@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><title>WBS - 과제 관리</title>
+<style>
+body{font-family:'Noto Sans KR',sans-serif;max-width:960px;margin:40px auto;padding:0 24px;color:#2c3e50}
+h1{color:#2c3e50;border-bottom:3px solid #3498db;padding-bottom:10px}
+h2{color:#2980b9;margin-top:30px}
+.box{background:#f8f9fa;border-left:4px solid #3498db;padding:15px 20px;margin:15px 0;border-radius:0 4px 4px 0}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th{background:#2c3e50;color:#fff;padding:10px;text-align:left}
+td{padding:8px 10px;border-bottom:1px solid #dee2e6}
+tr:hover{background:#f1f8fe}
+a{color:#2980b9;text-decoration:none}
+a:hover{text-decoration:underline}
+.back{display:inline-block;margin-bottom:20px;font-size:.9em}
+.badge{display:inline-block;padding:2px 8px;border-radius:3px;color:#fff;font-size:.85em}
+
+.stat{display:flex;gap:16px;flex-wrap:wrap;margin:20px 0}
+.stat-card{background:#f8f9fa;border-radius:8px;padding:16px 24px;min-width:100px;text-align:center}
+.stat-num{font-size:2em;font-weight:bold}
+.stat-label{font-size:.8em;color:#7f8c8d}
+.progress-bar{background:#ecf0f1;border-radius:4px;height:18px;margin:10px 0}
+.progress-fill{background:#27ae60;height:100%;border-radius:4px}
+</style></head><body>
+<a class="back" href="index.html">← 회의록 목록</a>
+<h1>📊 WBS — 과제 관리</h1>
+<div class="stat">
+  <div class="stat-card"><div class="stat-num">5</div><div class="stat-label">전체</div></div>
+  <div class="stat-card"><div class="stat-num" style="color:#27ae60">1</div><div class="stat-label">완료</div></div>
+  <div class="stat-card"><div class="stat-num" style="color:#2980b9">1</div><div class="stat-label">진행중</div></div>
+  <div class="stat-card"><div class="stat-num" style="color:#e67e22">3</div><div class="stat-label">대기중</div></div>
+</div>
+<div class="progress-bar"><div class="progress-fill" style="width:20%"></div></div>
+<p style="color:#7f8c8d;font-size:.9em">완료율 20% (1/5)</p>
+<table>
+  <tr><th>ID</th><th>과제명</th><th>담당자</th><th>목표일</th><th>우선순위</th><th>상태</th><th>출처 회의</th></tr>
+  <tr><td>T001</td><td>Q2 마케팅 기획안 작성</td><td>김영희</td><td>2026-06-20</td><td><span class='badge' style='background:#e74c3c'>높음</span></td><td><span class='badge' style='background:#2980b9'>진행중</span></td><td style='font-size:.85em'><a href="2026-06-10_1400.html">2026-06-10_1400</a></td></tr><tr><td>T002</td><td>신규 거래처 계약서 법무 검토</td><td>홍길동</td><td>2026-06-15</td><td><span class='badge' style='background:#e74c3c'>높음</span></td><td><span class='badge' style='background:#e67e22'>대기중</span></td><td style='font-size:.85em'><a href="2026-06-10_1400.html">2026-06-10_1400</a></td></tr><tr><td>T003</td><td>물류 시스템 개선 요구사항 정리</td><td>이철수</td><td>2026-06-25</td><td><span class='badge' style='background:#f39c12'>보통</span></td><td><span class='badge' style='background:#e67e22'>대기중</span></td><td style='font-size:.85em'><a href="2026-06-10_1400.html">2026-06-10_1400</a></td></tr><tr><td>T004</td><td>5월 매출 분석 보고서</td><td>박민준</td><td>2026-06-12</td><td><span class='badge' style='background:#e74c3c'>높음</span></td><td><span class='badge' style='background:#27ae60'>완료</span></td><td style='font-size:.85em'><a href="2026-06-05_1000.html">2026-06-05_1000</a></td></tr><tr><td>T005</td><td>팀 워크숍 장소 예약</td><td>김영희</td><td>2026-06-30</td><td><span class='badge' style='background:#27ae60'>낮음</span></td><td><span class='badge' style='background:#e67e22'>대기중</span></td><td style='font-size:.85em'><a href="2026-06-05_1000.html">2026-06-05_1000</a></td></tr>
+</table>
+<p style="margin-top:40px;color:#aaa;font-size:.8em">최종 업데이트: 2026-06-11 17:16</p>
+</body></html>
