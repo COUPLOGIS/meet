@@ -181,12 +181,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 </div>
 
 <script>
-let T=[],M=[],MH={},ED={},PAGE='tasks-all',SEL=null;
+let T=[],M=[],MH={},ED={},PAGE=USER_ID?'my-tasks':'tasks-all',SEL=null,USERS={};
 const SKEY='t5',ST=['대기중','진행중','완료','보류'];
 const STL={대기중:'Waiting',진행중:'In Progress',완료:'Done',보류:'Hold'};
 const PRI={높음:'High',보통:'Medium',낮음:'Low'};
+const USER_ID = new URLSearchParams(location.search).get('user') || '';
+
+// My username from users map
+function myName(){return USERS[USER_ID]?.username||''}
 
 const MENU=[
+  ...(USER_ID?[{id:'my-tasks',icon:'👤',label:'My Tasks',children:[
+    {id:'my-tasks',label:'All My Tasks'},
+  ]}]:[]),
   {id:'tasks',icon:'📊',label:'Tasks',children:[
     {id:'tasks-all',label:'All'},
     {id:'tasks-progress',label:'In Progress'},
@@ -204,7 +211,7 @@ function ap(t){const e=ED[t.id]||{};return{...t,...e,_h:[...(t._h||[]),...(e._ha
 
 async function boot(){
   l();
-  try{const w=await(await fetch('wbs.json?'+Date.now())).json();T=(w.tasks||[]).map(t=>({...t,_h:[{t:t.meeting_date||t.meeting_id||'?',a:'Created',n:''}]}));}catch(e){T=[]}
+  try{const w=await(await fetch('wbs.json?'+Date.now())).json();T=(w.tasks||[]).map(t=>({...t,_h:[{t:t.meeting_date||t.meeting_id||'?',a:'Created',n:''}]}));USERS=w.users||{};}catch(e){T=[]}
   const mids=new Set();T.forEach(t=>{if(t.meeting_id)mids.add(t.meeting_id);if(t.meeting_date)mids.add(t.meeting_date)});
   for(const id of mids){try{MH[id]=await(await fetch(id+'.html?'+Date.now())).text()}catch(e){}}
   M=[...mids].map(id=>{
@@ -268,11 +275,14 @@ function renderContent(){PAGE.startsWith('tasks')?renderTasks():PAGE.startsWith(
 
 function renderTasks(){
   const all=T.map(ap);let list;
-  if(PAGE==='tasks-progress')list=all.filter(t=>t.status==='진행중');
+  if(PAGE==='my-tasks'){
+    const myN=myName();
+    list=all.filter(t=>t.assignee===myN||String(t.created_by||'')===USER_ID);
+  }else if(PAGE==='tasks-progress')list=all.filter(t=>t.status==='진행중');
   else if(PAGE==='tasks-wait')list=all.filter(t=>t.status==='대기중');
   else if(PAGE==='tasks-done')list=all.filter(t=>t.status==='완료');
   else list=all;
-  const lmap={'tasks-all':'All Tasks','tasks-progress':'In Progress','tasks-wait':'Waiting','tasks-done':'Done'};
+  const lmap={'my-tasks':'My Tasks','tasks-all':'All Tasks','tasks-progress':'In Progress','tasks-wait':'Waiting','tasks-done':'Done'};
   document.getElementById('listHeader').innerHTML=`<h3>📊 ${lmap[PAGE]||'Tasks'}<span class="c">${list.length}</span></h3><button class="btn primary" onclick="mShow('addModal')">+ New Task</button>`;
   document.getElementById('listContent').innerHTML=`<table class="table"><thead><tr>
     <th style="width:55px">ID</th><th>Title</th><th style="width:75px">Assignee</th>
