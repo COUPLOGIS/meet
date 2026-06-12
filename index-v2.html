@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>회의록 · 과제 관리</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#252836;--border:#2d3142;
+  --text:#e2e8f0;--muted:#8892a4;
+  --accent:#6c63ff;--accent2:#4ecdc4;
+  --green:#48bb78;--orange:#f6ad55;--red:#fc8181;--blue:#63b3ed;
+  --sw:260px;
+}
+body{font-family:-apple-system,'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:13px;line-height:1.6}
+
+/* sidebar */
+#sidebar{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;overflow:hidden;z-index:100;transition:transform .25s}
+.sb-head{padding:16px 18px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sb-head h1{font-size:14px;font-weight:700;color:var(--accent)}
+.sb-head p{font-size:10px;color:var(--muted);margin-top:2px}
+.sb-sec{padding:10px 8px 2px;flex-shrink:0}
+.sb-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:0 8px;margin-bottom:4px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:12px;color:var(--muted);transition:all .15s;user-select:none}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--accent);color:#fff}
+.nav-item .ic{width:16px;text-align:center;flex-shrink:0;font-size:13px}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:600}
+.nav-item.active .nav-badge{background:rgba(255,255,255,.3)}
+.meet-list{overflow-y:auto;flex:1;padding:0 8px 12px}
+.meet-item{padding:8px 10px;border-radius:7px;cursor:pointer;transition:all .15s;margin-bottom:1px}
+.meet-item:hover{background:var(--surface2)}
+.meet-item.active{background:var(--accent)}
+.mi-date{font-size:10px;color:var(--muted)}.meet-item.active .mi-date{color:rgba(255,255,255,.6)}
+.mi-topic{font-size:12px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}.meet-item.active .mi-topic{color:#fff}
+
+/* footer */
+.sb-footer{padding:10px 16px;border-top:1px solid var(--border);flex-shrink:0;font-size:10px;color:var(--muted)}
+.sb-footer .dot{display:inline-block;width:6px;height:6px;background:var(--green);border-radius:50%;margin-right:4px}
+
+/* main */
+#main{margin-left:var(--sw);flex:1;padding:28px 32px;min-height:100vh;max-width:calc(100vw - var(--sw))}
+
+/* page title */
+.page-title{font-size:19px;font-weight:800;margin-bottom:20px;letter-spacing:-.3px}
+.page-sub{font-size:11px;color:var(--muted);margin:-14px 0 18px}
+
+/* cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.card-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center}
+.stat-n{font-size:24px;font-weight:800;margin-bottom:2px}
+.stat-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+
+/* progress */
+.prog-wrap{margin-bottom:16px}
+.prog-meta{font-size:11px;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:4px}
+.prog-bar{background:var(--surface2);border-radius:99px;height:5px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .7s ease}
+
+/* timeline */
+.timeline{position:relative;padding-left:20px}
+.timeline::before{content:'';position:absolute;left:7px;top:4px;bottom:4px;width:2px;background:var(--border)}
+.tl-item{position:relative;padding:6px 0 6px 18px;font-size:12px}
+.tl-item::before{content:'';position:absolute;left:-17px;top:12px;width:10px;height:10px;border-radius:50%;background:var(--surface2);border:2px solid var(--border)}
+.tl-item.done::before{background:var(--green);border-color:var(--green)}
+.tl-item.today::before{background:var(--accent);border-color:var(--accent)}
+.tl-item.urgent::before{background:var(--orange);border-color:var(--orange)}
+.tl-date{font-size:10px;color:var(--muted)}
+.tl-title{font-weight:500}
+.tl-meta{font-size:10px;color:var(--muted)}
+.tl-item.urgent .tl-date,.tl-item.today .tl-date{color:var(--orange);font-weight:600}
+
+/* filter bar */
+.filter-bar{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
+.fb{padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;transition:all .15s}
+.fb:hover{border-color:var(--accent);color:var(--text)}
+.fb.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* task grid */
+.tgrid{display:grid;gap:4px}
+.trow{display:grid;grid-template-columns:55px 1fr 75px 80px 60px 70px;align-items:center;gap:8px;padding:9px 12px;background:var(--surface2);border-radius:7px;border:1px solid transparent;font-size:12px;transition:border-color .15s}
+.trow:hover{border-color:var(--border)}
+.trow.hdr{background:transparent;border:none;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding-bottom:2px}
+.tid{font-family:'SF Mono',monospace;font-size:11px;color:var(--accent);font-weight:700}
+.ttitle{font-weight:500}
+.tsub{color:var(--muted);font-size:11px}
+
+/* badges */
+.bdg{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;white-space:nowrap}
+.bdg-wait{background:rgba(246,173,85,.15);color:#f6ad55}
+.bdg-ing{background:rgba(99,179,237,.15);color:#63b3ed}
+.bdg-done{background:rgba(72,187,120,.15);color:#48bb78}
+.bdg-hold{background:rgba(160,174,192,.15);color:#a0aec0}
+.bdg-high{background:rgba(252,129,129,.15);color:#fc8181}
+.bdg-mid{background:rgba(246,173,85,.15);color:#f6ad55}
+.bdg-low{background:rgba(72,187,120,.15);color:#48bb78}
+
+/* calendar mini */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:10px;text-align:center}
+.cal-dow{color:var(--muted);padding:4px 0;font-weight:600}
+.cal-day{padding:6px 0;border-radius:4px;cursor:default;color:var(--muted)}
+.cal-day.today{background:var(--accent);color:#fff;font-weight:700}
+.cal-day.has-task{color:var(--orange);font-weight:600}
+.cal-day.has-task.today{color:#fff}
+
+/* meeting detail */
+.meta-tags{display:flex;gap:8px;flex-wrap:wrap}
+.mtag{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--muted)}
+.mtag span{color:var(--text);margin-left:3px}
+.sum-list{list-style:none}
+.sum-list li{padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;display:flex;align-items:flex-start;gap:6px}
+.sum-list li:last-child{border-bottom:none}
+.sum-list li::before{content:'▸';color:var(--accent2);font-size:10px;margin-top:3px;flex-shrink:0}
+
+/* back button */
+.back-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;transition:all .15s}
+.back-btn:hover{border-color:var(--accent);color:var(--text)}
+
+/* empty state */
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty .ei{font-size:36px;margin-bottom:8px}
+
+/* 2-col layout */
+.col2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* hamburger */
+.hamburger{display:none;position:fixed;top:12px;left:12px;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px 9px;cursor:pointer;flex-direction:column;gap:3px}
+.hamburger span{display:block;width:16px;height:2px;background:var(--text);border-radius:1px}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
+
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+
+@media(max-width:900px){
+  :root{--sw:0px}
+  #sidebar{transform:translateX(-260px);width:260px}
+  #sidebar.open{transform:translateX(0)}
+  #main{margin-left:0;padding:56px 14px 14px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .col2{grid-template-columns:1fr}
+  .hamburger{display:flex}
+  .overlay.show{display:block}
+  .trow{grid-template-columns:48px 1fr 60px}
+  .hm{display:none!important}
+}
+</style>
+</head>
+<body>
+
+<div class="hamburger" id="ham" onclick="toggleSB()"><span></span><span></span><span></span></div>
+<div class="overlay" id="overlay" onclick="toggleSB()"></div>
+
+<nav id="sidebar">
+  <div class="sb-head">
+    <h1>📋 회의록 · 과제 관리</h1>
+    <p id="upd"></p>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-label">메뉴</div>
+    <div class="nav-item active" id="nav-dash" onclick="showDashboard()">
+      <span class="ic">🏠</span>대시보드
+    </div>
+    <div class="nav-item" id="nav-cal" onclick="showCalendar()">
+      <span class="ic">📅</span>일정 캘린더
+    </div>
+    <div class="nav-item" id="nav-wbs" onclick="showWBS()">
+      <span class="ic">📊</span>전체 과제
+      <span class="nav-badge" id="pend" style="display:none"></span>
+    </div>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-label">회의록</div>
+  </div>
+  <div class="meet-list" id="mlist"></div>
+  <div class="sb-footer">
+    <span class="dot"></span> Hermes 연결됨 · 1시간 보고 수신중
+  </div>
+</nav>
+
+<main id="main">
+  <div id="content"><div class="empty"><div class="ei">⏳</div><p>불러오는 중...</p></div></div>
+</main>
+
+<script>
+// ── Global state ──
+let D = null; // { meetings: [], wbs: { tasks: [] }, updated: "" }
+let MEET_FILES = {}; // meeting_id → html string
+
+// ── Init ──
+async function boot() {
+  try {
+    const r = await fetch('wbs.json?t=' + Date.now());
+    const wbs = await r.json();
+    D = { meetings: [], wbs: wbs, updated: '' };
+
+    // Load meeting list from index
+    try {
+      const r2 = await fetch('index.html?t=' + Date.now());
+      const html = await r2.text();
+      // Parse meeting links: <a href="2026-06-10_1400.html">
+      const re = /href="(\d{4}-\d{2}-\d{2}_\d{4})\.html"/g;
+      let m;
+      while ((m = re.exec(html)) !== null) {
+        const id = m[1];
+        if (!D.meetings.find(x => x.id === id)) {
+          D.meetings.push({ id, date: id.replace('_',' '), participants:'', topics:'', summary:'' });
+        }
+      }
+    } catch(e) {}
+
+    // Sort meetings newest first
+    D.meetings.sort((a,b) => b.id.localeCompare(a.id));
+
+  } catch(e) {
+    document.getElementById('content').innerHTML =
+      '<div class="empty"><div class="ei">⚠️</div><p>데이터를 불러올 수 없습니다.</p></div>';
+    return;
+  }
+  buildSidebar();
+  showDashboard();
+}
+
+function buildSidebar() {
+  const ml = document.getElementById('mlist');
+  ml.innerHTML = D.meetings.map(m =>
+    `<div class="meet-item" id="mi-${m.id}" onclick="showMeet('${m.id}')">
+      <div class="mi-date">${m.date}</div>
+      <div class="mi-topic">📋 ${m.id.replace('_',' ')}</div>
+    </div>`
+  ).join('') || '<div style="padding:10px;font-size:11px;color:var(--muted)">회의록 없음</div>';
+
+  const pend = (D.wbs?.tasks || []).filter(t => t.status !== '완료').length;
+  const pb = document.getElementById('pend');
+  pb.textContent = pend; pb.style.display = pend ? '' : 'none';
+}
+
+// ── Navigation ──
+function setActive(id) {
+  document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+  document.querySelectorAll('.meet-item').forEach(e => e.classList.remove('active'));
+  const n = document.getElementById('nav-' + id);
+  if (n) n.classList.add('active');
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function sBdg(s) {
+  const m = {대기중:'wait',진행중:'ing',완료:'done',보류:'hold'};
+  return `<span class="bdg bdg-${m[s]||'wait'}">${s}</span>`;
+}
+function pBdg(p) {
+  const m = {높음:'high',보통:'mid',낮음:'low'};
+  return `<span class="bdg bdg-${m[p]||'mid'}">${p||'보통'}</span>`;
+}
+
+// ── Dashboard ──
+function showDashboard() {
+  setActive('dash');
+  const tasks = D.wbs?.tasks || [];
+  const total = tasks.length;
+  const done  = tasks.filter(t => t.status === '완료').length;
+  const ing   = tasks.filter(t => t.status === '진행중').length;
+  const wait  = tasks.filter(t => t.status === '대기중').length;
+  const pct   = total ? Math.round(done / total * 100) : 0;
+
+  // Upcoming deadlines (this week)
+  const now = new Date(); now.setHours(0,0,0,0);
+  const weekEnd = new Date(now); weekEnd.setDate(weekEnd.getDate() + 7);
+  const upcoming = tasks
+    .filter(t => t.due_date && t.status !== '완료')
+    .map(t => ({...t, due: new Date(t.due_date + 'T00:00:00')}))
+    .filter(t => t.due >= now && t.due <= weekEnd)
+    .sort((a,b) => a.due - b.due);
+
+  // Today's tasks
+  const todayStr = now.toISOString().slice(0,10);
+  const todayTasks = tasks.filter(t => t.due_date === todayStr && t.status !== '완료');
+
+  // Overdue
+  const overdue = tasks.filter(t => {
+    if (!t.due_date || t.status === '완료') return false;
+    return new Date(t.due_date + 'T00:00:00') < now;
+  });
+
+  document.getElementById('content').innerHTML = `
+    <div class="page-title">🏠 대시보드</div>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-n">${total}</div><div class="stat-l">전체 과제</div></div>
+      <div class="stat"><div class="stat-n" style="color:var(--green)">${done}</div><div class="stat-l">완료</div></div>
+      <div class="stat"><div class="stat-n" style="color:var(--blue)">${ing}</div><div class="stat-l">진행중</div></div>
+      <div class="stat"><div class="stat-n" style="color:var(--orange)">${wait + overdue.length}</div><div class="stat-l">대기${overdue.length ? ' ('+overdue.length+'건 지연)' : ''}</div></div>
+    </div>
+
+    <div class="prog-wrap">
+      <div class="prog-meta"><span>전체 완료율</span><span style="color:var(--text);font-weight:600">${pct}%</span></div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+    </div>
+
+    <div class="col2">
+      <div class="card">
+        <div class="card-title">⏰ 이번주 마감 (${upcoming.length}건)</div>
+        ${upcoming.length === 0
+          ? '<div class="empty" style="padding:20px"><div class="ei">🎉</div><p>이번주 마감 없음!</p></div>'
+          : `<div class="timeline">${upcoming.map(t => {
+            const isToday = t.due_date === todayStr;
+            const isUrgent = t.priority === '높음';
+            const cls = isToday ? 'today' : (isUrgent ? 'urgent' : '');
+            return `<div class="tl-item ${cls}">
+              <div class="tl-date">${t.due_date} ${isToday ? '(오늘!)' : ''}</div>
+              <div class="tl-title">${esc(t.title)}</div>
+              <div class="tl-meta">${esc(t.assignee)} · ${pBdg(t.priority)} · ${sBdg(t.status)}</div>
+            </div>`;
+          }).join('')}</div>`
+        }
+      </div>
+      <div class="card">
+        <div class="card-title">📌 오늘 할 일</div>
+        ${todayTasks.length === 0
+          ? '<div class="empty" style="padding:20px"><div class="ei">☕</div><p>오늘 마감 과제 없음</p></div>'
+          : todayTasks.map(t => `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:12px">
+            <span class="tid">${t.id}</span> <strong>${esc(t.title)}</strong>
+            <span style="color:var(--muted);margin-left:8px">${esc(t.assignee)}</span>
+          </div>`).join('')
+        }
+        ${overdue.length > 0 ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--red)">
+          <div style="font-size:11px;color:var(--red);font-weight:600;margin-bottom:6px">⚠ 지연 과제 (${overdue.length}건)</div>
+          ${overdue.map(t => `<div style="padding:6px 0;font-size:11px">
+            <span class="tid">${t.id}</span> ${esc(t.title)} <span style="color:var(--muted)">→ 마감: ${t.due_date}</span>
+          </div>`).join('')}
+        </div>` : ''}
+      </div>
+    </div>`;
+}
+
+// ── Calendar ──
+function showCalendar() {
+  setActive('cal');
+  const tasks = D.wbs?.tasks || [];
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const firstDay = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const todayStr = now.toISOString().slice(0,10);
+
+  // Build set of dates that have tasks
+  const taskDates = new Set();
+  tasks.forEach(t => { if (t.due_date) taskDates.add(t.due_date); });
+
+  const DOWS = ['일','월','화','수','목','금','토'];
+  let calHTML = DOWS.map(d => `<div class="cal-dow">${d}</div>`).join('');
+
+  for (let i = 0; i < firstDay; i++) calHTML += '<div class="cal-day"></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const cls = ['cal-day'];
+    if (ds === todayStr) cls.push('today');
+    if (taskDates.has(ds)) cls.push('has-task');
+    calHTML += `<div class="${cls.join(' ')}" onclick="showDayTasks('${ds}')" title="클릭하면 해당일 과제">${d}</div>`;
+  }
+
+  // Tasks due this month
+  const monthTasks = tasks.filter(t => {
+    if (!t.due_date || t.status === '완료') return false;
+    return t.due_date >= `${y}-${String(m+1).padStart(2,'0')}-01` &&
+           t.due_date <= `${y}-${String(m+1).padStart(2,'0')}-${String(daysInMonth).padStart(2,'0')}`;
+  }).sort((a,b) => (a.due_date||'').localeCompare(b.due_date||''));
+
+  document.getElementById('content').innerHTML = `
+    <div class="page-title">📅 일정 캘린더</div>
+    <div class="page-sub">${y}년 ${m+1}월</div>
+    <div class="card">
+      <div class="cal">${calHTML}</div>
+    </div>
+    <div class="card">
+      <div class="card-title">📌 이번달 마감 과제 (${monthTasks.length}건)</div>
+      ${monthTasks.length === 0
+        ? '<div class="empty" style="padding:16px">마감 과제 없음</div>'
+        : `<div class="tgrid">
+          ${tHdr()}
+          ${monthTasks.map(t => tRow(t)).join('')}
+        </div>`
+      }
+    </div>`;
+}
+
+function showDayTasks(ds) {
+  const tasks = (D.wbs?.tasks || []).filter(t => t.due_date === ds);
+  if (!tasks.length) return;
+  alert(`${ds}\n\n` + tasks.map(t => `[${t.id}] ${t.title} — ${t.assignee} (${t.status})`).join('\n'));
+}
+
+// ── WBS ──
+function showWBS() {
+  setActive('wbs');
+  const tasks = D.wbs?.tasks || [];
+  const total = tasks.length;
+  const done  = tasks.filter(t => t.status === '완료').length;
+  const ing   = tasks.filter(t => t.status === '진행중').length;
+  const wait  = tasks.filter(t => t.status === '대기중').length;
+  const pct   = total ? Math.round(done / total * 100) : 0;
+
+  document.getElementById('content').innerHTML = `
+    <div class="page-title">📊 전체 과제</div>
+    <div class="stats">
+      <div class="stat"><div class="stat-n">${total}</div><div class="stat-l">전체</div></div>
+      <div class="stat"><div class="stat-n" style="color:var(--green)">${done}</div><div class="stat-l">완료</div></div>
+      <div class="stat"><div class="stat-n" style="color:var(--blue)">${ing}</div><div class="stat-l">진행중</div></div>
+      <div class="stat"><div class="stat-n" style="color:var(--orange)">${wait}</div><div class="stat-l">대기중</div></div>
+    </div>
+    <div class="prog-wrap">
+      <div class="prog-meta"><span>완료율</span><span style="color:var(--text);font-weight:600">${pct}%</span></div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:6px">
+        <div class="card-title" style="margin:0">과제 목록</div>
+        <div class="filter-bar">
+          <button class="fb active" onclick="ftask('all',this)">전체</button>
+          <button class="fb" onclick="ftask('대기중',this)">대기중</button>
+          <button class="fb" onclick="ftask('진행중',this)">진행중</button>
+          <button class="fb" onclick="ftask('완료',this)">완료</button>
+          <button class="fb" onclick="ftask('보류',this)">보류</button>
+        </div>
+      </div>
+      ${total === 0
+        ? '<div class="empty"><div class="ei">📭</div><p>등록된 과제가 없습니다</p></div>'
+        : `<div class="tgrid">${tHdr()}<div id="tlist">${tasks.map(t => tRow(t)).join('')}</div></div>`
+      }
+    </div>`;
+}
+
+function ftask(s, btn) {
+  document.querySelectorAll('.fb').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#tlist .trow').forEach(r =>
+    r.style.display = (s === 'all' || r.dataset.status === s) ? '' : 'none'
+  );
+}
+
+function tHdr() {
+  return `<div class="trow hdr">
+    <span>ID</span><span>과제명</span><span>담당자</span><span class="hm">목표일</span><span class="hm">우선순위</span><span>상태</span>
+  </div>`;
+}
+
+function tRow(t) {
+  return `<div class="trow" data-status="${t.status}">
+    <span class="tid">${t.id}</span>
+    <span class="ttitle">${esc(t.title)}</span>
+    <span class="tsub">${esc(t.assignee)}</span>
+    <span class="tsub hm">${t.due_date||'미정'}</span>
+    <span class="hm">${pBdg(t.priority)}</span>
+    <span>${sBdg(t.status)}</span>
+  </div>`;
+}
+
+// ── Meeting Detail ──
+async function showMeet(id) {
+  setActive('');
+  const mi = document.getElementById('mi-' + id);
+  if (mi) mi.classList.add('active');
+
+  document.getElementById('content').innerHTML =
+    '<div class="empty"><div class="ei">⏳</div><p>불러오는 중...</p></div>';
+
+  // Try to load meeting HTML
+  try {
+    if (!MEET_FILES[id]) {
+      const r = await fetch(id + '.html?t=' + Date.now());
+      MEET_FILES[id] = await r.text();
+    }
+    const html = MEET_FILES[id];
+
+    // Parse meeting data from HTML
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const date = doc.querySelector('.meta-item:nth-child(1)')?.textContent?.replace('📅 일시','').trim() || id.replace('_',' ');
+    const participants = doc.querySelector('.meta-item:nth-child(2)')?.textContent?.replace('👥 참여자','').trim() || '';
+    const topics = doc.querySelector('.meta-item:nth-child(3)')?.textContent?.replace('📌 주요 주제','').trim() || '';
+
+    // Summary
+    const summaryItems = [...doc.querySelectorAll('.box li')].map(li => li.textContent.trim());
+
+    const tasks = (D.wbs?.tasks || []).filter(t =>
+      (t.meeting_id || t.meeting_date) === id
+    );
+
+    document.getElementById('content').innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+        <button class="back-btn" onclick="showDashboard()">← 대시보드</button>
+        <div class="page-title" style="margin:0">📋 ${esc(date)}</div>
+      </div>
+      <div class="card">
+        <div class="meta-tags">
+          <div class="mtag">📅<span>${esc(date)}</span></div>
+          <div class="mtag">👥<span>${esc(participants)}</span></div>
+          <div class="mtag">📌<span>${esc(topics)}</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">회의 요약</div>
+        <ul class="sum-list">
+          ${summaryItems.length
+            ? summaryItems.map(l => `<li>${esc(l)}</li>`).join('')
+            : '<li>내용 없음</li>'}
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title">과제 (${tasks.length}건)</div>
+        ${tasks.length === 0
+          ? '<div class="empty" style="padding:20px"><div class="ei" style="font-size:24px">📭</div><p>등록된 과제가 없습니다</p></div>'
+          : `<div class="tgrid">${tHdr()}${tasks.map(t => tRow(t)).join('')}</div>`
+        }
+      </div>`;
+    if (window.innerWidth <= 900) closeSB();
+  } catch(e) {
+    document.getElementById('content').innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+        <button class="back-btn" onclick="showDashboard()">← 대시보드</button>
+        <div class="page-title" style="margin:0">📋 ${id.replace('_',' ')}</div>
+      </div>
+      <div class="card"><div class="empty"><div class="ei">⚠️</div><p>회의록을 불러올 수 없습니다</p></div></div>`;
+  }
+}
+
+// ── Mobile ──
+function toggleSB() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+}
+function closeSB() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+boot();
+</script>
+</body>
+</html>
