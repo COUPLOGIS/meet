@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Meeting Bot — Hermes-integrated task & meeting management system.
+TeamLog (팀록) — Hermes-integrated team task & meeting management bot.
 Handles meeting detection, task extraction, @mentions, comments,
 due-date notifications, and user management.
 
@@ -582,7 +582,7 @@ def process_command(cmd: str, chat_id: str, sender_name: str) -> dict:
 
     elif command == "/help":
         result["replies"].append(
-            "📋 *Meeting Bot 명령어*\n\n"
+            "📋 *TeamLog (팀록) 명령어*\n\n"
             "/addtask <제목> @담당자 - 과제 추가\n"
             "/mytasks - 내 과제 보기\n"
             "/done T001 - 과제 완료 처리\n"
