@@ -463,8 +463,26 @@ def process_command(cmd: str, chat_id: str, sender_name: str) -> dict:
 
     if command == "/start":
         username = args.strip() or sender_name
+        clean = username.lstrip('@')
+
+        # Check if this user was invited — auto-register with invite
+        wbs = load_wbs()
+        pending = wbs.get("pending_invites", [])
+        was_invited = clean in pending or username in pending
+
         user = register_user(chat_id, username)
-        result["replies"].append(f"✅ 등록 완료! 환영합니다, {user['username']}님!")
+        if was_invited:
+            # Remove from pending invites
+            if clean in pending:
+                pending.remove(clean)
+            if username in pending:
+                pending.remove(username)
+            wbs["pending_invites"] = pending
+            save_wbs(wbs)
+            result["replies"].append(f"✅ 초대 등록 완료! 환영합니다, {user['username']}님! 🎉")
+        else:
+            result["replies"].append(f"✅ 등록 완료! 환영합니다, {user['username']}님!")
+
         result["replies"].append("사용 가능 명령어:\n"
                                 "/addtask <제목> @담당자 - 과제 추가\n"
                                 "/mytasks - 내 과제 보기\n"
@@ -558,17 +576,40 @@ def process_command(cmd: str, chat_id: str, sender_name: str) -> dict:
         if not is_admin(chat_id):
             result["replies"].append("❌ 관리자만 사용할 수 있습니다.")
             return result
-        username = args.strip().lstrip('@')
+        # Parse: /invite @username [chat_id] [role]
+        parts = args.strip().split()
+        username = parts[0].lstrip('@') if parts else ""
+        invite_chat_id = parts[1] if len(parts) > 1 else ""
+        role = parts[2] if len(parts) > 2 else "member"
+
         if not username:
-            result["replies"].append("❌ 사용법: /invite @username")
+            result["replies"].append("❌ 사용법: /invite @username [chat_id] [role]")
             return result
-        # Store invited user (pending registration)
-        wbs = load_wbs()
-        wbs["pending_invites"] = wbs.get("pending_invites", [])
-        if username not in wbs["pending_invites"]:
-            wbs["pending_invites"].append(username)
-            save_wbs(wbs)
-        result["replies"].append(f"✅ @{username} 님이 초대되었습니다.\n초대받은 사용자는 `/start` 명령어로 등록해주세요.")
+
+        # If chat_id provided, register immediately
+        if invite_chat_id:
+            user = register_user(invite_chat_id, username, role)
+            result["replies"].append(
+                f"✅ @{user['username']} 님이 등록되었습니다! (role: {role})\n"
+                f"🔑 chat_id: {invite_chat_id}"
+            )
+            # Clean up pending invite if exists
+            wbs = load_wbs()
+            wbs["pending_invites"] = wbs.get("pending_invites", [])
+            if username in wbs["pending_invites"]:
+                wbs["pending_invites"].remove(username)
+                save_wbs(wbs)
+        else:
+            # Store as pending invite
+            wbs = load_wbs()
+            wbs["pending_invites"] = wbs.get("pending_invites", [])
+            if username not in wbs["pending_invites"]:
+                wbs["pending_invites"].append(username)
+                save_wbs(wbs)
+            result["replies"].append(
+                f"✅ @{username} 님이 초대되었습니다.\n"
+                f"초대코드가 생성되었습니다. 초대받은 사용자가 `/start {username}` 입력 시 자동 등록됩니다."
+            )
 
     elif command == "/users":
         if not is_admin(chat_id):
