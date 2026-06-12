@@ -119,6 +119,33 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .meta-tags{display:flex;gap:6px;flex-wrap:wrap}.mtag{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:4px 10px;font-size:11px;color:var(--muted)}.mtag span{color:var(--text);margin-left:3px}
 .sum-list{list-style:none}.sum-list li{padding:6px 0;border-bottom:1px solid var(--border2);font-size:12px;display:flex;gap:6px}.sum-list li:last-child{border-bottom:none}.sum-list li::before{content:'▸';color:var(--accent2);font-size:10px;margin-top:3px;flex-shrink:0}
 
+/* ── Calendar ── */
+.cal-hdr{display:flex;align-items:center;gap:12px;padding:4px 0 12px}
+.cal-hdr h4{font-size:16px;font-weight:700;min-width:140px}
+.cal-nav{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .1s}
+.cal-nav:hover{background:var(--surface3);color:var(--text)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cal-grid .dow{padding:8px 4px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.cal-day{aspect-ratio:1;border-radius:var(--radius-sm);padding:4px;cursor:pointer;transition:all .1s;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;font-size:13px;color:var(--text2);min-height:40px}
+.cal-day:hover{background:var(--surface3)}
+.cal-day.today{background:var(--accent);color:#fff;font-weight:700;border-radius:var(--radius)}
+.cal-day.other{color:var(--muted2)}
+.cal-day.has-task::after{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent2);position:absolute;bottom:5px}
+.cal-day.has-task.today::after{background:#fff}
+.cal-day.has-event::after{content:'';width:5px;height:5px;border-radius:50%;background:var(--orange);position:absolute;bottom:5px;left:calc(50% - 8px)}
+.cal-day.has-task.has-event::after{left:calc(50% - 2.5px)}
+.cal-day.has-task.has-event::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent2);position:absolute;bottom:5px}
+.cal-day.has-task.has-event.today::after,.cal-day.has-task.has-event.today::before{background:#fff}
+
+.ev-list{padding:12px 0}
+.ev-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:4px;cursor:pointer;transition:all .1s;border-left:3px solid transparent}
+.ev-item:hover{background:var(--surface2)}
+.ev-item.task{border-left-color:var(--accent)}
+.ev-item.personal{border-left-color:var(--orange)}
+.ev-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.ev-dot.task{background:var(--accent)}.ev-dot.personal{background:var(--orange)}
+.ev-body{flex:1;min-width:0}.ev-title{font-size:13px;font-weight:600}.ev-meta{font-size:10px;color:var(--muted);margin-top:1px}
+.ev-status{font-size:10px;padding:2px 8px;border-radius:99px;font-weight:600;flex-shrink:0}
+
 #toast{position:fixed;bottom:20px;right:20px;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 18px;font-size:12px;color:var(--text);z-index:1000;transform:translateY(80px);opacity:0;transition:all .2s}#toast.show{transform:translateY(0);opacity:1}
 
 .mo{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:center;justify-content:center}.mo.show{display:flex}
@@ -184,7 +211,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 <script>
 const USER_ID = new URLSearchParams(location.search).get('user') || '';
 let T=[],M=[],MH={},ED={},PAGE=USER_ID?'my-tasks':'team-tasks-all',SEL=null,USERS={};
-const SKEY='t5',ST=['대기중','진행중','완료','보류'];
+const SKEY='t5',EKEY='ev1',ST=['대기중','진행중','완료','보류'];
+let EV={},calY,calM;
 const STL={대기중:'Waiting',진행중:'In Progress',완료:'Done',보류:'Hold'};
 const PRI={높음:'High',보통:'Medium',낮음:'Low'};
 
@@ -204,10 +232,14 @@ const MENU=[
   {id:'meetings',icon:'📝',label:'Meetings',children:[
     {id:'meetings-all',label:'All Meetings'},
   ]},
+  {id:'calendar',icon:'📅',label:'Calendar',children:[
+    {id:'calendar-month',label:'Month'},
+    {id:'calendar-events',label:'All Events'},
+  ]},
 ];
 
-function l(){try{ED=JSON.parse(localStorage.getItem(SKEY)||'{}');}catch(e){ED={}}}
-function s(){localStorage.setItem(SKEY,JSON.stringify(ED))}
+function l(){try{ED=JSON.parse(localStorage.getItem(SKEY)||'{}');EV=JSON.parse(localStorage.getItem(EKEY)||'{}');}catch(e){ED={};EV={}}}
+function s(){localStorage.setItem(SKEY,JSON.stringify(ED));localStorage.setItem(EKEY,JSON.stringify(EV))}
 function ap(t){const e=ED[t.id]||{};return{...t,...e,_h:[...(t._h||[]),...(e._ha||[])]}}
 
 async function boot(){
@@ -269,11 +301,12 @@ function updateCounts(){
   setgrp('cnt-team-tasks',team);
   if(USER_ID){el('cnt-my-tasks',mine.filter(t=>t.assignee===myName()||String(t.created_by||'')===USER_ID).length)}
   el('cnt-meetings-all',M.length);
+  el('cnt-calendar-events',Object.keys(EV).length);
 }
 
 // ── Render ──
 function render(){renderMenu();renderContent()}
-function renderContent(){if(PAGE.startsWith('my-tasks')||PAGE.startsWith('team-tasks')||PAGE.startsWith('tasks'))renderTasks();else if(PAGE.startsWith('meetings'))renderMeetings();updateDetail()}
+function renderContent(){if(PAGE.startsWith('my-tasks')||PAGE.startsWith('team-tasks')||PAGE.startsWith('tasks'))renderTasks();else if(PAGE.startsWith('meetings'))renderMeetings();else if(PAGE.startsWith('calendar'))renderCalendar();updateDetail()}
 
 function renderTasks(){
   const all=T.map(ap);let list;
@@ -313,6 +346,102 @@ function renderMeetings(){
       <div class="mc-icon">📋</div><div class="mc-body"><div class="mc-date">${esc(m.date||m.id.replace(/_/g,' '))}</div>
       <div class="mc-title">${esc(m.tp||'Meeting')}</div><div class="mc-meta">👥 ${esc(m.p||'')}</div></div>
       <div class="mc-tasks">${m.ts.length} tasks</div></div>`).join('');
+}
+
+// ── Calendar ──
+function calDays(y,m){return new Date(y,m+1,0).getDate()}
+function calDow(y,m){return new Date(y,m,1).getDay()}
+function dueSet(){
+  const s=new Set();
+  T.forEach(t=>{if(t.due_date&&t.due_date!=='N/A'){const d=t.due_date.replace(/-/g,'');s.add(d)}});
+  Object.keys(EV).forEach(k=>{if(EV[k]&&EV[k].date){const d=EV[k].date.replace(/-/g,'');s.add(d)}});
+  return s;
+}
+function evOnDay(y,m,d){
+  const ds=`${String(y)}${String(m+1).padStart(2,'0')}${String(d).padStart(2,'0')}`;
+  const tasks=T.filter(t=>t.due_date&&t.due_date!=='N/A'&&t.due_date.replace(/-/g,'')===ds);
+  const events=[];Object.entries(EV).forEach(([id,e])=>{if(e&&e.date&&e.date.replace(/-/g,'')===ds)events.push({id,...e})});
+  return {tasks,events};
+}
+
+function renderCalendar(){
+  const now=new Date();
+  if(calY===undefined){calY=now.getFullYear();calM=now.getMonth()}
+  const today=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  const todayStr=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const ds=dueSet(),totalDays=calDays(calY,calM),startDow=calDow(calY,calM);
+  const dows=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const mName=calY+'년 '+(calM+1)+'월';
+
+  if(PAGE==='calendar-events'){
+    const allEv=[];Object.entries(EV).forEach(([id,e])=>{if(e)allEv.push({id,...e})});
+    allEv.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    document.getElementById('listHeader').innerHTML=`<h3>📅 All Events<span class="c">${allEv.length}</span></h3><button class="btn primary" onclick="addEvent()">+ Event</button>`;
+    document.getElementById('listContent').innerHTML=allEv.length===0
+      ?'<div class="empty"><div class="ei">📭</div><p>No events</p></div>'
+      :`<div class="ev-list">${allEv.map(e=>`<div class="ev-item personal" onclick="editEvent('${e.id}')"><div class="ev-dot personal"></div><div class="ev-body"><div class="ev-title">${esc(e.title)}</div><div class="ev-meta">📅 ${e.date}${e.time?' ⏰ '+e.time:''}</div></div><span class="ev-status" style="color:var(--muted)">✎</span></div>`).join('')}</div>`;
+    return;
+  }
+
+  document.getElementById('listHeader').innerHTML=`<h3>📅 Calendar</h3><button class="btn primary" onclick="addEvent()">+ Event</button>`;
+  let html=`<div class="cal-hdr"><button class="cal-nav" onclick="calNav(-1)">◀</button><h4>${mName}</h4><button class="cal-nav" onclick="calNav(1)">▶</button><button class="btn sm" onclick="calGoToday()">Today</button></div>`;
+  html+=`<div class="cal-grid">${dows.map(d=>`<div class="dow">${d}</div>`).join('')}`;
+  for(let i=0;i<startDow;i++)html+=`<div class="cal-day other"></div>`;
+  for(let d=1;d<=totalDays;d++){
+    const dk=`${calY}${String(calM+1).padStart(2,'0')}${String(d).padStart(2,'0')}`;
+    const cls=['cal-day'];if(dk===today)cls.push('today');if(ds.has(dk))cls.push('has-task');
+    // check personal events
+    let hasEv=false;Object.values(EV).forEach(e=>{if(e&&e.date&&e.date.replace(/-/g,'')===dk)hasEv=true});
+    if(hasEv)cls.push('has-event');
+    html+=`<div class="${cls.join(' ')}" onclick="calClick(${d})">${d}</div>`;
+  }
+  html+=`</div>`;
+
+  // Events for today
+  if(PAGE==='calendar-month'&&!SEL){
+    const{events}=evOnDay(calY,calM,now.getDate());
+    const todayTasks=T.filter(t=>t.due_date&&t.due_date!=='N/A'&&t.due_date===todayStr);
+    if(todayTasks.length||events.length){
+      html+=`<h5 style="margin-top:16px">📌 Today — ${todayStr}</h5><div class="ev-list">`;
+      todayTasks.forEach(t=>{html+=`<div class="ev-item task" onclick="selTask('${t.id}')"><div class="ev-dot task"></div><div class="ev-body"><div class="ev-title">${esc(t.title)}</div><div class="ev-meta">👤 ${esc(t.assignee)} · ${STL[t.status]}</div></div><span class="ev-status" style="background:rgba(88,166,255,.12);color:var(--accent)">⏳ ${t.due_date}</span></div>`});
+      events.forEach(e=>{html+=`<div class="ev-item personal" onclick="editEvent('${e.id}')"><div class="ev-dot personal"></div><div class="ev-body"><div class="ev-title">${esc(e.title)}</div><div class="ev-meta">${e.time?'⏰ '+e.time:'종일'}</div></div><span class="ev-status" style="color:var(--muted);font-size:10px">개인</span></div>`});
+      html+=`</div>`;
+    }
+  }
+
+  if(SEL&&PAGE==='calendar-month'){
+    const dk=`${calY}${String(calM+1).padStart(2,'0')}${String(SEL).padStart(2,'0')}`;
+    const dt=`${calY}-${String(calM+1).padStart(2,'0')}-${String(SEL).padStart(2,'0')}`;
+    const{events}=evOnDay(calY,calM,SEL);
+    const dayTasks=T.filter(t=>t.due_date&&t.due_date!=='N/A'&&t.due_date===dt);
+    html+=`<h5 style="margin-top:16px">📌 ${mName} ${SEL}일</h5><div class="ev-list">`;
+    if(!dayTasks.length&&!events.length)html+=`<div style="color:var(--muted);font-size:12px;padding:8px 0">No tasks or events</div>`;
+    dayTasks.forEach(t=>{html+=`<div class="ev-item task" onclick="selTask('${t.id}')"><div class="ev-dot task"></div><div class="ev-body"><div class="ev-title">${esc(t.title)}</div><div class="ev-meta">👤 ${esc(t.assignee)} · ${STL[t.status]}</div></div><span class="ev-status" style="background:rgba(88,166,255,.12);color:var(--accent)">과제</span></div>`});
+    events.forEach(e=>{html+=`<div class="ev-item personal" onclick="editEvent('${e.id}')"><div class="ev-dot personal"></div><div class="ev-body"><div class="ev-title">${esc(e.title)}</div><div class="ev-meta">${e.time?'⏰ '+e.time:'종일'}</div></div><span class="ev-status" style="color:var(--muted);font-size:10px">개인</span></div>`});
+    html+=`</div><button class="btn sm" style="margin-top:8px" onclick="addEvent('${dt}')">+ Add Event</button>`;
+  }
+
+  document.getElementById('listContent').innerHTML=html;
+}
+
+function calNav(dir){calM+=dir;if(calM<0){calM=11;calY--}if(calM>11){calM=0;calY++}SEL=null;render()}
+function calGoToday(){const n=new Date();calY=n.getFullYear();calM=n.getMonth();SEL=null;render()}
+function calClick(d){SEL=d;render()}
+
+function addEvent(date){
+  const title=prompt('이벤트 제목:');if(!title)return;
+  const d=date||prompt('날짜 (YYYY-MM-DD):',new Date().toISOString().slice(0,10));if(!d)return;
+  const time=prompt('시간 (선택, HH:MM):','');
+  const id='ev'+Date.now();
+  EV[id]={title,date:d,time:time||'',created:now()};
+  s();render();updateDetail();toast('Event added');
+}
+function editEvent(id){
+  const e=EV[id];if(!e)return;
+  const act=prompt('Edit / Delete?\n\n제목: '+e.title+'\n날짜: '+e.date+'\n시간: '+(e.time||'없음')+'\n\n"d" 입력 = 삭제, 새 제목 입력 = 수정');
+  if(act===null)return;
+  if(act.toLowerCase()==='d'){delete EV[id];s();render();toast('Deleted');return}
+  if(act.trim()){EV[id].title=act.trim();s();render();toast('Updated')}
 }
 
 function sbdg(t){return sbdgSpan(t).outerHTML}
