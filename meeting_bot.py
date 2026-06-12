@@ -124,7 +124,8 @@ def get_next_task_id(wbs: dict) -> str:
     return f"T{next_id:03d}"
 
 def add_task(title: str, assignee: str, due_date: str = "", priority: str = "Medium",
-             meeting_id: str = "", created_by: str = "", collaborators: list = None) -> dict:
+             meeting_id: str = "", created_by: str = "", collaborators: list = None,
+             description: str = "", tags: list = None, parent_id: str = None) -> dict:
     wbs = load_wbs()
     task_id = get_next_task_id(wbs)
     task = {
@@ -138,7 +139,10 @@ def add_task(title: str, assignee: str, due_date: str = "", priority: str = "Med
         "created_by": created_by,
         "collaborators": collaborators or [],
         "comments": [],
-        "created_at": datetime.now().isoformat()
+        "created_at": datetime.now().isoformat(),
+        "description": description,
+        "tags": tags or [],
+        "parent_id": parent_id
     }
     wbs["tasks"].append(task)
     save_wbs(wbs)

@@ -248,6 +248,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 /* ── Progress ── */
 .prog-bar{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);font-weight:600}
 .prog-bar .pg-done{color:var(--green)}.prog-bar .pg-total{color:var(--muted2)}
+/* ── Tags ── */
+.tag-chip{display:inline-flex;align-items:center;gap:2px;font-size:9px;padding:1px 6px;border-radius:99px;background:var(--surface3);color:var(--accent2);font-weight:600;margin-right:3px;white-space:nowrap;cursor:pointer}
+.tag-chip:hover{background:var(--accent);color:#fff}
+.tag-chip.active{background:var(--accent);color:#fff}
+/* ── Sub-tasks ── */
+.subtask td:first-child{padding-left:32px}
+.subtask .tid::before{content:'└ ';color:var(--muted2)}
+.subtask .tid{font-size:10px}
+/* ── Description markdown ── */
+.desc-md{font-size:12px;color:var(--text2);line-height:1.6;padding:8px 0;word-break:break-word}
+.desc-md p{margin:4px 0}
+.desc-md code{font-family:var(--mono);font-size:11px;background:var(--surface3);padding:1px 4px;border-radius:3px}
+.desc-md a{color:var(--accent2)}
+.desc-md ul,.desc-md ol{padding-left:18px;margin:4px 0}
+.desc-md blockquote{border-left:2px solid var(--accent);padding-left:10px;color:var(--muted);margin:4px 0}
 </style>
 </head>
 <body>
@@ -282,6 +297,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
     <label>Collaborators</label><input id="aCollab" placeholder="@username1, @username2 (선택)">
     <label>Due Date</label><input id="aDue" type="date">
     <label>Priority</label><select id="aPri"><option>Medium</option><option>High</option><option>Low</option></select>
+    <label>Parent Task</label><select id="aParent"><option value="">(None — top level)</option></select>
+    <label>Description</label><textarea id="aDesc" placeholder="Markdown supported..." style="width:100%;font-family:var(--font);font-size:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 10px;outline:none;resize:vertical;min-height:60px"></textarea>
+    <label>Tags</label><input id="aTags" placeholder="comma, separated (e.g. urgent, design)">
     <div class="btns"><button class="btn" onclick="mClose('addModal')">Cancel</button><button class="btn primary" onclick="addTask()">Create</button></div>
   </div>
 </div>
@@ -298,6 +316,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 const USER_ID = new URLSearchParams(location.search).get('user') || '';
 let T=[],M=[],MH={},ED={},EV={},calY,calM,PAGE=USER_ID?'my-tasks':'team-tasks-all',SEL=null,USERS={},CP_ITEMS=[];
 var SORT_BY='id',SORT_DIR='asc',Q='',FILTER_STATUS='',FILTER_PRIORITY='',KANBAN=false;
+var FILTER_TAG='';
 const SKEY='t5',EKEY='ev1',ST=['대기중','진행중','완료','보류'];
 const STL={대기중:'Waiting',진행중:'In Progress',완료:'Done',보류:'Hold'};
 const PRI={높음:'High',보통:'Medium',낮음:'Low'};
@@ -332,6 +351,7 @@ const MENU=[
 function l(){try{ED=JSON.parse(localStorage.getItem(SKEY)||'{}');EV=JSON.parse(localStorage.getItem(EKEY)||'{}');}catch(e){ED={};EV={}}}
 function s(){localStorage.setItem(SKEY,JSON.stringify(ED));localStorage.setItem(EKEY,JSON.stringify(EV))}
 function ap(t){const e=ED[t.id]||{};return{...t,...e,comments:[...(t.comments||[]),...(e._ca||[])],_h:[...(t._h||[]),...(e._ha||[])],_fa:[...(e._fa||[])]}}
+function allTags(){const s=new Set();T.forEach(t=>{(t.tags||[]).forEach(tg=>s.add(tg));const e=ED[t.id];if(e&&e.tags)e.tags.forEach(tg=>s.add(tg))});return[...s].sort()}
 
 async function boot(){
   l();
@@ -414,12 +434,14 @@ function renderTasks(){
   else if(PAGE==='tasks-done')list=all.filter(t=>t.status==='완료');
   else list=all;
   const lmap={'my-tasks':'My Tasks','team-tasks-all':'All Team Tasks','team-tasks-progress':'Team — In Progress','team-tasks-wait':'Team — Waiting','team-tasks-done':'Team — Done','tasks-all':'All Tasks','tasks-progress':'In Progress','tasks-wait':'Waiting','tasks-done':'Done'};
-  document.getElementById('listHeader').innerHTML=`<h3>${PAGE.startsWith('my-tasks')?'👤':PAGE.startsWith('team')?'👥':'📊'} ${lmap[PAGE]||'Tasks'}<span class="c">${list.length}</span></h3><div style="display:flex;align-items:center;gap:8px"><div class="vtg-group"><button class="vtg${KANBAN?'':' active'}" onclick="KANBAN=false;render()">📋 Table</button><button class="vtg${KANBAN?' active':''}" onclick="KANBAN=true;render()">📌 Board</button></div><input id="sq" style="font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:5px 10px;outline:none;width:130px" placeholder="Search..." value="${Q.replace(/\\"/g,'&quot;').replace(/</g,'&lt;')}" oninput="Q=this.value;render();"><select onchange="FILTER_STATUS=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_STATUS?'selected':''}>All Status</option>${ST.map(s=>`<option value="${s}" ${FILTER_STATUS===s?'selected':''}>${STL[s]}</option>`).join('')}</select><select onchange="FILTER_PRIORITY=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_PRIORITY?'selected':''}>All Priority</option>${['높음','보통','낮음'].map(p=>`<option value="${p}" ${FILTER_PRIORITY===p?'selected':''}>${PRI[p]}</option>`).join('')}</select><button class="btn primary" onclick="mShow('addModal')">+ New Task</button></div>`;
+  document.getElementById('listHeader').innerHTML=`<h3>${PAGE.startsWith('my-tasks')?'👤':PAGE.startsWith('team')?'👥':'📊'} ${lmap[PAGE]||'Tasks'}<span class="c">${list.length}</span></h3><div style="display:flex;align-items:center;gap:8px"><div class="vtg-group"><button class="vtg${KANBAN?'':' active'}" onclick="KANBAN=false;render()">📋 Table</button><button class="vtg${KANBAN?' active':''}" onclick="KANBAN=true;render()">📌 Board</button></div><input id="sq" style="font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:5px 10px;outline:none;width:130px" placeholder="Search..." value="${Q.replace(/\\\\"/g,'&quot;').replace(/</g,'&lt;')}" oninput="Q=this.value;render();"><select onchange="FILTER_STATUS=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_STATUS?'selected':''}>All Status</option>${ST.map(s=>`<option value="${s}" ${FILTER_STATUS===s?'selected':''}>${STL[s]}</option>`).join('')}</select><select onchange="FILTER_PRIORITY=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_PRIORITY?'selected':''}>All Priority</option>${['높음','보통','낮음'].map(p=>`<option value="${p}" ${FILTER_PRIORITY===p?'selected':''}>${PRI[p]}</option>`).join('')}</select><button class="btn primary" onclick="mShow('addModal')">+ New Task</button></div>`;
+  document.getElementById('listHeader').innerHTML=`<h3>${PAGE.startsWith('my-tasks')?'👤':PAGE.startsWith('team')?'👥':'📊'} ${lmap[PAGE]||'Tasks'}<span class="c">${list.length}</span></h3><div style="display:flex;align-items:center;gap:8px"><div class="vtg-group"><button class="vtg${KANBAN?'':' active'}" onclick="KANBAN=false;render()">📋 Table</button><button class="vtg${KANBAN?' active':''}" onclick="KANBAN=true;render()">📌 Board</button></div><input id="sq" style="font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:5px 10px;outline:none;width:130px" placeholder="Search..." value="${Q.replace(/\\\\"/g,'&quot;').replace(/</g,'&lt;')}" oninput="Q=this.value;render();"><select onchange="FILTER_STATUS=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_STATUS?'selected':''}>All Status</option>${ST.map(s=>`<option value="${s}" ${FILTER_STATUS===s?'selected':''}>${STL[s]}</option>`).join('')}</select><select onchange="FILTER_PRIORITY=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_PRIORITY?'selected':''}>All Priority</option>${['높음','보통','낮음'].map(p=>`<option value="${p}" ${FILTER_PRIORITY===p?'selected':''}>${PRI[p]}</option>`).join('')}</select><select onchange="FILTER_TAG=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_TAG?'selected':''}>All Tags</option>${allTags().map(tg=>`<option value="${tg}" ${FILTER_TAG===tg?'selected':''}>#${tg}</option>`).join('')}</select><button class="btn primary" onclick="mShow('addModal')">+ New Task</button></div>`;
   // Apply search
   if(Q){const q=Q.toLowerCase();list=list.filter(t=>t.id.toLowerCase().includes(q)||(t.title||'').toLowerCase().includes(q)||(t.assignee||'').toLowerCase().includes(q))}
   // Apply filters
   if(FILTER_STATUS)list=list.filter(t=>t.status===FILTER_STATUS);
   if(FILTER_PRIORITY)list=list.filter(t=>t.priority===FILTER_PRIORITY);
+  if(FILTER_TAG)list=list.filter(t=>(t.tags||[]).includes(FILTER_TAG));
   // Apply sort
   const sd=SORT_DIR==='asc'?1:-1;
   list.sort((a,b)=>{
@@ -433,26 +455,60 @@ function renderTasks(){
   if(KANBAN)renderTasksBoard(list);else renderTasksTable(list);
 }
 function renderTasksTable(list){
-  const th=(col,label,w)=>{const a=SORT_BY===col?(SORT_DIR==='asc'?' ▴':' ▾'):'';return`<th style="${w};cursor:pointer" onclick="SORT_BY='${col}';SORT_DIR=SORT_BY==='${col}'&&SORT_DIR==='asc'?'desc':'asc';render()">${label}${a}</th>`};
+  const th=(col,label,w)=>{
+    const a=SORT_BY===col?(SORT_DIR==='asc'?' ▴':' ▾'):'';
+    return `<th style="${w||''};cursor:pointer" onclick="SORT_BY='${col}';SORT_DIR=SORT_BY==='${col}'&&SORT_DIR==='asc'?'desc':'asc';render()">${label}${a}</th>`;
+  };
+  const topList=list.filter(t=>!t.parent_id||!list.some(p=>p.id===t.parent_id));
+  const allRows=[];
+  const added=new Set();
+  topList.forEach(t=>{
+    const mid=t.meeting_id||t.meeting_date,meet=mid?M.find(m=>m.id===mid):null;
+    const cmts=t.comments||[];
+    const doneCount=cmts.filter(c=>/완료|✓/.test(c.text||'')).length;
+    const prog=cmts.length?`<span class="prog-bar"><span class="pg-done">${doneCount}</span><span class="pg-total">/${cmts.length}</span></span>`:'-';
+    const isAdmin=USERS[t.created_by||'']?.role==='admin';
+    const childCount=list.filter(c=>c.parent_id===t.id).length;
+    const tags=(t.tags||[]).map(tg=>`<span class="tag-chip" onclick="event.stopPropagation();FILTER_TAG='${tg}';render()">#${esc(tg)}</span>`).join('');
+    const cls=[t.status==='완료'?'done':'',SEL===t.id?'sel':''].filter(Boolean).join(' ');
+    allRows.push(`<tr class="${cls}" onclick="selTask('${t.id}')">
+      <td class="tid">${t.id}${isAdmin?' 👑':''}${childCount?` <span style="font-size:9px;color:var(--muted)">+${childCount}</span>`:''}</td>
+      <td class="tt-c">${(t.collaborators||[]).length?'👥 ':''}${mid?'📋 ':''}${esc(t.title)}</td>
+      <td><span class="editable" onclick="event.stopPropagation();ie('${t.id}','assignee')">${esc(t.assignee)}</span></td>
+      <td class="hm">${meet?`<span class="mlink" onclick="event.stopPropagation();SEL=null;PAGE='meetings-all';selMeet('${meet.id}')">📋 ${(meet.date||meet.id).slice(0,16)}</span>`:'<span style="color:var(--muted2)">-</span>'}</td>
+      <td>${sbdg(t)}</td>
+      <td class="hm"><span class="editable" onclick="event.stopPropagation();ie('${t.id}','due_date')">${t.due_date||'-'}</span></td>
+      <td style="font-size:10px">${tags||'<span style="color:var(--muted2)">-</span>'}</td>
+      <td style="font-size:11px">${prog}</td></tr>`);
+    added.add(t.id);
+    list.filter(c=>c.parent_id===t.id).forEach(c=>{
+      const cmid=c.meeting_id||c.meeting_date,cmeet=cmid?M.find(m=>m.id===cmid):null;
+      const ccmts=c.comments||[];
+      const cdone=ccmts.filter(x=>/완료|✓/.test(x.text||'')).length;
+      const cprog=ccmts.length?`<span class="prog-bar"><span class="pg-done">${cdone}</span><span class="pg-total">/${ccmts.length}</span></span>`:'-';
+      const isAdmin2=USERS[c.created_by||'']?.role==='admin';
+      const ctags=(c.tags||[]).map(tg=>`<span class="tag-chip" onclick="event.stopPropagation();FILTER_TAG='${tg}';render()">#${esc(tg)}</span>`).join('');
+      const ccls=[c.status==='완료'?'done':'',SEL===c.id?'sel':''].filter(Boolean).join(' ');
+      allRows.push(`<tr class="subtask ${ccls}" onclick="selTask('${c.id}')">
+        <td class="tid">${c.id}${isAdmin2?' 👑':''}</td>
+        <td class="tt-c">${esc(c.title)}</td>
+        <td><span class="editable" onclick="event.stopPropagation();ie('${c.id}','assignee')">${esc(c.assignee)}</span></td>
+        <td class="hm">${cmeet?`<span class="mlink" onclick="event.stopPropagation();SEL=null;PAGE='meetings-all';selMeet('${cmeet.id}')">📋 ${(cmeet.date||cmeet.id).slice(0,16)}</span>`:'<span style="color:var(--muted2)">-</span>'}</td>
+        <td>${sbdg(c)}</td>
+        <td class="hm"><span class="editable" onclick="event.stopPropagation();ie('${c.id}','due_date')">${c.due_date||'-'}</span></td>
+        <td style="font-size:10px">${ctags||'<span style="color:var(--muted2)">-</span>'}</td>
+        <td style="font-size:11px">${cprog}</td></tr>`);
+      added.add(c.id);
+    });
+  });
   document.getElementById('listContent').innerHTML=`<table class="table"><thead><tr>
-    ${th('id','ID','width:55px')+th('title','Title','width:170px')+th('assignee','Assignee','width:70px')}
-    <th class="hm" style="width:130px">Meeting</th>
+    ${th('id','ID','width:55px')+th('title','Title','width:140px')+th('assignee','Assignee','width:65px')}
+    <th class="hm" style="width:110px">Meeting</th>
     ${th('status','Status','width:80px')+th('due','Due','width:75px')}
+    <th style="width:80px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase">Tags</th>
     <th style="width:55px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase">Prog</th></tr></thead><tbody>
-    ${list.length===0?`<tr><td colspan="7"><div class="empty"><div class="ei">📭</div><p>No tasks</p></div></td></tr>`
-    :list.map(t=>{
-      const mid=t.meeting_id||t.meeting_date,meet=mid?M.find(m=>m.id===mid):null;
-      const cmts=t.comments||[];
-      const doneCount=cmts.filter(c=>/완료|✓/.test(c.text||'')).length;
-      const prog=cmts.length?`<span class="prog-bar"><span class="pg-done">${doneCount}</span><span class="pg-total">/${cmts.length}</span></span>`:'-';
-      const isAdmin=USERS[t.created_by||'']?.role==='admin';
-      return`<tr class="${t.status==='완료'?'done':''}${SEL===t.id?' sel':''}" onclick="selTask('${t.id}')">
-        <td class="tid">${t.id}${isAdmin?' 👑':''}</td><td class="tt-c">${(t.collaborators||[]).length?'👥 ':''}${mid?'📋 ':''}${esc(t.title)}</td>
-        <td><span class="editable" onclick="event.stopPropagation();ie('${t.id}','assignee')">${esc(t.assignee)}</span></td>
-        <td class="hm">${meet?`<span class="mlink" onclick="event.stopPropagation();SEL=null;PAGE='meetings-all';selMeet('${meet.id}')">📋 ${(meet.date||meet.id).slice(0,16)}</span>`:'<span style="color:var(--muted2)">-</span>'}</td>
-        <td>${sbdg(t)}</td>
-        <td class="hm"><span class="editable" onclick="event.stopPropagation();ie('${t.id}','due_date')">${t.due_date||'-'}</span></td>
-        <td style="font-size:11px">${prog}</td></tr>`}).join('')}</tbody></table>`;
+    ${allRows.length===0?`<tr><td colspan="8"><div class="empty"><div class="ei">📭</div><p>No tasks</p></div></td></tr>`
+    :allRows.join('')}</tbody></table>`;
 }
 function renderTasksBoard(list){
   const cols={'대기중':[],'진행중':[],'완료':[],'보류':[]};
@@ -467,7 +523,7 @@ function renderTasksBoard(list){
     else tasks.forEach(t=>{
       const isAdmin=USERS[t.created_by||'']?.role==='admin'||USERS[USER_ID]?.role==='admin';
       html+=`<div class="kanban-card${SEL===t.id?' sel':''}" onclick="selTask('${t.id}')">
-        <div class="kc-id">${t.id}${isAdmin?' <span style="color:#f0c040" title="Admin">👑</span>':''}</div>
+        <div class="kc-id">${t.id}${isAdmin?' <span style="color:#f0c040" title="Admin">👑</span>':''}${(t.tags||[]).length?` <span style="font-size:9px;color:var(--muted)">${t.tags.map(tg=>'#'+tg).join(' ')}</span>`:''}</div>
         <div class="kc-title">${esc(t.title)}</div>
         <div class="kc-meta">
           <span class="kc-assignee">👤 ${esc(t.assignee)}</span>
@@ -497,15 +553,15 @@ function renderBoardPage(){
     if(tasks.length===0)html+=`<div style=\"color:var(--muted2);font-size:11px;text-align:center;padding:20px 0\">Empty</div>`;
     else tasks.forEach(t=>{
       const isAdmin=USERS[t.created_by||'']?.role==='admin'||USERS[USER_ID]?.role==='admin';
-      html+=`<div class=\"kanban-card${SEL===t.id?' sel':''}\" onclick=\"selTask('${t.id}')\">
-        <div class=\"kc-id\">${t.id}${isAdmin?' <span style=\"color:#f0c040\" title=\"Admin\">👑</span>':''}</div>
-        <div class=\"kc-title\">${esc(t.title)}</div>
-        <div class=\"kc-meta\">
-          <span class=\"kc-assignee\">👤 ${esc(t.assignee)}</span>
+      html+=`<div class="kanban-card${SEL===t.id?' sel':''}" onclick="selTask('${t.id}')">
+        <div class="kc-id">${t.id}${isAdmin?' <span style="color:#f0c040" title="Admin">👑</span>':''}${(t.tags||[]).length?` <span style="font-size:9px;color:var(--muted)">${t.tags.map(tg=>'#'+tg).join(' ')}</span>`:''}</div>
+        <div class="kc-title">${esc(t.title)}</div>
+        <div class="kc-meta">
+          <span class="kc-assignee">👤 ${esc(t.assignee)}</span>
           ${t.priority?`<span>${pb(t.priority)}</span>`:''}
-          ${t.due_date&&t.due_date!=='N/A'?`<span class=\"kc-due\">📅 ${t.due_date}</span>`:''}
+          ${t.due_date&&t.due_date!=='N/A'?`<span class="kc-due">📅 ${t.due_date}</span>`:''}
         </div>
-        <div style=\"margin-top:6px\">${boardStatusDropdown(t.id,t.status)}</div>
+        <div style="margin-top:6px">${boardStatusDropdown(t.id,t.status)}</div>
       </div>`;
     });
     html+=`</div></div>`;
@@ -677,15 +733,25 @@ function renderTD(t){
   const cmts=t.comments||[];
   const doneCount=cmts.filter(c=>/완료|✓/.test(c.text||'')).length;
   const progHtml=cmts.length?`<div class="df"><span class="fl">Progress</span><span class="fv"><span class="prog-bar"><span class="pg-done">${doneCount}</span><span class="pg-total">/${cmts.length}</span></span></span></div>`:'';
+  const tagsHtml=(t.tags||[]).length?`<div class="df"><span class="fl">Tags</span><span class="fv" style="display:flex;gap:4px;flex-wrap:wrap;cursor:default">${t.tags.map(tg=>`<span class="tag-chip" onclick="event.stopPropagation();FILTER_TAG='${tg}';render()">#${esc(tg)}</span>`).join('')}</span></div>`:'';
+  const descHtml=t.description?`<h5>Description</h5><div class="desc-md">${hm(t.description)}</div>`:'';
+  const parent=t.parent_id?T.find(x=>x.id===t.parent_id):null;
+  const parentHtml=parent?`<div class="df"><span class="fl">Parent</span><span class="fv" style="color:var(--accent2);cursor:pointer" onclick="selTask('${parent.id}')">📌 ${esc(parent.title)}</span></div>`:'';
+  const childTasks=T.filter(x=>x.parent_id===t.id);
+  const subtaskHtml=childTasks.length?`<h5>Sub-tasks (${childTasks.length})</h5>${childTasks.map(c=>`<div class="lmeet" onclick="selTask('${c.id}')"><span class="tid">${c.id}</span> ${esc(c.title)}<span style="margin-left:auto;font-size:10px">${STL[c.status]}</span></div>`).join('')}`:'';
   document.getElementById('dBody').innerHTML=`
     <h5>Info</h5>
     <div class="df"><span class="fl">Title</span><span class="fv" onclick="edf('title')">${esc(t.title)}</span></div>
+    ${descHtml}
     <div class="df"><span class="fl">Assignee</span><span class="fv" onclick="edf('assignee')">${esc(t.assignee)}</span></div>
     ${(t.collaborators||[]).length?`<div class="df"><span class="fl">Shared</span><span class="fv" style="color:var(--accent2)">👥 ${t.collaborators.map(c=>'@'+c).join(', ')}</span></div>`:''}
+    ${tagsHtml}
+    ${parentHtml}
     <div class="df"><span class="fl">Due</span><span class="fv" onclick="edf('due_date')">${t.due_date||'N/A'}</span></div>
     <div class="df"><span class="fl">Priority</span><span class="fv" onclick="edf('priority')">${pb(t.priority)}</span></div>
     <div class="df"><span class="fl">Status</span><select onchange="uf('status',this.value)">${ST.map(s=>`<option value="${s}" ${t.status===s?'selected':''}>${STL[s]}</option>`).join('')}</select></div>
     ${progHtml}
+    ${subtaskHtml}
     ${meet?`<h5>Source Meeting</h5><div class="lmeet" onclick="SEL=null;PAGE='meetings-all';selMeet('${meet.id}')">📋 <strong>${esc(meet.date||meet.id.replace(/_/g,' '))}</strong><span style="color:var(--muted);font-size:11px">${esc(meet.tp||'')}</span><span style="margin-left:auto;font-size:10px;color:var(--accent)">→ Meeting</span></div>`:''}
     <h5>History</h5><div class="tl">${h.map(e=>`<div class="tl-i"><div class="tl-t">${e.t}</div><div>${e.a}</div>${e.n?`<div class="tl-n">${esc(e.n)}</div>`:''}</div>`).join('')}</div>
     <h5>Comments</h5><div class="tl">${cmts.length?cmts.map(c=>`<div class="tl-i"><div class="tl-t">${c.timestamp||''}</div><div><strong>@${esc(c.author||'unknown')}</strong>: ${hm(c.text||'')}</div>${c.mentions&&c.mentions.length?`<div class="tl-n" style="color:var(--accent)">👥 ${c.mentions.map(m=>'@'+m).join(', ')}</div>`:''}</div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0">No comments</div>'}</div>
@@ -734,11 +800,15 @@ function hm(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').r
 function addFilePath(){if(!SEL)return;const path=prompt('Enter file path:');if(!path||!path.trim())return;const ci=document.getElementById('ci');if(ci)ci.value=(ci.value?ci.value+' ':'')+'📎 '+path.trim()}
 function addTask(){
   const title=document.getElementById('aTitle').value.trim();if(!title)return;
+  const desc=document.getElementById('aDesc').value.trim();
+  const tagsRaw=document.getElementById('aTags').value.trim();
+  const tags=tagsRaw?tagsRaw.split(/[,，]+/).map(t=>t.trim()).filter(t=>t):[];
+  const parentId=document.getElementById('aParent').value||null;
   const collabRaw=document.getElementById('aCollab').value.trim();
   const collaborators=collabRaw?collabRaw.split(/[,，\s]+/).filter(c=>c).map(c=>c.replace(/^@/,'')):[];
   const ids=T.map(t=>parseInt(t.id.slice(1))).filter(n=>!isNaN(n));const nid=`T${String((Math.max(0,...ids)+1)).padStart(3,'0')}`;
-  ED[nid]={title,assignee:document.getElementById('aAssignee').value.trim()||'조한표',collaborators,due_date:document.getElementById('aDue').value||'N/A',priority:document.getElementById('aPri').value,status:'대기중',created_by:USER_ID,_ha:[{t:now(),a:'Created (web)',n:collaborators.length?'👥 '+collaborators.join(', '):''}],_new:true};
-  T.push({id:nid,title:'',assignee:'',collaborators:[],due_date:'',priority:'보통',status:'대기중',meeting_id:'',created_by:USER_ID,_h:[]});
+  ED[nid]={title,description:desc,tags,parent_id:parentId,assignee:document.getElementById('aAssignee').value.trim()||'조한표',collaborators,due_date:document.getElementById('aDue').value||'N/A',priority:document.getElementById('aPri').value,status:'대기중',created_by:USER_ID,_ha:[{t:now(),a:'Created (web)',n:collaborators.length?'👥 '+collaborators.join(', '):''}],_new:true};
+  T.push({id:nid,title:'',description:'',tags:[],parent_id:null,assignee:'',collaborators:[],due_date:'',priority:'보통',status:'대기중',meeting_id:'',created_by:USER_ID,_h:[]});
   s();mClose('addModal');SEL=nid;PAGE='my-tasks';render();updateDetail();toast('Task created'+(collaborators.length?' 👥':''));
 }
 function pb(p){const m={높음:'pri-high',High:'pri-high',보통:'pri-mid',Medium:'pri-mid',낮음:'pri-low',Low:'pri-low'};return`<span class="pribdg ${m[p]||'pri-mid'}">${p||'Medium'}</span>`}
@@ -747,8 +817,8 @@ function pb(p){const m={높음:'pri-high',High:'pri-high',보통:'pri-mid',Mediu
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function now(){return new Date().toLocaleString('ko-KR')}
 function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),1800)}
-function mShow(id){document.getElementById(id).classList.add('show')}
-function mClose(id){document.getElementById(id).classList.remove('show');if(id==='addModal')document.getElementById('aTitle').value=document.getElementById('aAssignee').value=document.getElementById('aCollab').value=document.getElementById('aDue').value=''}
+function mShow(id){if(id==='addModal'){const sel=document.getElementById('aParent');sel.innerHTML='<option value="">(None — top level)</option>'+T.map(t=>`<option value="${t.id}">${t.id} — ${esc(t.title)}</option>`).join('')}document.getElementById(id).classList.add('show')}
+function mClose(id){document.getElementById(id).classList.remove('show');if(id==='addModal'){document.getElementById('aTitle').value=document.getElementById('aAssignee').value=document.getElementById('aCollab').value=document.getElementById('aDue').value=document.getElementById('aDesc').value=document.getElementById('aTags').value='';document.getElementById('aParent').innerHTML='<option value="">(None — top level)</option>'}}
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){cpClose();closeDetail();mClose('addModal')}
   if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();cpOpen()}
