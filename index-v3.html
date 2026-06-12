@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tasks — 회의록 과제 관리</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#090c10;--surface:#0d1117;--surface2:#161b22;--surface3:#21262d;
+  --border:#30363d;--border2:#21262d;
+  --text:#f0f6fc;--text2:#c9d1d9;--muted:#8b949e;--muted2:#484f58;
+  --accent:#58a6ff;--accent2:#79c0ff;
+  --green:#3fb950;--orange:#d2991d;--red:#f85149;--purple:#bc8cff;--pink:#db61a2;
+  --radius:8px;--radius-sm:6px;--radius-lg:12px;
+  --sw:300px;--dw:420px;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;
+  --mono:'SF Mono','JetBrains Mono','Cascadia Code',monospace;
+  --transition:0.18s cubic-bezier(0.4,0,0.2,1);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;
+  display:flex}
+
+/* ── Sidebar ── */
+#sidebar{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;position:relative;z-index:10}
+.sb-header{padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sb-header h2{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-.2px}
+.sb-header .sub{font-size:11px;color:var(--muted);margin-top:2px}
+.sb-stats{display:flex;gap:8px;padding:14px 20px;border-bottom:1px solid var(--border2);flex-shrink:0}
+.sb-stat{flex:1;text-align:center}
+.sb-stat .n{font-size:18px;font-weight:800;letter-spacing:-.5px}
+.sb-stat .l{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:1px}
+.sb-filters{padding:10px 20px 6px;flex-shrink:0;display:flex;gap:4px;flex-wrap:wrap}
+.sb-f{font-size:10px;padding:3px 10px;border-radius:99px;border:1px solid var(--border2);background:transparent;
+  color:var(--muted);cursor:pointer;transition:var(--transition);font-weight:500}
+.sb-f:hover{color:var(--text2);border-color:var(--muted2)}
+.sb-f.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.sb-list{flex:1;overflow-y:auto;padding:6px 12px 16px}
+.task-item{padding:10px 12px;border-radius:var(--radius);cursor:pointer;transition:var(--transition);
+  margin-bottom:2px;position:relative;border:1px solid transparent}
+.task-item:hover{background:var(--surface2);border-color:var(--border2)}
+.task-item.active{background:var(--surface2);border-color:var(--accent)}
+.task-item .tid{font-family:var(--mono);font-size:10px;color:var(--muted2)}
+.task-item .title{font-size:13px;font-weight:500;margin-top:2px;line-height:1.4}
+.task-item .meta{font-size:10px;color:var(--muted);margin-top:3px;display:flex;gap:8px;align-items:center}
+.task-item .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.task-item:hover .tid{color:var(--accent2)}
+.d-empty{padding:40px 16px;text-align:center;color:var(--muted);font-size:12px}
+.sb-footer{padding:10px 20px;border-top:1px solid var(--border2);flex-shrink:0;font-size:10px;color:var(--muted);
+  display:flex;align-items:center;gap:6px}
+.sb-footer .live{width:5px;height:5px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── Main → split view ── */
+#main{flex:1;display:flex;overflow:hidden}
+#list-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#detail-panel{width:var(--dw);border-left:1px solid var(--border);background:var(--surface);
+  display:flex;flex-direction:column;overflow:hidden;transition:width var(--transition),opacity var(--transition);
+  opacity:1;flex-shrink:0}
+#detail-panel.collapsed{width:0;opacity:0;overflow:hidden;border-left:none}
+
+/* ── List header ── */
+.list-header{padding:20px 28px 14px;border-bottom:1px solid var(--border2);flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between}
+.list-header h3{font-size:15px;font-weight:700;letter-spacing:-.2px}
+.list-header .count{font-size:11px;color:var(--muted);margin-left:8px;font-weight:400}
+.btn{font-size:11px;font-weight:600;padding:6px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:var(--surface2);color:var(--text2);cursor:pointer;transition:var(--transition);display:inline-flex;
+  align-items:center;gap:5px}
+.btn:hover{background:var(--surface3);border-color:var(--muted2);color:var(--text)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent2);border-color:var(--accent2)}
+.btn.danger{color:var(--red)}
+.btn.sm{padding:3px 8px;font-size:10px}
+
+/* ── Table ── */
+.table-wrap{flex:1;overflow-y:auto;padding:0}
+.table{width:100%;border-collapse:collapse}
+.table th{position:sticky;top:0;background:var(--bg);font-size:10px;font-weight:600;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.8px;padding:10px 16px;text-align:left;
+  border-bottom:1px solid var(--border2);z-index:2;white-space:nowrap}
+.table td{padding:12px 16px;border-bottom:1px solid var(--border2);font-size:13px;vertical-align:middle}
+.table tr{cursor:pointer;transition:var(--transition)}
+.table tr:hover td{background:var(--surface2)}
+.table tr.selected td{background:var(--surface2)}
+.table tr.completed td{opacity:.5}
+.table tr.completed .tt{text-decoration:line-through}
+
+/* editable cells */
+.editable{position:relative;border-radius:4px;padding:2px 4px;margin:-2px -4px;cursor:pointer;transition:var(--transition)}
+.editable:hover{background:var(--surface3)}
+.editable.editing{padding:0;margin:0}
+.editable select,.editable input{font-family:var(--font);font-size:13px;background:var(--surface3);color:var(--text);
+  border:1px solid var(--accent);border-radius:4px;padding:4px 6px;outline:none;width:100%}
+.editable input{min-width:120px}
+
+/* status badges */
+.sbdg{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;
+  font-weight:600;white-space:nowrap;cursor:pointer;transition:var(--transition);border:1px solid transparent}
+.sbdg.wait{background:rgba(210,153,29,.12);color:var(--orange);border-color:rgba(210,153,29,.25)}
+.sbdg.progress{background:rgba(88,166,255,.12);color:var(--accent);border-color:rgba(88,166,255,.25)}
+.sbdg.done{background:rgba(63,185,80,.12);color:var(--green);border-color:rgba(63,185,80,.25)}
+.sbdg.hold{background:rgba(139,148,158,.12);color:var(--muted);border-color:rgba(139,148,158,.25)}
+.sbdg:hover{filter:brightness(1.3)}
+
+/* priority */
+.pribdg{font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px}
+.pri-high{background:rgba(248,81,73,.15);color:var(--red)}
+.pri-mid{background:rgba(210,153,29,.15);color:var(--orange)}
+.pri-low{background:rgba(139,148,158,.15);color:var(--muted)}
+
+/* ── Detail panel ── */
+.detail-header{padding:18px 22px;border-bottom:1px solid var(--border);flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between}
+.detail-header h4{font-size:14px;font-weight:600}
+.detail-close{width:28px;height:28px;border-radius:var(--radius-sm);border:1px solid var(--border2);
+  background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;
+  justify-content:center;font-size:16px;transition:var(--transition)}
+.detail-close:hover{background:var(--surface3);color:var(--text)}
+.detail-body{flex:1;overflow-y:auto;padding:20px 22px}
+.detail-body h5{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.8px;margin:20px 0 8px}
+.detail-body h5:first-child{margin-top:0}
+.detail-field{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);
+  padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;transition:var(--transition)}
+.detail-field:hover{border-color:var(--border)}
+.detail-field .flabel{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;
+  min-width:50px;flex-shrink:0}
+.detail-field .fvalue{flex:1;font-size:13px;cursor:pointer;padding:2px 4px;margin:-2px -4px;border-radius:3px;
+  transition:var(--transition)}
+.detail-field .fvalue:hover{background:var(--surface3)}
+.detail-field input,.detail-field select{font-family:var(--font);font-size:13px;background:var(--surface3);
+  color:var(--text);border:1px solid var(--accent);border-radius:4px;padding:5px 8px;outline:none;width:100%}
+.detail-field select{cursor:pointer}
+
+/* history timeline */
+.tl{position:relative;padding-left:14px;margin-top:8px}
+.tl::before{content:'';position:absolute;left:4px;top:2px;bottom:2px;width:1px;background:var(--border2)}
+.tl-item{position:relative;padding:4px 0 4px 16px;font-size:11px}
+.tl-item::before{content:'';position:absolute;left:-11px;top:8px;width:5px;height:5px;border-radius:50%;
+  background:var(--accent);border:1px solid var(--surface)}
+.tl-time{font-family:var(--mono);font-size:10px;color:var(--muted2)}
+.tl-action{color:var(--text2)}
+.tl-note{color:var(--muted);font-size:10px;margin-top:2px;line-height:1.5}
+
+/* note input */
+.note-input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);
+  color:var(--text);padding:10px 12px;font-family:var(--font);font-size:12px;resize:vertical;
+  min-height:60px;outline:none;transition:var(--transition)}
+.note-input:focus{border-color:var(--accent)}
+
+/* empty detail */
+.d-empty-state{padding:60px 20px;text-align:center;color:var(--muted)}
+.d-empty-state .icon{font-size:40px;margin-bottom:10px;opacity:.4}
+
+/* toast */
+#toast{position:fixed;bottom:20px;right:20px;background:var(--surface3);border:1px solid var(--border);
+  border-radius:var(--radius);padding:10px 18px;font-size:12px;color:var(--text);z-index:1000;
+  transform:translateY(80px);opacity:0;transition:var(--transition);pointer-events:none}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.saving{background:rgba(88,166,255,.15);border-color:var(--accent)}
+
+/* sync bar */
+#sync-bar{background:rgba(210,153,29,.1);border-bottom:1px solid rgba(210,153,29,.25);
+  padding:8px 28px;font-size:11px;color:var(--orange);display:none;align-items:center;gap:8px;flex-shrink:0}
+#sync-bar.show{display:flex}
+#sync-bar .btn{font-size:10px}
+
+/* modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;
+  align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:24px;width:400px;max-width:90vw;max-height:80vh;overflow-y:auto}
+.modal h4{font-size:15px;font-weight:700;margin-bottom:16px}
+.modal label{display:block;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.5px;margin-bottom:4px;margin-top:12px}
+.modal input,.modal select{width:100%;font-family:var(--font);font-size:13px;background:var(--surface2);
+  color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 10px;
+  outline:none;transition:var(--transition)}
+.modal input:focus,.modal select:focus{border-color:var(--accent)}
+.modal .btns{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+
+/* scrollbar */
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+
+@media(max-width:900px){
+  :root{--sw:0px;--dw:0px}
+  #sidebar{position:fixed;left:0;top:0;bottom:0;width:280px;transform:translateX(-100%);transition:transform var(--transition)}
+  #sidebar.open{transform:translateX(0)}
+  #detail-panel{position:fixed;right:0;top:0;bottom:0;width:100vw;z-index:20;border-left:none}
+  #detail-panel.collapsed{width:0}
+  #list-panel{padding:48px 0 0 0}
+  .list-header{padding:12px 16px}
+  .hm{display:none!important}
+  .table th:nth-child(4),.table td:nth-child(4){display:none}
+}
+
+/* ── Mobile hamburger ── */
+.menu-btn{display:none;position:fixed;top:12px;left:12px;z-index:30;width:32px;height:32px;
+  border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border);
+  cursor:pointer;align-items:center;justify-content:center;flex-direction:column;gap:3px}
+.menu-btn span{width:14px;height:1.5px;background:var(--text);border-radius:1px}
+@media(max-width:900px){.menu-btn{display:flex}}
+</style>
+</head>
+<body>
+
+<!-- Mobile menu -->
+<div class="menu-btn" id="menuBtn" onclick="toggleMenu()"><span></span><span></span><span></span></div>
+<div class="modal-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div class="sb-header">
+    <h2>📋 Tasks</h2>
+    <div class="sub">회의록 과제 관리</div>
+  </div>
+  <div class="sb-stats" id="sbStats"></div>
+  <div class="sb-filters" id="sbFilters">
+    <button class="sb-f active" onclick="setFilter('all',this)">전체</button>
+    <button class="sb-f" onclick="setFilter('진행중',this)">진행중</button>
+    <button class="sb-f" onclick="setFilter('대기중',this)">대기중</button>
+    <button class="sb-f" onclick="setFilter('완료',this)">완료</button>
+  </div>
+  <div class="sb-list" id="sbList"></div>
+  <div class="sb-footer">
+    <span class="live"></span> Hermes 연결됨
+  </div>
+</nav>
+
+<!-- Main -->
+<div id="main">
+  <div id="list-panel">
+    <div id="sync-bar">
+      ⚠ 변경사항이 서버와 동기화되지 않았습니다.
+      <button class="btn sm primary" onclick="showSync()">동기화</button>
+    </div>
+    <div class="list-header">
+      <div><h3 id="listTitle">전체 과제<span class="count" id="listCount"></span></h3></div>
+      <button class="btn primary" onclick="showAddModal()">+ 새 과제</button>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr>
+          <th style="width:60px">ID</th>
+          <th>과제명</th>
+          <th style="width:80px">담당자</th>
+          <th class="hm" style="width:90px">마감일</th>
+          <th style="width:90px">상태</th>
+        </tr></thead>
+        <tbody id="taskTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="detail-panel" class="collapsed">
+    <div class="detail-header">
+      <h4 id="detailTitle">과제 상세</h4>
+      <button class="detail-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Add modal -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <h4>➕ 새 과제</h4>
+    <label>과제명</label><input id="addTitle" placeholder="과제 제목">
+    <label>담당자</label><input id="addAssignee" placeholder="예: 홍길동">
+    <label>목표 완료일</label><input id="addDue" type="date">
+    <label>우선순위</label>
+    <select id="addPriority"><option value="보통">보통</option><option value="높음">높음</option><option value="낮음">낮음</option></select>
+    <div class="btns">
+      <button class="btn" onclick="closeAddModal()">취소</button>
+      <button class="btn primary" onclick="addTask()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sync modal -->
+<div class="modal-overlay" id="syncModal">
+  <div class="modal">
+    <h4>🔄 변경사항 동기화</h4>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px">복사해서 회의록 봇에게 전송하세요</p>
+    <textarea id="syncCmds" readonly style="width:100%;height:120px;background:var(--surface2);color:var(--text);
+      border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px;font-family:var(--mono);
+      font-size:11px;resize:none;outline:none"></textarea>
+    <div class="btns">
+      <button class="btn" onclick="closeSyncModal()">닫기</button>
+      <button class="btn primary" onclick="copySync()">📋 복사</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──
+let TASKS = [];          // all tasks (merged: wbs.json + localStorage overrides)
+let EDITS = {};          // localStorage edits: { T001: { status:'완료', ... } }
+let FILTER = 'all';
+let SELECTED = null;
+
+const SKEY = 'meeting-edits';
+const STATUSES = ['대기중','진행중','완료','보류'];
+const PRIORITIES = ['높음','보통','낮음'];
+
+function loadEdits() {
+  try { EDITS = JSON.parse(localStorage.getItem(SKEY) || '{}'); } catch(e) { EDITS = {}; }
+}
+function saveEdits() {
+  localStorage.setItem(SKEY, JSON.stringify(EDITS));
+  renderAll();
+  updateSyncBar();
+}
+function applyEdits(t) {
+  const e = EDITS[t.id] || {};
+  return { ...t, ...e, _history: [...(t._history||[]), ...(e._history_added||[])] };
+}
+
+function hasEdits() {
+  return Object.keys(EDITS).length > 0;
+}
+
+// ── Data load ──
+async function boot() {
+  loadEdits();
+  try {
+    const r = await fetch('wbs.json?t=' + Date.now());
+    const wbs = await r.json();
+    TASKS = (wbs.tasks || []).map(t => ({
+      ...t,
+      _history: [{ time: t.meeting_date||'?', action: '등록', note: `회의에서 생성됨` }]
+    }));
+  } catch(e) {
+    TASKS = [];
+  }
+  renderAll();
+  updateSyncBar();
+}
+
+function getFiltered() {
+  let tasks = TASKS.map(applyEdits);
+  if (FILTER !== 'all') tasks = tasks.filter(t => t.status === FILTER);
+  return tasks;
+}
+
+function getStats() {
+  const all = TASKS.map(applyEdits);
+  return {
+    total: all.length,
+    done: all.filter(t => t.status==='완료').length,
+    progress: all.filter(t => t.status==='진행중').length,
+    wait: all.filter(t => t.status==='대기중').length,
+  };
+}
+
+// ── Render ──
+function renderAll() {
+  renderSidebar();
+  renderTable();
+  if (SELECTED) renderDetail();
+}
+
+function renderSidebar() {
+  const s = getStats();
+  document.getElementById('sbStats').innerHTML = `
+    <div class="sb-stat"><div class="n" style="color:var(--text2)">${s.total}</div><div class="l">전체</div></div>
+    <div class="sb-stat"><div class="n" style="color:var(--accent)">${s.progress}</div><div class="l">진행중</div></div>
+    <div class="sb-stat"><div class="n" style="color:var(--orange)">${s.wait}</div><div class="l">대기중</div></div>
+    <div class="sb-stat"><div class="n" style="color:var(--green)">${s.done}</div><div class="l">완료</div></div>`;
+
+  const tasks = getFiltered().slice(0, 30);
+  const colors = { 진행중: 'var(--accent)', 대기중: 'var(--orange)', 완료: 'var(--green)', 보류: 'var(--muted)' };
+  document.getElementById('sbList').innerHTML = tasks.length === 0
+    ? '<div class="d-empty">📭 없음</div>'
+    : tasks.map(t => `
+      <div class="task-item${SELECTED===t.id?' active':''}" onclick="selectTask('${t.id}')">
+        <div class="tid">${t.id}</div>
+        <div class="title">${esc(t.title)}</div>
+        <div class="meta">
+          <span class="dot" style="background:${colors[t.status]||'var(--muted)'}"></span>
+          ${t.status} · ${esc(t.assignee)}<span class="hm"> · ${t.due_date||'미정'}</span>
+        </div>
+      </div>`).join('');
+}
+
+function renderTable() {
+  const tasks = getFiltered();
+  document.getElementById('listTitle').innerHTML = 
+    (FILTER==='all'?'전체 과제':FILTER) + `<span class="count">${tasks.length}건</span>`;
+  document.getElementById('taskTable').innerHTML = tasks.length === 0
+    ? `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--muted)">과제 없음</td></tr>`
+    : tasks.map(t => {
+      const cls = t.status==='완료'?'completed':'';
+      const sel = SELECTED===t.id?'selected':'';
+      return `<tr class="${cls} ${sel}" onclick="selectTask('${t.id}')">
+        <td><span style="font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:600">${t.id}</span></td>
+        <td class="tt">${esc(t.title)}</td>
+        <td><span class="editable" onclick="event.stopPropagation();editInline('${t.id}','assignee')" title="클릭해서 변경">${esc(t.assignee)}</span></td>
+        <td class="hm"><span class="editable" onclick="event.stopPropagation();editInline('${t.id}','due_date')" title="클릭해서 변경">${t.due_date||'미정'}</span></td>
+        <td>${statusDropdown(t)}</td>
+      </tr>`;
+    }).join('');
+}
+
+function statusDropdown(t) {
+  const labels = { 대기중:'대기', 진행중:'진행', 완료:'완료', 보류:'보류' };
+  const cls = { 대기중:'wait', 진행중:'progress', 완료:'done', 보류:'hold' };
+  return `<span class="sbdg ${cls[t.status]||'wait'}" onclick="event.stopPropagation();cycleStatus('${t.id}')" title="클릭해서 상태 변경">
+    ${labels[t.status]||t.status}
+  </span>`;
+}
+
+// ── Select / Detail ──
+function selectTask(id) {
+  SELECTED = id;
+  renderAll();
+  document.getElementById('detail-panel').classList.remove('collapsed');
+  renderDetail();
+  if (window.innerWidth <= 900) toggleMenu(false);
+}
+
+function closeDetail() {
+  SELECTED = null;
+  document.getElementById('detail-panel').classList.add('collapsed');
+  renderAll();
+}
+
+function renderDetail() {
+  if (!SELECTED) return;
+  const t = applyEdits(TASKS.find(t => t.id === SELECTED));
+  if (!t) return;
+  document.getElementById('detailTitle').textContent = t.id;
+
+  const history = t._history || [];
+  document.getElementById('detailBody').innerHTML = `
+    <h5>기본 정보</h5>
+    <div class="detail-field">
+      <span class="flabel">제목</span>
+      <span class="fvalue" onclick="editField('title')">${esc(t.title)}</span>
+    </div>
+    <div class="detail-field">
+      <span class="flabel">담당자</span>
+      <span class="fvalue" onclick="editField('assignee')">${esc(t.assignee)}</span>
+    </div>
+    <div class="detail-field">
+      <span class="flabel">마감일</span>
+      <span class="fvalue" onclick="editField('due_date')">${t.due_date||'미정'}</span>
+    </div>
+    <div class="detail-field">
+      <span class="flabel">우선순위</span>
+      <span class="fvalue" onclick="editField('priority')">${pBdg(t.priority)}</span>
+    </div>
+    <div class="detail-field">
+      <span class="flabel">상태</span>
+      <select onchange="updateField('status',this.value)" style="flex:1">
+        ${STATUSES.map(s => `<option value="${s}" ${t.status===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+
+    ${t.meeting_id || t.meeting_date ? `
+    <h5>출처 회의</h5>
+    <div class="detail-field">
+      <span class="flabel">회의록</span>
+      <span class="fvalue" onclick="window.open('${t.meeting_id||t.meeting_date}.html')">📋 ${(t.meeting_id||t.meeting_date||'').replace(/_/g,' ')}</span>
+    </div>` : ''}
+
+    <h5>진행 과정 (히스토리)</h5>
+    <div class="tl">
+      ${history.map(h => `
+        <div class="tl-item">
+          <div class="tl-time">${h.time}</div>
+          <div class="tl-action">${h.action}</div>
+          ${h.note ? `<div class="tl-note">${esc(h.note)}</div>` : ''}
+        </div>
+      `).join('')}
+    </div>
+
+    <h5>과정 노트 추가</h5>
+    <textarea class="note-input" id="noteInput" placeholder="진행 상황이나 특이사항을 기록하세요..."></textarea>
+    <div style="margin-top:8px;display:flex;gap:8px">
+      <button class="btn sm primary" onclick="addNote()">노트 추가</button>
+      <button class="btn sm danger" onclick="deleteTask('${t.id}')">과제 삭제</button>
+    </div>`;
+}
+
+// ── Actions ──
+function cycleStatus(id) {
+  const t = applyEdits(TASKS.find(t => t.id === id));
+  const idx = STATUSES.indexOf(t.status);
+  const next = STATUSES[(idx + 1) % STATUSES.length];
+  updateField('status', next);
+}
+
+function updateField(field, value) {
+  if (!SELECTED) return;
+  const edits = EDITS[SELECTED] || {};
+  const old = applyEdits(TASKS.find(t => t.id === SELECTED));
+  
+  if (field === 'status' && old.status !== value) {
+    edits[field] = value;
+    edits._history_added = [...(edits._history_added||[]), {
+      time: new Date().toLocaleString('ko-KR'), action: `상태 → ${value}`, note: ''
+    }];
+    toast('✅ 상태 변경됨');
+  } else if (old[field] !== value) {
+    edits[field] = value;
+    edits._history_added = [...(edits._history_added||[]), {
+      time: new Date().toLocaleString('ko-KR'), action: `${fieldLabel(field)} → ${value}`, note: ''
+    }];
+    toast('✅ 저장됨');
+  }
+  
+  EDITS[SELECTED] = edits;
+  saveEdits();
+}
+
+function fieldLabel(f) {
+  return { title:'제목', assignee:'담당자', due_date:'마감일', priority:'우선순위', status:'상태' }[f]||f;
+}
+
+function editField(field) {
+  const t = applyEdits(TASKS.find(t => t.id === SELECTED));
+  const val = t[field] || '';
+  
+  let input;
+  if (field === 'status') {
+    input = `<select onchange="updateField('status',this.value);renderDetail()" style="width:100%">
+      ${STATUSES.map(s => `<option value="${s}" ${val===s?'selected':''}>${s}</option>`).join('')}
+    </select>`;
+  } else if (field === 'priority') {
+    input = `<select onchange="updateField('priority',this.value);renderDetail()" style="width:100%">
+      ${PRIORITIES.map(p => `<option value="${p}" ${val===p?'selected':''}>${p}</option>`).join('')}
+    </select>`;
+  } else if (field === 'due_date') {
+    input = `<input type="date" value="${val}" onblur="updateField('due_date',this.value);renderDetail()" onkeydown="if(event.key==='Enter'){updateField('due_date',this.value);renderDetail()}">`;
+  } else {
+    input = `<input value="${esc(val)}" onblur="updateField('${field}',this.value);renderDetail()" onkeydown="if(event.key==='Enter'){updateField('${field}',this.value);renderDetail()}">`;
+  }
+  
+  const fieldEl = document.querySelector(`.detail-field .fvalue`);
+  if (fieldEl) fieldEl.innerHTML = input;
+}
+
+function editInline(id, field) {
+  const t = applyEdits(TASKS.find(t => t.id === id));
+  const val = t[field] || '';
+  selectTask(id);
+  
+  if (field === 'due_date') {
+    const input = `<input type="date" value="${val}" onblur="updateField('due_date',this.value)" onkeydown="if(event.key==='Enter'){updateField('due_date',this.value)}">`;
+    // fallback: just update directly
+    const d = prompt('마감일 (YYYY-MM-DD):', val);
+    if (d !== null) updateField('due_date', d);
+  } else {
+    const d = prompt(`${fieldLabel(field)}:`, val);
+    if (d !== null && d !== val) updateField(field, d);
+  }
+}
+
+function addNote() {
+  const note = document.getElementById('noteInput').value.trim();
+  if (!note) return;
+  const edits = EDITS[SELECTED] || {};
+  edits._history_added = [...(edits._history_added||[]), {
+    time: new Date().toLocaleString('ko-KR'), action: '노트', note
+  }];
+  EDITS[SELECTED] = edits;
+  saveEdits();
+  document.getElementById('noteInput').value = '';
+  toast('📝 노트 추가됨');
+}
+
+function deleteTask(id) {
+  if (!confirm(`"${id}" 과제를 삭제하시겠습니까?`)) return;
+  const edits = EDITS[id] || {};
+  edits._deleted = true;
+  EDITS[id] = edits;
+  saveEdits();
+  closeDetail();
+  toast('🗑 삭제됨');
+}
+
+function addTask() {
+  const title = document.getElementById('addTitle').value.trim();
+  if (!title) return;
+  const ids = TASKS.filter(t => t.id.startsWith('T') && t.id.slice(1).match(/^\d+$/))
+    .map(t => parseInt(t.id.slice(1)));
+  const nextId = `T${String((Math.max(0,...ids) + 1)).padStart(3,'0')}`;
+  
+  const newTask = {
+    id: nextId, title,
+    assignee: document.getElementById('addAssignee').value.trim() || '미지정',
+    due_date: document.getElementById('addDue').value || '미정',
+    priority: document.getElementById('addPriority').value,
+    status: '대기중', meeting_id: '',
+    _history: [{ time: new Date().toLocaleString('ko-KR'), action: '등록', note: '웹에서 추가됨' }]
+  };
+  
+  // Store in EDITS so it persists
+  EDITS[nextId] = { ...newTask, _history_added: newTask._history, _is_new: true };
+  TASKS.push({ id: nextId, title, assignee:'', due_date:'', priority:'보통', status:'대기중', meeting_id:'' });
+  saveEdits();
+  closeAddModal();
+  selectTask(nextId);
+  toast('✅ 새 과제 추가됨');
+}
+
+// ── Sync ──
+function updateSyncBar() {
+  document.getElementById('sync-bar').className = hasEdits() ? 'show' : '';
+}
+
+function showSync() {
+  const cmds = [];
+  for (const [id, edits] of Object.entries(EDITS)) {
+    if (edits._deleted) {
+      cmds.push(`# ${id} 삭제됨 (수동 처리 필요)`);
+      continue;
+    }
+    if (edits.status) cmds.push(`/status ${id} ${edits.status}`);
+    if (edits._is_new) {
+      cmds.push(`# ${id} 신규: ${edits.title} / ${edits.assignee} / ${edits.due_date} / ${edits.priority}`);
+    }
+  }
+  document.getElementById('syncCmds').value = cmds.join('\n') || '변경사항 없음';
+  document.getElementById('syncModal').classList.add('show');
+}
+
+function closeSyncModal() { document.getElementById('syncModal').classList.remove('show'); }
+
+function copySync() {
+  const text = document.getElementById('syncCmds');
+  text.select();
+  document.execCommand('copy');
+  toast('📋 복사됨! 회의록 봇에게 붙여넣으세요');
+  closeSyncModal();
+}
+
+// ── Add modal ──
+function showAddModal() { document.getElementById('addModal').classList.add('show'); }
+function closeAddModal() {
+  document.getElementById('addModal').classList.remove('show');
+  document.getElementById('addTitle').value = '';
+  document.getElementById('addAssignee').value = '';
+  document.getElementById('addDue').value = '';
+}
+
+// ── Filter ──
+function setFilter(f, btn) {
+  FILTER = f;
+  document.querySelectorAll('.sb-f').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  SELECTED = null;
+  document.getElementById('detail-panel').classList.add('collapsed');
+  renderAll();
+}
+
+// ── Mobile ──
+function toggleMenu(force) {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('menuOverlay');
+  const open = force !== undefined ? force : !sb.classList.contains('open');
+  sb.classList.toggle('open', open);
+  ov.classList.toggle('show', open);
+}
+
+// ── Helpers ──
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function pBdg(p) {
+  const m = { 높음:'pri-high', 보통:'pri-mid', 낮음:'pri-low' };
+  return `<span class="pribdg ${m[p]||'pri-mid'}">${p||'보통'}</span>`;
+}
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+// ── Keyboard shortcuts ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeDetail(); closeAddModal(); closeSyncModal(); }
+  if ((e.ctrlKey||e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    const q = prompt('과제 검색:');
+    if (q) {
+      const found = TASKS.map(applyEdits).find(t => t.title.includes(q) || t.id.includes(q.toUpperCase()));
+      if (found) selectTask(found.id);
+    }
+  }
+});
+
+boot();
+</script>
+</body>
+</html>
