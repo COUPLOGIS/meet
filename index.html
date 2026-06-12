@@ -271,7 +271,7 @@ function updateCounts(){
 
 // ── Render ──
 function render(){renderMenu();renderContent()}
-function renderContent(){PAGE.startsWith('tasks')?renderTasks():PAGE.startsWith('meetings')?renderMeetings():null;updateDetail()}
+function renderContent(){if(PAGE.startsWith('my-tasks')||PAGE.startsWith('tasks'))renderTasks();else if(PAGE.startsWith('meetings'))renderMeetings();updateDetail()}
 
 function renderTasks(){
   const all=T.map(ap);let list;
