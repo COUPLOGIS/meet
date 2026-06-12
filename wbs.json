@@ -45,5 +45,11 @@
       "status": "대기중",
       "meeting_date": "2026-06-05_1000"
     }
-  ]
+  ],
+  "users": {
+    "8947411038": {
+      "username": "@hanpyo",
+      "role": "admin"
+    }
+  }
 }

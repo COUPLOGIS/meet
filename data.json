@@ -1,0 +1,73 @@
+{
+  "meetings": [
+    {
+      "id": "2026-06-10_1400",
+      "date": "2026-06-10 14:00",
+      "participants": "홍길동, 김영희, 이철수",
+      "topics": "Q2 마케팅 전략",
+      "summary": ""
+    },
+    {
+      "id": "2026-06-05_1000",
+      "date": "2026-06-05 10:00",
+      "participants": "홍길동, 김영희, 이철수, 박민준",
+      "topics": "5월 실적 리뷰",
+      "summary": ""
+    }
+  ],
+  "wbs": {
+    "tasks": [
+      {
+        "id": "T001",
+        "title": "Q2 마케팅 기획안 작성",
+        "assignee": "김영희",
+        "due_date": "2026-06-20",
+        "priority": "높음",
+        "status": "진행중",
+        "meeting_date": "2026-06-10_1400"
+      },
+      {
+        "id": "T002",
+        "title": "신규 거래처 계약서 법무 검토",
+        "assignee": "홍길동",
+        "due_date": "2026-06-15",
+        "priority": "높음",
+        "status": "대기중",
+        "meeting_date": "2026-06-10_1400"
+      },
+      {
+        "id": "T003",
+        "title": "물류 시스템 개선 요구사항 정리",
+        "assignee": "이철수",
+        "due_date": "2026-06-25",
+        "priority": "보통",
+        "status": "대기중",
+        "meeting_date": "2026-06-10_1400"
+      },
+      {
+        "id": "T004",
+        "title": "5월 매출 분석 보고서",
+        "assignee": "박민준",
+        "due_date": "2026-06-12",
+        "priority": "높음",
+        "status": "완료",
+        "meeting_date": "2026-06-05_1000"
+      },
+      {
+        "id": "T005",
+        "title": "팀 워크숍 장소 예약",
+        "assignee": "김영희",
+        "due_date": "2026-06-30",
+        "priority": "낮음",
+        "status": "대기중",
+        "meeting_date": "2026-06-05_1000"
+      }
+    ]
+  },
+  "users": {
+    "8947411038": {
+      "username": "@hanpyo",
+      "role": "admin"
+    }
+  }
+}
