@@ -377,21 +377,7 @@ function renderTaskSidebar() {
       <div style="display:flex;gap:4px;flex-wrap:wrap">
         ${['all','대기중','진행중','완료'].map(f=>`<button class="btn sm ${FILTER.task===f?'primary':''}" onclick="setTaskFilter('${f}')">${f==='all'?'전체':f}</button>`).join('')}
       </div>
-    </div>
-    <div class="sb-list" id="taskSBNav"></div>`;
-
-  const list = FILTER.task==='all'?all:all.filter(t=>t.status===FILTER.task);
-  const colors = {진행중:'var(--accent)',대기중:'var(--orange)',완료:'var(--green)',보류:'var(--muted)'};
-  document.getElementById('taskSBNav').innerHTML = list.length===0
-    ? '<div class="sb-empty">📭 없음</div>'
-    : list.slice(0,50).map(t=>`
-      <div class="sb-item${SEL===t.id?' active':''}${t.status==='완료'?' completed':''}" onclick="selectTask('${t.id}')">
-        <div class="i-title">${esc(t.title)}</div>
-        <div class="i-meta">
-          <span class="i-dot" style="background:${colors[t.status]||'var(--muted)'}"></span>
-          ${t.status} · ${esc(t.assignee)}
-        </div>
-      </div>`).join('');
+    </div>`;
 }
 
 // ── Task list ──
