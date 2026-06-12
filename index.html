@@ -181,11 +181,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 </div>
 
 <script>
+const USER_ID = new URLSearchParams(location.search).get('user') || '';
 let T=[],M=[],MH={},ED={},PAGE=USER_ID?'my-tasks':'tasks-all',SEL=null,USERS={};
 const SKEY='t5',ST=['대기중','진행중','완료','보류'];
 const STL={대기중:'Waiting',진행중:'In Progress',완료:'Done',보류:'Hold'};
 const PRI={높음:'High',보통:'Medium',낮음:'Low'};
-const USER_ID = new URLSearchParams(location.search).get('user') || '';
 
 // My username from users map
 function myName(){return USERS[USER_ID]?.username||''}
