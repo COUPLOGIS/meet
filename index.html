@@ -67,7 +67,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .btn.sm{padding:3px 8px;font-size:10px}
 
 .tw{flex:1;overflow:auto}
-.table{width:100%;min-width:700px;border-collapse:collapse}
+.table{width:100%;table-layout:fixed;border-collapse:collapse}
 .table th{position:sticky;top:0;background:var(--bg);font-size:10px;font-weight:600;color:var(--muted);
   text-transform:uppercase;letter-spacing:.8px;padding:10px 16px;text-align:left;border-bottom:1px solid var(--border2);z-index:2}
 .table td{padding:11px 16px;border-bottom:1px solid var(--border2);font-size:13px;vertical-align:middle}
@@ -286,7 +286,7 @@ function renderTasks(){
   const lmap={'my-tasks':'My Tasks','tasks-all':'All Tasks','tasks-progress':'In Progress','tasks-wait':'Waiting','tasks-done':'Done'};
   document.getElementById('listHeader').innerHTML=`<h3>📊 ${lmap[PAGE]||'Tasks'}<span class="c">${list.length}</span></h3><button class="btn primary" onclick="mShow('addModal')">+ New Task</button>`;
   document.getElementById('listContent').innerHTML=`<table class="table"><thead><tr>
-    <th style="width:55px">ID</th><th style="max-width:200px;min-width:100px">Title</th><th style="width:75px">Assignee</th>
+    <th style="width:55px">ID</th><th style="width:40%">Title</th><th style="width:75px">Assignee</th>
     <th class="hm" style="width:140px">Meeting</th>
     <th style="width:90px">Status</th><th class="hm" style="width:85px">Due</th></tr></thead><tbody>
     ${list.length===0?`<tr><td colspan="6"><div class="empty"><div class="ei">📭</div><p>No tasks</p></div></td></tr>`
