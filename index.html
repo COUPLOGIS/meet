@@ -218,6 +218,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
     <h4>+ New Task</h4>
     <label>Title</label><input id="aTitle" placeholder="Task title">
     <label>Assignee</label><input id="aAssignee" placeholder="조한표">
+    <label>Collaborators</label><input id="aCollab" placeholder="@username1, @username2 (선택)">
     <label>Due Date</label><input id="aDue" type="date">
     <label>Priority</label><select id="aPri"><option>Medium</option><option>High</option><option>Low</option></select>
     <div class="btns"><button class="btn" onclick="mClose('addModal')">Cancel</button><button class="btn primary" onclick="addTask()">Create</button></div>
@@ -314,7 +315,7 @@ function updateCounts(){
   const elg=(id,f,arr)=>el(id,arr.filter(t=>t.status===f).length);
   function setgrp(pre,arr){el(pre+'-all',arr.length);elg(pre+'-progress','진행중',arr);elg(pre+'-wait','대기중',arr);elg(pre+'-done','완료',arr)}
   setgrp('cnt-team-tasks',team);
-  if(USER_ID){el('cnt-my-tasks',mine.filter(t=>t.assignee===myName()||String(t.created_by||'')===USER_ID).length)}
+  if(USER_ID){el('cnt-my-tasks',all.filter(t=>t.assignee===myName()||String(t.created_by||'')===USER_ID||(t.collaborators||[]).some(c=>c===myName().replace(/^@/,''))).length)}
   el('cnt-meetings-all',M.length);
   el('cnt-calendar-events',Object.keys(EV).length);
 }
@@ -327,7 +328,7 @@ function renderTasks(){
   const all=T.map(ap);let list;
   if(PAGE==='my-tasks'){
     const myN=myName();
-    list=all.filter(t=>(t.assignee===myN||String(t.created_by||'')===USER_ID)&&!(t.meeting_date||t.meeting_id));
+    list=all.filter(t=>t.assignee===myN||String(t.created_by||'')===USER_ID||(t.collaborators||[]).some(c=>c===myN.replace(/^@/,'')));
   }else if(PAGE==='team-tasks-progress')list=all.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='진행중');
   else if(PAGE==='team-tasks-wait')list=all.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='대기중');
   else if(PAGE==='team-tasks-done')list=all.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='완료');
@@ -346,7 +347,7 @@ function renderTasks(){
     :list.map(t=>{
       const mid=t.meeting_id||t.meeting_date,meet=mid?M.find(m=>m.id===mid):null;
       return`<tr class="${t.status==='완료'?'done':''}${SEL===t.id?' sel':''}" onclick="selTask('${t.id}')">
-        <td class="tid">${t.id}</td><td class="tt-c">${mid?'팀 ':''}${esc(t.title)}</td>
+        <td class="tid">${t.id}</td><td class="tt-c">${(t.collaborators||[]).length?'👥 ':''}${mid?'📋 ':''}${esc(t.title)}</td>
         <td><span class="editable" onclick="event.stopPropagation();ie('${t.id}','assignee')">${esc(t.assignee)}</span></td>
         <td class="hm">${meet?`<span class="mlink" onclick="event.stopPropagation();SEL=null;PAGE='meetings-all';selMeet('${meet.id}')">📋 ${(meet.date||meet.id).slice(0,16)}</span>`:'<span style="color:var(--muted2)">-</span>'}</td>
         <td>${sbdg(t)}</td>
@@ -480,6 +481,7 @@ function renderTD(t){
     <h5>Info</h5>
     <div class="df"><span class="fl">Title</span><span class="fv" onclick="edf('title')">${esc(t.title)}</span></div>
     <div class="df"><span class="fl">Assignee</span><span class="fv" onclick="edf('assignee')">${esc(t.assignee)}</span></div>
+    ${(t.collaborators||[]).length?`<div class="df"><span class="fl">Shared</span><span class="fv" style="color:var(--accent2)">👥 ${t.collaborators.map(c=>'@'+c).join(', ')}</span></div>`:''}
     <div class="df"><span class="fl">Due</span><span class="fv" onclick="edf('due_date')">${t.due_date||'N/A'}</span></div>
     <div class="df"><span class="fl">Priority</span><span class="fv" onclick="edf('priority')">${pb(t.priority)}</span></div>
     <div class="df"><span class="fl">Status</span><select onchange="uf('status',this.value)">${ST.map(s=>`<option value="${s}" ${t.status===s?'selected':''}>${STL[s]}</option>`).join('')}</select></div>
@@ -524,10 +526,12 @@ function ie(id,f){selTask(id);const t=ap(T.find(t=>t.id===id));const d=prompt(`$
 function addNote(){const n=document.getElementById('ni')?.value?.trim();if(!n)return;const e=ED[SEL]||{};e._ha=[...(e._ha||[]),{t:now(),a:'Note',n}];ED[SEL]=e;s();render();updateDetail();toast('Note added')}
 function addTask(){
   const title=document.getElementById('aTitle').value.trim();if(!title)return;
+  const collabRaw=document.getElementById('aCollab').value.trim();
+  const collaborators=collabRaw?collabRaw.split(/[,，\s]+/).filter(c=>c).map(c=>c.replace(/^@/,'')):[];
   const ids=T.map(t=>parseInt(t.id.slice(1))).filter(n=>!isNaN(n));const nid=`T${String((Math.max(0,...ids)+1)).padStart(3,'0')}`;
-  ED[nid]={title,assignee:document.getElementById('aAssignee').value.trim()||'조한표',due_date:document.getElementById('aDue').value||'N/A',priority:document.getElementById('aPri').value,status:'대기중',_ha:[{t:now(),a:'Created (web)',n:''}],_new:true};
-  T.push({id:nid,title:'',assignee:'',due_date:'',priority:'보통',status:'대기중',meeting_id:'',_h:[]});
-  s();mClose('addModal');SEL=nid;PAGE='tasks-all';render();updateDetail();toast('Task created');
+  ED[nid]={title,assignee:document.getElementById('aAssignee').value.trim()||'조한표',collaborators,due_date:document.getElementById('aDue').value||'N/A',priority:document.getElementById('aPri').value,status:'대기중',created_by:USER_ID,_ha:[{t:now(),a:'Created (web)',n:collaborators.length?'👥 '+collaborators.join(', '):''}],_new:true};
+  T.push({id:nid,title:'',assignee:'',collaborators:[],due_date:'',priority:'보통',status:'대기중',meeting_id:'',created_by:USER_ID,_h:[]});
+  s();mClose('addModal');SEL=nid;PAGE='my-tasks';render();updateDetail();toast('Task created'+(collaborators.length?' 👥':''));
 }
 function pb(p){const m={높음:'pri-high',High:'pri-high',보통:'pri-mid',Medium:'pri-mid',낮음:'pri-low',Low:'pri-low'};return`<span class="pribdg ${m[p]||'pri-mid'}">${p||'Medium'}</span>`}
 
@@ -536,7 +540,7 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function now(){return new Date().toLocaleString('ko-KR')}
 function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),1800)}
 function mShow(id){document.getElementById(id).classList.add('show')}
-function mClose(id){document.getElementById(id).classList.remove('show');if(id==='addModal')document.getElementById('aTitle').value=document.getElementById('aAssignee').value=document.getElementById('aDue').value=''}
+function mClose(id){document.getElementById(id).classList.remove('show');if(id==='addModal')document.getElementById('aTitle').value=document.getElementById('aAssignee').value=document.getElementById('aCollab').value=document.getElementById('aDue').value=''}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDetail();mClose('addModal')}});
 boot();
 </script>
