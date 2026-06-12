@@ -156,6 +156,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .modal .btns{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
 .empty{padding:60px 20px;text-align:center;color:var(--muted)}.empty .ei{font-size:36px;margin-bottom:8px}
 
+/* ── Command Palette ── */
+.cp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:600;display:none;align-items:flex-start;justify-content:center;padding-top:15vh}
+.cp-overlay.show{display:flex}
+.cp-container{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:480px;max-width:90vw;box-shadow:0 12px 40px rgba(0,0,0,.5);overflow:hidden}
+.cp-input-w{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border2)}
+.cp-input-w .cp-ic{font-size:18px;color:var(--muted);flex-shrink:0}
+.cp-input-w input{flex:1;font-family:var(--font);font-size:14px;background:transparent;color:var(--text);border:none;outline:none}
+.cp-input-w input::placeholder{color:var(--muted2)}
+.cp-results{max-height:320px;overflow-y:auto;padding:6px}
+.cp-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;color:var(--text2);transition:all .08s}
+.cp-item:hover,.cp-item.sel{background:var(--surface2);color:var(--text)}
+.cp-item .cp-k{font-size:10px;font-family:var(--mono);color:var(--muted2);margin-left:auto;flex-shrink:0}
+.cp-empty{padding:24px;text-align:center;color:var(--muted);font-size:13px}
+.cp-section{padding:4px 14px 2px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+
 /* ── Calendar ── */
 .cal-hdr{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cal-hdr h4{font-size:15px;font-weight:700;flex:1;text-align:center}
 .cal-nav{width:28px;height:28px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}.cal-nav:hover{background:var(--surface3);color:var(--text)}
@@ -185,7 +200,33 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
   #sidebar{display:none}
   #dp{position:fixed;right:0;top:0;bottom:0;width:100vw;z-index:15;border-left:none}#dp.closed{width:0}
   .hambtn{display:flex}.hm{display:none!important}
+  .kanban-board{flex-direction:column;padding:12px}
+  .kanban-col{max-width:100%;min-width:0;max-height:none}
+  .kanban-col-body{max-height:300px}
 }
+/* ── Kanban Board ── */
+.vtg-group{display:flex;border:1px solid var(--border2);border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0}
+.vtg{font-size:11px;font-weight:600;padding:5px 10px;border:none;background:transparent;color:var(--muted);cursor:pointer;transition:all .12s}
+.vtg:hover{background:var(--surface2);color:var(--text2)}
+.vtg.active{background:var(--accent);color:#fff}
+.kanban-board{display:flex;gap:12px;padding:0 20px 16px;overflow-x:auto;height:100%;align-items:flex-start}
+.kanban-col{flex:1;min-width:220px;max-width:340px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);display:flex;flex-direction:column;max-height:100%;overflow:hidden}
+.kanban-col-header{padding:12px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;flex-shrink:0;border-bottom:1px solid var(--border2)}
+.kanban-col-header .kdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.kanban-col-header .kcount{font-size:10px;font-weight:400;color:var(--muted);margin-left:auto}
+.kanban-col-body{flex:1;overflow-y:auto;padding:8px}
+.kanban-card{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all .12s}
+.kanban-card:hover{border-color:var(--accent);background:var(--surface3)}
+.kanban-card.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.kanban-card .kc-id{font-family:var(--mono);font-size:10px;color:var(--accent);font-weight:600;margin-bottom:4px}
+.kanban-card .kc-title{font-size:13px;font-weight:600;margin-bottom:6px;line-height:1.4;word-break:break-word}
+.kanban-card .kc-meta{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--muted);flex-wrap:wrap}
+.kanban-card .kc-assignee{display:flex;align-items:center;gap:3px}
+.kanban-card .kc-due{display:flex;align-items:center;gap:3px}
+.kcol-wait .kanban-col-header{border-bottom-color:rgba(210,153,29,.3)}.kcol-wait .kdot{background:var(--orange)}
+.kcol-progress .kanban-col-header{border-bottom-color:rgba(88,166,255,.3)}.kcol-progress .kdot{background:var(--accent)}
+.kcol-done .kanban-col-header{border-bottom-color:rgba(63,185,80,.3)}.kcol-done .kdot{background:var(--green)}
+.kcol-hold .kanban-col-header{border-bottom-color:rgba(139,148,158,.3)}.kcol-hold .kdot{background:var(--muted)}
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
 </style>
 </head>
@@ -225,10 +266,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
   </div>
 </div>
 
+<!-- ── Command Palette ── -->
+<div class="cp-overlay" id="cpOverlay" onclick="if(event.target===this)cpClose()">
+  <div class="cp-container">
+    <div class="cp-input-w"><span class="cp-ic">⌘</span><input id="cpInput" placeholder="Search tasks, navigate..." oninput="cpFilter()" onkeydown="cpKey(event)"></div>
+    <div class="cp-results" id="cpResults"></div>
+  </div>
+</div>
+
 <script>
 const USER_ID = new URLSearchParams(location.search).get('user') || '';
-let T=[],M=[],MH={},ED={},EV={},calY,calM,PAGE=USER_ID?'my-tasks':'team-tasks-all',SEL=null,USERS={};
-var SORT_BY='id',SORT_DIR='asc',Q='',FILTER_STATUS='',FILTER_PRIORITY='';
+let T=[],M=[],MH={},ED={},EV={},calY,calM,PAGE=USER_ID?'my-tasks':'team-tasks-all',SEL=null,USERS={},CP_ITEMS=[];
+var SORT_BY='id',SORT_DIR='asc',Q='',FILTER_STATUS='',FILTER_PRIORITY='',KANBAN=false;
 const SKEY='t5',EKEY='ev1',ST=['대기중','진행중','완료','보류'];
 const STL={대기중:'Waiting',진행중:'In Progress',완료:'Done',보류:'Hold'};
 const PRI={높음:'High',보통:'Medium',낮음:'Low'};
@@ -257,7 +306,7 @@ const MENU=[
 
 function l(){try{ED=JSON.parse(localStorage.getItem(SKEY)||'{}');EV=JSON.parse(localStorage.getItem(EKEY)||'{}');}catch(e){ED={};EV={}}}
 function s(){localStorage.setItem(SKEY,JSON.stringify(ED));localStorage.setItem(EKEY,JSON.stringify(EV))}
-function ap(t){const e=ED[t.id]||{};return{...t,...e,comments:[...(t.comments||[]),...(e._ca||[])],_h:[...(t._h||[]),...(e._ha||[])]}}
+function ap(t){const e=ED[t.id]||{};return{...t,...e,comments:[...(t.comments||[]),...(e._ca||[])],_h:[...(t._h||[]),...(e._ha||[])],_fa:[...(e._fa||[])]}}
 
 async function boot(){
   l();
@@ -339,7 +388,7 @@ function renderTasks(){
   else if(PAGE==='tasks-done')list=all.filter(t=>t.status==='완료');
   else list=all;
   const lmap={'my-tasks':'My Tasks','team-tasks-all':'All Team Tasks','team-tasks-progress':'Team — In Progress','team-tasks-wait':'Team — Waiting','team-tasks-done':'Team — Done','tasks-all':'All Tasks','tasks-progress':'In Progress','tasks-wait':'Waiting','tasks-done':'Done'};
-  document.getElementById('listHeader').innerHTML=`<h3>${PAGE.startsWith('my-tasks')?'👤':PAGE.startsWith('team')?'👥':'📊'} ${lmap[PAGE]||'Tasks'}<span class="c">${list.length}</span></h3><div style="display:flex;align-items:center;gap:8px"><input id="sq" style="font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:5px 10px;outline:none;width:130px" placeholder="Search..." value="${Q.replace(/\"/g,'&quot;').replace(/</g,'&lt;')}" oninput="Q=this.value;render();"><select onchange="FILTER_STATUS=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_STATUS?'selected':''}>All Status</option>${ST.map(s=>`<option value="${s}" ${FILTER_STATUS===s?'selected':''}>${STL[s]}</option>`).join('')}</select><select onchange="FILTER_PRIORITY=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_PRIORITY?'selected':''}>All Priority</option>${['높음','보통','낮음'].map(p=>`<option value="${p}" ${FILTER_PRIORITY===p?'selected':''}>${PRI[p]}</option>`).join('')}</select><button class="btn primary" onclick="mShow('addModal')">+ New Task</button></div>`;
+  document.getElementById('listHeader').innerHTML=`<h3>${PAGE.startsWith('my-tasks')?'👤':PAGE.startsWith('team')?'👥':'📊'} ${lmap[PAGE]||'Tasks'}<span class="c">${list.length}</span></h3><div style="display:flex;align-items:center;gap:8px"><div class="vtg-group"><button class="vtg${KANBAN?'':' active'}" onclick="KANBAN=false;render()">📋 Table</button><button class="vtg${KANBAN?' active':''}" onclick="KANBAN=true;render()">📌 Board</button></div><input id="sq" style="font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:5px 10px;outline:none;width:130px" placeholder="Search..." value="${Q.replace(/\\"/g,'&quot;').replace(/</g,'&lt;')}" oninput="Q=this.value;render();"><select onchange="FILTER_STATUS=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_STATUS?'selected':''}>All Status</option>${ST.map(s=>`<option value="${s}" ${FILTER_STATUS===s?'selected':''}>${STL[s]}</option>`).join('')}</select><select onchange="FILTER_PRIORITY=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_PRIORITY?'selected':''}>All Priority</option>${['높음','보통','낮음'].map(p=>`<option value="${p}" ${FILTER_PRIORITY===p?'selected':''}>${PRI[p]}</option>`).join('')}</select><button class="btn primary" onclick="mShow('addModal')">+ New Task</button></div>`;
   // Apply search
   if(Q){const q=Q.toLowerCase();list=list.filter(t=>t.id.toLowerCase().includes(q)||(t.title||'').toLowerCase().includes(q)||(t.assignee||'').toLowerCase().includes(q))}
   // Apply filters
@@ -355,6 +404,9 @@ function renderTasks(){
     if(SORT_BY==='due')return (a.due_date||'').localeCompare(b.due_date||'')*sd;
     return 0;
   });
+  if(KANBAN)renderTasksBoard(list);else renderTasksTable(list);
+}
+function renderTasksTable(list){
   const th=(col,label,w)=>{const a=SORT_BY===col?(SORT_DIR==='asc'?' ▴':' ▾'):'';return`<th style="${w};cursor:pointer" onclick="SORT_BY='${col}';SORT_DIR=SORT_BY==='${col}'&&SORT_DIR==='asc'?'desc':'asc';render()">${label}${a}</th>`};
   document.getElementById('listContent').innerHTML=`<table class="table"><thead><tr>
     ${th('id','ID','width:55px')+th('title','Title','width:180px')+th('assignee','Assignee','width:75px')}
@@ -369,6 +421,32 @@ function renderTasks(){
         <td class="hm">${meet?`<span class="mlink" onclick="event.stopPropagation();SEL=null;PAGE='meetings-all';selMeet('${meet.id}')">📋 ${(meet.date||meet.id).slice(0,16)}</span>`:'<span style="color:var(--muted2)">-</span>'}</td>
         <td>${sbdg(t)}</td>
         <td class="hm"><span class="editable" onclick="event.stopPropagation();ie('${t.id}','due_date')">${t.due_date||'-'}</span></td></tr>`}).join('')}</tbody></table>`;
+}
+function renderTasksBoard(list){
+  const cols={'대기중':[],'진행중':[],'완료':[],'보류':[]};
+  list.forEach(t=>{if(cols[t.status])cols[t.status].push(t);else cols['대기중'].push(t)});
+  const cc={'대기중':'kcol-wait','진행중':'kcol-progress','완료':'kcol-done','보류':'kcol-hold'};
+  let html='<div class="kanban-board">';
+  for(const [st,tasks] of Object.entries(cols)){
+    html+=`<div class="kanban-col ${cc[st]||''}">
+      <div class="kanban-col-header"><span class="kdot"></span>${STL[st]}<span class="kcount">${tasks.length}</span></div>
+      <div class="kanban-col-body">`;
+    if(tasks.length===0)html+=`<div style="color:var(--muted2);font-size:11px;text-align:center;padding:20px 0">Empty</div>`;
+    else tasks.forEach(t=>{
+      html+=`<div class="kanban-card${SEL===t.id?' sel':''}" onclick="selTask('${t.id}')">
+        <div class="kc-id">${t.id}</div>
+        <div class="kc-title">${esc(t.title)}</div>
+        <div class="kc-meta">
+          <span class="kc-assignee">👤 ${esc(t.assignee)}</span>
+          ${t.priority?`<span>${pb(t.priority)}</span>`:''}
+          ${t.due_date&&t.due_date!=='N/A'?`<span class="kc-due">📅 ${t.due_date}</span>`:''}
+        </div>
+      </div>`;
+    });
+    html+=`</div></div>`;
+  }
+  html+=`</div>`;
+  document.getElementById('listContent').innerHTML=html;
 }
 
 function renderMeetings(){
@@ -506,6 +584,8 @@ function renderTD(t){
     <h5>History</h5><div class="tl">${h.map(e=>`<div class="tl-i"><div class="tl-t">${e.t}</div><div>${e.a}</div>${e.n?`<div class="tl-n">${esc(e.n)}</div>`:''}</div>`).join('')}</div>
     <h5>Comments</h5><div class="tl">${(t.comments||[]).length?t.comments.map(c=>`<div class="tl-i"><div class="tl-t">${c.timestamp||''}</div><div><strong>@${esc(c.author||'unknown')}</strong>: ${hm(esc(c.text||''))}</div>${c.mentions&&c.mentions.length?`<div class="tl-n" style="color:var(--accent)">👥 ${c.mentions.map(m=>'@'+m).join(', ')}</div>`:''}</div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0">No comments</div>'}</div>
     <div style="display:flex;gap:6px;margin-top:8px"><input id="ci" style="flex:1;font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:6px 10px;outline:none;min-height:32px" placeholder="Comment... use @name to mention"><button class="btn sm primary" onclick="addComment()">Add</button></div>
+    <h5>Attachments</h5>${(t._fa||[]).length?t._fa.map((f,i)=>`<div class="df"><span class="fl">📎</span><span class="fv" style="cursor:pointer;color:var(--accent2)" onclick="navigator.clipboard.writeText('${esc(f).replace(/'/g,"\\'")}');toast('Path copied')">${esc(f)}</span><span style="color:var(--muted2);font-size:12px;cursor:pointer;padding:0 4px" onclick="rmFile('${t.id}',${i})" title="Remove">✕</span></div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0">No attachments</div>'}
+    <button class="btn sm" style="margin-top:6px" onclick="attachFile()">📎 Attach</button>
     <textarea class="ni" id="ni" placeholder="Add a progress note..."></textarea>
     <div style="margin-top:8px"><button class="btn sm primary" onclick="addNote()">Add Note</button></div>`;
 }
@@ -562,7 +642,93 @@ function now(){return new Date().toLocaleString('ko-KR')}
 function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),1800)}
 function mShow(id){document.getElementById(id).classList.add('show')}
 function mClose(id){document.getElementById(id).classList.remove('show');if(id==='addModal')document.getElementById('aTitle').value=document.getElementById('aAssignee').value=document.getElementById('aCollab').value=document.getElementById('aDue').value=''}
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDetail();mClose('addModal')}});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){cpClose();closeDetail();mClose('addModal')}
+  if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();cpOpen()}
+});
+// ── Command Palette ──
+function cpOpen(){
+  document.getElementById('cpOverlay').classList.add('show');
+  document.getElementById('cpInput').value='';
+  document.getElementById('cpInput').focus();
+  cpFilter();
+}
+function cpClose(){
+  document.getElementById('cpOverlay').classList.remove('show');
+  CP_ITEMS=[];
+}
+function cpKey(e){
+  if(e.key==='Escape'){cpClose();return}
+  if(e.key==='Enter'){
+    const sel=document.querySelector('.cp-item.sel');
+    if(sel){sel.click();return}
+    const first=document.querySelector('.cp-item');
+    if(first){first.click();return}
+  }
+  if(e.key==='ArrowDown'){e.preventDefault();cpMove(1)}
+  if(e.key==='ArrowUp'){e.preventDefault();cpMove(-1)}
+}
+function cpMove(dir){
+  const items=[...document.querySelectorAll('.cp-item')];
+  const idx=items.findIndex(el=>el.classList.contains('sel'));
+  items.forEach(el=>el.classList.remove('sel'));
+  const next=idx<0?(dir>0?0:items.length-1):(idx+dir+items.length)%items.length;
+  if(items[next])items[next].classList.add('sel');
+}
+function cpFilter(){
+  const q=document.getElementById('cpInput').value.trim().toLowerCase();
+  CP_ITEMS=[];
+  // Navigation
+  const navs=[
+    {label:'My Tasks',icon:'👤',action:()=>{navTo('my-tasks')},keys:'my'},
+    {label:'Team Tasks',icon:'👥',action:()=>{navTo('team-tasks-all')},keys:'team'},
+    {label:'Meetings',icon:'📝',action:()=>{navTo('meetings-all')},keys:'meet'},
+    {label:'Calendar',icon:'📅',action:()=>{navTo('calendar-month')},keys:'cal'},
+  ];
+  if(!q||navs.some(n=>n.keys.includes(q)||n.label.toLowerCase().includes(q))){
+    CP_ITEMS.push({section:'Navigate'});
+    navs.forEach(n=>{if(!q||n.keys.includes(q)||n.label.toLowerCase().includes(q))CP_ITEMS.push({label:n.label,icon:n.icon,action:n.action,keys:n.keys})});
+  }
+  // Task search
+  if(q&&q.toUpperCase().startsWith('T')){
+    const matching=T.map(ap).filter(t=>t.id.toLowerCase().includes(q));
+    if(matching.length){
+      CP_ITEMS.push({section:'Tasks'});
+      matching.slice(0,10).forEach(t=>{CP_ITEMS.push({label:t.id+' — '+t.title,icon:'📋',action:()=>{selTask(t.id)},keys:t.id})});
+    }
+  }
+  // Actions
+  const acts=[{label:'New Task',icon:'➕',action:()=>{mShow('addModal')},keys:'new'}];
+  const tm=q.match(/^done\s+(t\d+)/i);
+  if(tm){
+    const tid=tm[1].toUpperCase();
+    const t=T.find(t=>t.id===tid);
+    if(t)acts.push({label:'Mark '+tid+' as Done',icon:'✅',action:()=>{ufx(tid,'status','완료');toast(tid+' marked done')},keys:'done '+tid});
+  }
+  if(!q||acts.some(a=>a.keys.toLowerCase().includes(q.toLowerCase())||a.label.toLowerCase().includes(q))){
+    CP_ITEMS.push({section:'Actions'});
+    acts.forEach(a=>{if(!q||a.keys.toLowerCase().includes(q.toLowerCase())||a.label.toLowerCase().includes(q))CP_ITEMS.push({label:a.label,icon:a.icon,action:a.action,keys:a.keys})});
+  }
+  let html='';
+  CP_ITEMS.forEach((item,i)=>{if(item.section){html+=`<div class="cp-section">${item.section}</div>`;return}html+=`<div class="cp-item" onclick="cpExec(${i})">${item.icon} ${esc(item.label)}<span class="cp-k">${item.keys||''}</span></div>`});
+  document.getElementById('cpResults').innerHTML=html||'<div class="cp-empty">No results</div>';
+}
+function cpExec(i){cpClose();const item=CP_ITEMS[i];if(item&&item.action)item.action()}
+
+// ── File Attachments ──
+function attachFile(){
+  if(!SEL)return;
+  const path=prompt('Enter file path:');
+  if(!path||!path.trim())return;
+  const e=ED[SEL]||{};
+  e._fa=[...(e._fa||[]),path.trim()];
+  ED[SEL]=e;s();render();updateDetail();toast('File attached');
+}
+function rmFile(tid,i){
+  const e=ED[tid];if(!e||!e._fa)return;
+  e._fa.splice(i,1);
+  ED[tid]=e;s();render();updateDetail();toast('Attachment removed');
+}
 boot();
 </script>
 </body>
