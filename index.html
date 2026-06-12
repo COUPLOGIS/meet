@@ -228,6 +228,26 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .kcol-done .kanban-col-header{border-bottom-color:rgba(63,185,80,.3)}.kcol-done .kdot{background:var(--green)}
 .kcol-hold .kanban-col-header{border-bottom-color:rgba(139,148,158,.3)}.kcol-hold .kdot{background:var(--muted)}
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+/* ── Week Calendar ── */
+.week-strip{display:flex;gap:4px;overflow-x:auto;padding-bottom:8px}
+.week-day{flex:1;min-width:110px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:10px;cursor:pointer;transition:all .12s;display:flex;flex-direction:column}
+.week-day:hover{border-color:var(--border);background:var(--surface2)}
+.week-day.today{border-color:var(--accent);background:var(--surface2)}
+.wd-date{font-size:20px;font-weight:700;color:var(--text)}
+.week-day.today .wd-date{color:var(--accent)}
+.wd-dow{font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase}
+.wd-items{flex:1;display:flex;flex-direction:column;gap:3px;overflow-y:auto;max-height:300px;font-size:11px}
+.wd-item{padding:3px 6px;border-radius:4px;cursor:pointer;transition:all .1s;word-break:break-word;line-height:1.3;display:flex;align-items:flex-start;gap:4px}
+.wd-item.task{background:rgba(88,166,255,.1);color:var(--accent2)}.wd-item.task:hover{background:rgba(88,166,255,.18)}
+.wd-item.event{background:rgba(63,185,80,.1);color:var(--green)}.wd-item.event:hover{background:rgba(63,185,80,.18)}
+.wi-dot{flex-shrink:0;font-size:8px;margin-top:2px}
+.wd-empty{color:var(--muted2);font-size:11px;text-align:center;padding:8px 0}
+/* ── Comment markdown ── */
+.cm-bold{font-weight:700}.cm-italic{font-style:italic}.cm-code{font-family:var(--mono);font-size:11px;background:var(--surface3);padding:1px 4px;border-radius:3px}
+.cm-file{display:inline-flex;align-items:center;gap:3px;color:var(--accent2);cursor:pointer;font-size:10px;background:var(--surface3);padding:2px 8px;border-radius:4px;margin:2px 0}.cm-file:hover{color:var(--accent);background:var(--surface2)}
+/* ── Progress ── */
+.prog-bar{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);font-weight:600}
+.prog-bar .pg-done{color:var(--green)}.prog-bar .pg-total{color:var(--muted2)}
 </style>
 </head>
 <body>
@@ -281,6 +301,7 @@ var SORT_BY='id',SORT_DIR='asc',Q='',FILTER_STATUS='',FILTER_PRIORITY='',KANBAN=
 const SKEY='t5',EKEY='ev1',ST=['대기중','진행중','완료','보류'];
 const STL={대기중:'Waiting',진행중:'In Progress',완료:'Done',보류:'Hold'};
 const PRI={높음:'High',보통:'Medium',낮음:'Low'};
+var calWeekOffset=0;
 
 // My username from users map
 function myName(){return USERS[USER_ID]?.username||''}
@@ -300,7 +321,11 @@ const MENU=[
   ]},
   {id:'calendar',icon:'📅',label:'Calendar',children:[
     {id:'calendar-month',label:'Month'},
+    {id:'calendar-week',label:'Week'},
     {id:'calendar-events',label:'All Events'},
+  ]},
+  {id:'board',icon:'📌',label:'Board',children:[
+    {id:'board',label:'Kanban Board'},
   ]},
 ];
 
@@ -368,11 +393,12 @@ function updateCounts(){
   if(USER_ID){el('cnt-my-tasks',all.filter(t=>t.assignee===myName()||String(t.created_by||'')===USER_ID||(t.collaborators||[]).some(c=>c===myName().replace(/^@/,''))).length)}
   el('cnt-meetings-all',M.length);
   el('cnt-calendar-events',Object.keys(EV).length);
+  el('cnt-board',all.length);
 }
 
 // ── Render ──
 function render(){renderMenu();renderContent()}
-function renderContent(){if(PAGE.startsWith('my-tasks')||PAGE.startsWith('team-tasks')||PAGE.startsWith('tasks'))renderTasks();else if(PAGE.startsWith('meetings'))renderMeetings();else if(PAGE.startsWith('calendar'))renderCalendar();updateDetail()}
+function renderContent(){if(PAGE.startsWith('my-tasks')||PAGE.startsWith('team-tasks')||PAGE.startsWith('tasks'))renderTasks();else if(PAGE.startsWith('board'))renderBoardPage();else if(PAGE.startsWith('meetings'))renderMeetings();else if(PAGE.startsWith('calendar'))renderCalendar();updateDetail()}
 
 function renderTasks(){
   const all=T.map(ap);let list;
@@ -409,18 +435,24 @@ function renderTasks(){
 function renderTasksTable(list){
   const th=(col,label,w)=>{const a=SORT_BY===col?(SORT_DIR==='asc'?' ▴':' ▾'):'';return`<th style="${w};cursor:pointer" onclick="SORT_BY='${col}';SORT_DIR=SORT_BY==='${col}'&&SORT_DIR==='asc'?'desc':'asc';render()">${label}${a}</th>`};
   document.getElementById('listContent').innerHTML=`<table class="table"><thead><tr>
-    ${th('id','ID','width:55px')+th('title','Title','width:180px')+th('assignee','Assignee','width:75px')}
-    <th class="hm" style="width:140px">Meeting</th>
-    ${th('status','Status','width:90px')+th('due','Due','width:85px')}</tr></thead><tbody>
-    ${list.length===0?`<tr><td colspan="6"><div class="empty"><div class="ei">📭</div><p>No tasks</p></div></td></tr>`
+    ${th('id','ID','width:55px')+th('title','Title','width:170px')+th('assignee','Assignee','width:70px')}
+    <th class="hm" style="width:130px">Meeting</th>
+    ${th('status','Status','width:80px')+th('due','Due','width:75px')}
+    <th style="width:55px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase">Prog</th></tr></thead><tbody>
+    ${list.length===0?`<tr><td colspan="7"><div class="empty"><div class="ei">📭</div><p>No tasks</p></div></td></tr>`
     :list.map(t=>{
       const mid=t.meeting_id||t.meeting_date,meet=mid?M.find(m=>m.id===mid):null;
+      const cmts=t.comments||[];
+      const doneCount=cmts.filter(c=>/완료|✓/.test(c.text||'')).length;
+      const prog=cmts.length?`<span class="prog-bar"><span class="pg-done">${doneCount}</span><span class="pg-total">/${cmts.length}</span></span>`:'-';
+      const isAdmin=USERS[t.created_by||'']?.role==='admin';
       return`<tr class="${t.status==='완료'?'done':''}${SEL===t.id?' sel':''}" onclick="selTask('${t.id}')">
-        <td class="tid">${t.id}</td><td class="tt-c">${(t.collaborators||[]).length?'👥 ':''}${mid?'📋 ':''}${esc(t.title)}</td>
+        <td class="tid">${t.id}${isAdmin?' 👑':''}</td><td class="tt-c">${(t.collaborators||[]).length?'👥 ':''}${mid?'📋 ':''}${esc(t.title)}</td>
         <td><span class="editable" onclick="event.stopPropagation();ie('${t.id}','assignee')">${esc(t.assignee)}</span></td>
         <td class="hm">${meet?`<span class="mlink" onclick="event.stopPropagation();SEL=null;PAGE='meetings-all';selMeet('${meet.id}')">📋 ${(meet.date||meet.id).slice(0,16)}</span>`:'<span style="color:var(--muted2)">-</span>'}</td>
         <td>${sbdg(t)}</td>
-        <td class="hm"><span class="editable" onclick="event.stopPropagation();ie('${t.id}','due_date')">${t.due_date||'-'}</span></td></tr>`}).join('')}</tbody></table>`;
+        <td class="hm"><span class="editable" onclick="event.stopPropagation();ie('${t.id}','due_date')">${t.due_date||'-'}</span></td>
+        <td style="font-size:11px">${prog}</td></tr>`}).join('')}</tbody></table>`;
 }
 function renderTasksBoard(list){
   const cols={'대기중':[],'진행중':[],'완료':[],'보류':[]};
@@ -433,20 +465,57 @@ function renderTasksBoard(list){
       <div class="kanban-col-body">`;
     if(tasks.length===0)html+=`<div style="color:var(--muted2);font-size:11px;text-align:center;padding:20px 0">Empty</div>`;
     else tasks.forEach(t=>{
+      const isAdmin=USERS[t.created_by||'']?.role==='admin'||USERS[USER_ID]?.role==='admin';
       html+=`<div class="kanban-card${SEL===t.id?' sel':''}" onclick="selTask('${t.id}')">
-        <div class="kc-id">${t.id}</div>
+        <div class="kc-id">${t.id}${isAdmin?' <span style="color:#f0c040" title="Admin">👑</span>':''}</div>
         <div class="kc-title">${esc(t.title)}</div>
         <div class="kc-meta">
           <span class="kc-assignee">👤 ${esc(t.assignee)}</span>
           ${t.priority?`<span>${pb(t.priority)}</span>`:''}
           ${t.due_date&&t.due_date!=='N/A'?`<span class="kc-due">📅 ${t.due_date}</span>`:''}
         </div>
+        <div style="margin-top:6px">${boardStatusDropdown(t.id,t.status)}</div>
       </div>`;
     });
     html+=`</div></div>`;
   }
   html+=`</div>`;
   document.getElementById('listContent').innerHTML=html;
+}
+
+function renderBoardPage(){
+  const all=T.map(ap);
+  const cols={'대기중':[],'진행중':[],'완료':[],'보류':[]};
+  all.forEach(t=>{if(cols[t.status])cols[t.status].push(t);else cols['대기중'].push(t)});
+  const cc={'대기중':'kcol-wait','진행중':'kcol-progress','완료':'kcol-done','보류':'kcol-hold'};
+  document.getElementById('listHeader').innerHTML=`<h3>📌 Board<span class=\"c\">${all.length}</span></h3><button class=\"btn primary\" onclick=\"mShow('addModal')\"">+ New Task</button>`;
+  let html='<div class=\"kanban-board\" style=\"padding:0 20px 16px;height:100%\">';
+  for(const [st,tasks] of Object.entries(cols)){
+    html+=`<div class=\"kanban-col ${cc[st]||''}\">
+      <div class=\"kanban-col-header\"><span class=\"kdot\"></span>${STL[st]}<span class=\"kcount\">${tasks.length}</span></div>
+      <div class=\"kanban-col-body\">`;
+    if(tasks.length===0)html+=`<div style=\"color:var(--muted2);font-size:11px;text-align:center;padding:20px 0\">Empty</div>`;
+    else tasks.forEach(t=>{
+      const isAdmin=USERS[t.created_by||'']?.role==='admin'||USERS[USER_ID]?.role==='admin';
+      html+=`<div class=\"kanban-card${SEL===t.id?' sel':''}\" onclick=\"selTask('${t.id}')\">
+        <div class=\"kc-id\">${t.id}${isAdmin?' <span style=\"color:#f0c040\" title=\"Admin\">👑</span>':''}</div>
+        <div class=\"kc-title\">${esc(t.title)}</div>
+        <div class=\"kc-meta\">
+          <span class=\"kc-assignee\">👤 ${esc(t.assignee)}</span>
+          ${t.priority?`<span>${pb(t.priority)}</span>`:''}
+          ${t.due_date&&t.due_date!=='N/A'?`<span class=\"kc-due\">📅 ${t.due_date}</span>`:''}
+        </div>
+        <div style=\"margin-top:6px\">${boardStatusDropdown(t.id,t.status)}</div>
+      </div>`;
+    });
+    html+=`</div></div>`;
+  }
+  html+=`</div>`;
+  document.getElementById('listContent').innerHTML=html;
+}
+
+function boardStatusDropdown(tid,st){
+  return `<select onchange=\"event.stopPropagation();ufx('${tid}','status',this.value)\" style=\"font-family:var(--font);font-size:10px;background:var(--surface3);color:var(--text);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;outline:none;cursor:pointer;width:100%\">${ST.map(s=>`<option value=\"${s}\" ${st===s?'selected':''}>${STL[s]}</option>`).join('')}</select>`;
 }
 
 function renderMeetings(){
@@ -494,6 +563,37 @@ function renderCalendar(){
     return;
   }
 
+  // Week view
+  if(PAGE==='calendar-week'){
+    const today=new Date();
+    const baseDate=new Date(today);baseDate.setDate(today.getDate()-today.getDay()+calWeekOffset);
+    const startOfWeek=new Date(baseDate);startOfWeek.setDate(baseDate.getDate()-baseDate.getDay());
+    const endOfWeek=new Date(startOfWeek);endOfWeek.setDate(startOfWeek.getDate()+6);
+    const weekLabel=startOfWeek.toLocaleDateString('ko-KR',{month:'long',day:'numeric'})+' — '+endOfWeek.toLocaleDateString('ko-KR',{month:'long',day:'numeric'});
+    document.getElementById('listHeader').innerHTML=`<h3>📅 Week</h3><button class="btn primary" onclick="addEvent()">+ Event</button>`;
+    let whtml=`<div class="cal-hdr"><button class="cal-nav" onclick="calWeekNav(-7)">◀</button><h4>${weekLabel}</h4><button class="cal-nav" onclick="calWeekNav(7)">▶</button><button class="btn sm" onclick="calWeekGoToday()">Today</button></div>`;
+    whtml+=`<div class="week-strip">`;
+    for(let i=0;i<7;i++){
+      const d=new Date(startOfWeek);d.setDate(startOfWeek.getDate()+i);
+      const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const dk=ds.replace(/-/g,'');
+      const isToday=dk===`${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+      const dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+      const dayTasks=T.filter(t=>t.due_date&&t.due_date!=='N/A'&&t.due_date===ds);
+      const dayEvents=[];Object.entries(EV).forEach(([id,e])=>{if(e&&e.date===ds)dayEvents.push({id,...e})});
+      whtml+=`<div class="week-day${isToday?' today':''}" onclick="if(event.target.tagName!=='SELECT')SEL='${ds}';render();">
+        <div class="wd-date">${d.getDate()}</div><div class="wd-dow">${dow}</div>
+        <div class="wd-items">`;
+      dayTasks.forEach(t=>{whtml+=`<div class="wd-item task" onclick="event.stopPropagation();selTask('${t.id}')"><span class="wi-dot">●</span>${esc(t.title)}</div>`});
+      dayEvents.forEach(e=>{whtml+=`<div class="wd-item event" onclick="event.stopPropagation();editEvent('${e.id}')"><span class="wi-dot">○</span>${esc(e.title)}</div>`});
+      if(!dayTasks.length&&!dayEvents.length)whtml+=`<div class="wd-empty">—</div>`;
+      whtml+=`</div></div>`;
+    }
+    whtml+=`</div>`;
+    document.getElementById('listContent').innerHTML=whtml;
+    return;
+  }
+
   document.getElementById('listHeader').innerHTML=`<h3>📅 Calendar</h3><button class="btn primary" onclick="addEvent()">+ Event</button>`;
   let html=`<div class="cal-hdr"><button class="cal-nav" onclick="calNav(-1)">◀</button><h4>${mName}</h4><button class="cal-nav" onclick="calNav(1)">▶</button><button class="btn sm" onclick="calGoToday()">Today</button></div>`;
   html+=`<div class="cal-grid">${dows.map(d=>`<div class="dow">${d}</div>`).join('')}`;
@@ -538,6 +638,8 @@ function renderCalendar(){
 function calNav(dir){calM+=dir;if(calM<0){calM=11;calY--}if(calM>11){calM=0;calY++}SEL=null;render()}
 function calGoToday(){const n=new Date();calY=n.getFullYear();calM=n.getMonth();SEL=null;render()}
 function calClick(d){SEL=d;render()}
+function calWeekNav(days){calWeekOffset+=days;render()}
+function calWeekGoToday(){calWeekOffset=0;render()}
 
 function addEvent(date){
   const title=prompt('이벤트 제목:');if(!title)return;
@@ -570,8 +672,11 @@ function updateDetail(){
 }
 
 function renderTD(t){
-  document.getElementById('dTitle').textContent=t.id;
+  document.getElementById('dTitle').textContent=t.id+(USERS[t.created_by||'']?.role==='admin'?' 👑':'');
   const mid=t.meeting_id||t.meeting_date,meet=mid?M.find(m=>m.id===mid):null,h=t._h||[];
+  const cmts=t.comments||[];
+  const doneCount=cmts.filter(c=>/완료|✓/.test(c.text||'')).length;
+  const progHtml=cmts.length?`<div class="df"><span class="fl">Progress</span><span class="fv"><span class="prog-bar"><span class="pg-done">${doneCount}</span><span class="pg-total">/${cmts.length}</span></span></span></div>`:'';
   document.getElementById('dBody').innerHTML=`
     <h5>Info</h5>
     <div class="df"><span class="fl">Title</span><span class="fv" onclick="edf('title')">${esc(t.title)}</span></div>
@@ -580,10 +685,11 @@ function renderTD(t){
     <div class="df"><span class="fl">Due</span><span class="fv" onclick="edf('due_date')">${t.due_date||'N/A'}</span></div>
     <div class="df"><span class="fl">Priority</span><span class="fv" onclick="edf('priority')">${pb(t.priority)}</span></div>
     <div class="df"><span class="fl">Status</span><select onchange="uf('status',this.value)">${ST.map(s=>`<option value="${s}" ${t.status===s?'selected':''}>${STL[s]}</option>`).join('')}</select></div>
+    ${progHtml}
     ${meet?`<h5>Source Meeting</h5><div class="lmeet" onclick="SEL=null;PAGE='meetings-all';selMeet('${meet.id}')">📋 <strong>${esc(meet.date||meet.id.replace(/_/g,' '))}</strong><span style="color:var(--muted);font-size:11px">${esc(meet.tp||'')}</span><span style="margin-left:auto;font-size:10px;color:var(--accent)">→ Meeting</span></div>`:''}
     <h5>History</h5><div class="tl">${h.map(e=>`<div class="tl-i"><div class="tl-t">${e.t}</div><div>${e.a}</div>${e.n?`<div class="tl-n">${esc(e.n)}</div>`:''}</div>`).join('')}</div>
-    <h5>Comments</h5><div class="tl">${(t.comments||[]).length?t.comments.map(c=>`<div class="tl-i"><div class="tl-t">${c.timestamp||''}</div><div><strong>@${esc(c.author||'unknown')}</strong>: ${hm(esc(c.text||''))}</div>${c.mentions&&c.mentions.length?`<div class="tl-n" style="color:var(--accent)">👥 ${c.mentions.map(m=>'@'+m).join(', ')}</div>`:''}</div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0">No comments</div>'}</div>
-    <div style="display:flex;gap:6px;margin-top:8px"><input id="ci" style="flex:1;font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:6px 10px;outline:none;min-height:32px" placeholder="Comment... use @name to mention"><button class="btn sm primary" onclick="addComment()">Add</button></div>
+    <h5>Comments</h5><div class="tl">${cmts.length?cmts.map(c=>`<div class="tl-i"><div class="tl-t">${c.timestamp||''}</div><div><strong>@${esc(c.author||'unknown')}</strong>: ${hm(c.text||'')}</div>${c.mentions&&c.mentions.length?`<div class="tl-n" style="color:var(--accent)">👥 ${c.mentions.map(m=>'@'+m).join(', ')}</div>`:''}</div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0">No comments</div>'}</div>
+    <div style="display:flex;gap:6px;margin-top:8px"><input id="ci" style="flex:1;font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:6px 10px;outline:none;min-height:32px" placeholder="Comment... **bold** *italic* \`code\` @name"><button class="btn sm" style="background:var(--surface3)" onclick="addFilePath()" title="Add file path">📎</button><button class="btn sm primary" onclick="addComment()">Add</button></div>
     <h5>Attachments</h5>${(t._fa||[]).length?t._fa.map((f,i)=>`<div class="df"><span class="fl">📎</span><span class="fv" style="cursor:pointer;color:var(--accent2)" onclick="navigator.clipboard.writeText('${esc(f).replace(/'/g,"\\'")}');toast('Path copied')">${esc(f)}</span><span style="color:var(--muted2);font-size:12px;cursor:pointer;padding:0 4px" onclick="rmFile('${t.id}',${i})" title="Remove">✕</span></div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0">No attachments</div>'}
     <button class="btn sm" style="margin-top:6px" onclick="attachFile()">📎 Attach</button>
     <textarea class="ni" id="ni" placeholder="Add a progress note..."></textarea>
@@ -624,7 +730,8 @@ function edf(f){const t=ap(T.find(t=>t.id===SEL));if(!t)return;const d=prompt(`$
 function ie(id,f){selTask(id);const t=ap(T.find(t=>t.id===id));const d=prompt(`${fl(f)}:`,t[f]||'');if(d!==null&&d!==t[f])ufx(id,f,d)}
 function addNote(){const n=document.getElementById('ni')?.value?.trim();if(!n)return;const e=ED[SEL]||{};e._ha=[...(e._ha||[]),{t:now(),a:'Note',n}];ED[SEL]=e;s();render();updateDetail();toast('Note added')}
 function addComment(){if(!SEL)return;const text=document.getElementById('ci')?.value?.trim();if(!text)return;const mentions=[];text.replace(/@([\w가-힣]+)/g,(_,m)=>{mentions.push(m);return''});const e=ED[SEL]||{};e._ca=[...(e._ca||[]),{author:myName().replace(/^@/,'')||USER_ID,text,timestamp:now(),mentions}];ED[SEL]=e;s();render();updateDetail();toast('Comment added')}
-function hm(s){return String(s).replace(/@([\w가-힣]+)/g,'<span style="color:var(--accent);font-weight:600">@$1</span>')}
+function hm(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/📎\s*(\S+)/g,'<span class="cm-file" onclick="event.stopPropagation();navigator.clipboard.writeText(\'$1\');toast(\'Path copied: $1\')" title="Click to copy path">📁 $1</span>').replace(/\*\*(.+?)\*\*/g,'<span class="cm-bold">$1</span>').replace(/\*(.+?)\*/g,'<span class="cm-italic">$1</span>').replace(/`(.+?)`/g,'<span class="cm-code">$1</span>').replace(/\n/g,'<br>').replace(/@([\w가-힣]+)/g,'<span style="color:var(--accent);font-weight:600">@$1</span>')}
+function addFilePath(){if(!SEL)return;const path=prompt('Enter file path:');if(!path||!path.trim())return;const ci=document.getElementById('ci');if(ci)ci.value=(ci.value?ci.value+' ':'')+'📎 '+path.trim()}
 function addTask(){
   const title=document.getElementById('aTitle').value.trim();if(!title)return;
   const collabRaw=document.getElementById('aCollab').value.trim();
