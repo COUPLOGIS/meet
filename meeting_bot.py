@@ -511,6 +511,13 @@ def process_command(cmd: str, chat_id: str, sender_name: str) -> dict:
             wbs["pending_invites"] = pending
             save_wbs(wbs)
             result["replies"].append(f"✅ 초대 등록 완료! 환영합니다, {user['username']}님! 🎉")
+            # Send welcome notification via TeamLog bot
+            welcome = (
+                f"📋 *TeamLog*\n\n"
+                f"👋 초대가 수락되었습니다! 환영합니다 🎉\n\n"
+                f"🔗 [팀록 열기](https://couplogis.github.io/meet/?user={chat_id}&v=23)"
+            )
+            send_telegram(chat_id, welcome)
         else:
             result["replies"].append(f"✅ 등록 완료! 환영합니다, {user['username']}님!")
 
@@ -617,13 +624,21 @@ def process_command(cmd: str, chat_id: str, sender_name: str) -> dict:
             result["replies"].append("❌ 사용법: /invite @username [chat_id] [role]")
             return result
 
-        # If chat_id provided, register immediately
+        # If chat_id provided, register immediately and notify
         if invite_chat_id:
             user = register_user(invite_chat_id, username, role)
             result["replies"].append(
                 f"✅ @{user['username']} 님이 등록되었습니다! (role: {role})\n"
                 f"🔑 chat_id: {invite_chat_id}"
             )
+            # Send welcome notification to the invited user
+            inviter_name = sender_name.lstrip("@")
+            welcome_msg = (
+                f"📋 *TeamLog*\n\n"
+                f"👋 @{inviter_name}님이 팀록에 초대했습니다\n\n"
+                f"🔗 [팀록 열기](https://couplogis.github.io/meet/?user={invite_chat_id}&v=23)"
+            )
+            send_telegram(invite_chat_id, welcome_msg)
             # Clean up pending invite if exists
             wbs = load_wbs()
             wbs["pending_invites"] = wbs.get("pending_invites", [])
