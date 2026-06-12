@@ -226,9 +226,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 
 <script>
 const USER_ID = new URLSearchParams(location.search).get('user') || '';
-let T=[],M=[],MH={},ED={},PAGE=USER_ID?'my-tasks':'team-tasks-all',SEL=null,USERS={};
+let T=[],M=[],MH={},ED={},EV={},calY,calM,PAGE=USER_ID?'my-tasks':'team-tasks-all',SEL=null,USERS={};
 const SKEY='t5',EKEY='ev1',ST=['대기중','진행중','완료','보류'];
-let EV={},calY,calM;
 const STL={대기중:'Waiting',진행중:'In Progress',완료:'Done',보류:'Hold'};
 const PRI={높음:'High',보통:'Medium',낮음:'Low'};
 
@@ -467,10 +466,11 @@ function selMeet(id){SEL=id;render()}
 function closeDetail(){SEL=null;document.getElementById('dp').classList.add('closed');render()}
 
 function updateDetail(){
-  if(!SEL){document.getElementById('dp').classList.add('closed');return}
+  if(!SEL||PAGE.startsWith('calendar')){document.getElementById('dp').classList.add('closed');return}
   document.getElementById('dp').classList.remove('closed');
   const tm=T.find(t=>t.id===SEL);if(tm){renderTD(ap(tm));return}
   const mm=M.find(m=>m.id===SEL);if(mm){renderMD(mm);return}
+  document.getElementById('dp').classList.add('closed');
 }
 
 function renderTD(t){
