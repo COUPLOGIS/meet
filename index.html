@@ -192,9 +192,9 @@ const PRI={높음:'High',보통:'Medium',낮음:'Low'};
 function myName(){return USERS[USER_ID]?.username||''}
 
 const MENU=[
-  ...(USER_ID?[{id:'my-tasks',icon:'👤',label:'My Tasks',children:[
+  {id:'my-tasks',icon:'👤',label:'My Tasks',children:[
     {id:'my-tasks',label:'All My Tasks'},
-  ]}]:[]),
+  ]},
   {id:'team-tasks',icon:'👥',label:'Team Tasks',children:[
     {id:'team-tasks-all',label:'All'},
     {id:'team-tasks-progress',label:'In Progress'},
