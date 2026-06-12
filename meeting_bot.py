@@ -72,11 +72,12 @@ def save_notifications(data: list):
 
 # ── Telegram delivery (via Hermes send_message bridge) ──
 def send_telegram(chat_id: str, message: str) -> bool:
-    """Send message via Hermes gateway. Returns True if successful."""
+    """Send message via TeamLog bot (teamlog profile). Returns True if successful."""
     try:
         result = subprocess.run(
-            ["hermes", "send", "--target", f"telegram:{chat_id}", "--message", message],
-            capture_output=True, text=True, timeout=30
+            ["hermes", "send", "--to", f"telegram:{chat_id}", message],
+            capture_output=True, text=True, timeout=30,
+            env={**os.environ, "HERMES_PROFILE": "teamlog"},
         )
         return result.returncode == 0
     except Exception as e:
