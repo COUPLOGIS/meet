@@ -89,20 +89,25 @@ def get_user(chat_id: str) -> Optional[dict]:
     return users.get(chat_id)
 
 def get_user_by_username(username: str) -> Optional[dict]:
-    """Find user by username (with or without @ prefix)"""
+    """Find user by username or display_name (with or without @ prefix)"""
     users = load_users()
     clean = username.lstrip('@')
     for cid, data in users.items():
-        if data.get('username', '').lstrip('@') == clean:
+        stored = data.get('username', '').lstrip('@')
+        display = data.get('display_name', '')
+        if stored == clean or display == clean or display == username:
             return {"chat_id": cid, **data}
     return None
 
-def register_user(chat_id: str, username: str, role: str = "member") -> dict:
+def register_user(chat_id: str, username: str, role: str = "member", display_name: str = "") -> dict:
     users = load_users()
+    clean_username = username if username.startswith('@') else f"@{username}"
+    existing = users.get(chat_id, {})
     users[chat_id] = {
-        "username": username if username.startswith('@') else f"@{username}",
-        "role": role,
-        "registered_at": datetime.now().isoformat()
+        "username": clean_username,
+        "display_name": display_name or existing.get("display_name", ""),
+        "role": role if not existing else existing.get("role", role),
+        "registered_at": existing.get("registered_at", datetime.now().isoformat())
     }
     save_users(users)
 
