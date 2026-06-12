@@ -183,7 +183,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 
 <script>
 const USER_ID = new URLSearchParams(location.search).get('user') || '';
-let T=[],M=[],MH={},ED={},PAGE=USER_ID?'my-tasks':'tasks-all',SEL=null,USERS={};
+let T=[],M=[],MH={},ED={},PAGE=USER_ID?'my-tasks':'team-tasks-all',SEL=null,USERS={};
 const SKEY='t5',ST=['대기중','진행중','완료','보류'];
 const STL={대기중:'Waiting',진행중:'In Progress',완료:'Done',보류:'Hold'};
 const PRI={높음:'High',보통:'Medium',낮음:'Low'};
@@ -195,11 +195,11 @@ const MENU=[
   ...(USER_ID?[{id:'my-tasks',icon:'👤',label:'My Tasks',children:[
     {id:'my-tasks',label:'All My Tasks'},
   ]}]:[]),
-  {id:'tasks',icon:'📊',label:'Tasks',children:[
-    {id:'tasks-all',label:'All'},
-    {id:'tasks-progress',label:'In Progress'},
-    {id:'tasks-wait',label:'Waiting'},
-    {id:'tasks-done',label:'Done'},
+  {id:'team-tasks',icon:'👥',label:'Team Tasks',children:[
+    {id:'team-tasks-all',label:'All'},
+    {id:'team-tasks-progress',label:'In Progress'},
+    {id:'team-tasks-wait',label:'Waiting'},
+    {id:'team-tasks-done',label:'Done'},
   ]},
   {id:'meetings',icon:'📝',label:'Meetings',children:[
     {id:'meetings-all',label:'All Meetings'},
@@ -262,31 +262,36 @@ function navTo(page){
 }
 
 function updateCounts(){
-  const all=T.map(ap);
-  document.getElementById('cnt-tasks-all').textContent=all.length||'';
-  document.getElementById('cnt-tasks-progress').textContent=all.filter(t=>t.status==='진행중').length||'';
-  document.getElementById('cnt-tasks-wait').textContent=all.filter(t=>t.status==='대기중').length||'';
-  document.getElementById('cnt-tasks-done').textContent=all.filter(t=>t.status==='완료').length||'';
-  document.getElementById('cnt-meetings-all').textContent=M.length||'';
+  const all=T.map(ap),team=all.filter(t=>!!(t.meeting_date||t.meeting_id)),mine=all.filter(t=>!(t.meeting_date||t.meeting_id));
+  const el=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v||''};
+  const elg=(id,f,arr)=>el(id,arr.filter(t=>t.status===f).length);
+  function setgrp(pre,arr){el(pre+'-all',arr.length);elg(pre+'-progress','진행중',arr);elg(pre+'-wait','대기중',arr);elg(pre+'-done','완료',arr)}
+  setgrp('cnt-team-tasks',team);
+  if(USER_ID){el('cnt-my-tasks',mine.filter(t=>t.assignee===myName()||String(t.created_by||'')===USER_ID).length)}
+  el('cnt-meetings-all',M.length);
 }
 
 // ── Render ──
 function render(){renderMenu();renderContent()}
-function renderContent(){if(PAGE.startsWith('my-tasks')||PAGE.startsWith('tasks'))renderTasks();else if(PAGE.startsWith('meetings'))renderMeetings();updateDetail()}
+function renderContent(){if(PAGE.startsWith('my-tasks')||PAGE.startsWith('team-tasks')||PAGE.startsWith('tasks'))renderTasks();else if(PAGE.startsWith('meetings'))renderMeetings();updateDetail()}
 
 function renderTasks(){
   const all=T.map(ap);let list;
   if(PAGE==='my-tasks'){
     const myN=myName();
-    list=all.filter(t=>t.assignee===myN||String(t.created_by||'')===USER_ID);
-  }else if(PAGE==='tasks-progress')list=all.filter(t=>t.status==='진행중');
+    list=all.filter(t=>(t.assignee===myN||String(t.created_by||'')===USER_ID)&&!(t.meeting_date||t.meeting_id));
+  }else if(PAGE==='team-tasks-progress')list=all.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='진행중');
+  else if(PAGE==='team-tasks-wait')list=all.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='대기중');
+  else if(PAGE==='team-tasks-done')list=all.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='완료');
+  else if(PAGE==='team-tasks-all')list=all.filter(t=>!!(t.meeting_date||t.meeting_id));
+  else if(PAGE==='tasks-progress')list=all.filter(t=>t.status==='진행중');
   else if(PAGE==='tasks-wait')list=all.filter(t=>t.status==='대기중');
   else if(PAGE==='tasks-done')list=all.filter(t=>t.status==='완료');
   else list=all;
-  const lmap={'my-tasks':'My Tasks','tasks-all':'All Tasks','tasks-progress':'In Progress','tasks-wait':'Waiting','tasks-done':'Done'};
-  document.getElementById('listHeader').innerHTML=`<h3>📊 ${lmap[PAGE]||'Tasks'}<span class="c">${list.length}</span></h3><button class="btn primary" onclick="mShow('addModal')">+ New Task</button>`;
+  const lmap={'my-tasks':'My Tasks','team-tasks-all':'All Team Tasks','team-tasks-progress':'Team — In Progress','team-tasks-wait':'Team — Waiting','team-tasks-done':'Team — Done','tasks-all':'All Tasks','tasks-progress':'In Progress','tasks-wait':'Waiting','tasks-done':'Done'};
+  document.getElementById('listHeader').innerHTML=`<h3>${PAGE.startsWith('my-tasks')?'👤':PAGE.startsWith('team')?'👥':'📊'} ${lmap[PAGE]||'Tasks'}<span class="c">${list.length}</span></h3><button class="btn primary" onclick="mShow('addModal')">+ New Task</button>`;
   document.getElementById('listContent').innerHTML=`<table class="table"><thead><tr>
-    <th style="width:55px">ID</th><th style="width:40%">Title</th><th style="width:75px">Assignee</th>
+    <th style="width:55px">ID</th><th style="width:180px">Title</th><th style="width:75px">Assignee</th>
     <th class="hm" style="width:140px">Meeting</th>
     <th style="width:90px">Status</th><th class="hm" style="width:85px">Due</th></tr></thead><tbody>
     ${list.length===0?`<tr><td colspan="6"><div class="empty"><div class="ei">📭</div><p>No tasks</p></div></td></tr>`
