@@ -657,7 +657,7 @@ if __name__ == "__main__":
         if len(sys.argv) < 4:
             print("Usage: meeting_bot.py invite <username> <chat_id> [role]")
             sys.exit(1)
-        user = register_user(sys.argv[2], sys.argv[3],
+        user = register_user(sys.argv[3], sys.argv[2],
                             role=sys.argv[4] if len(sys.argv) > 4 else "member")
         print(json.dumps(user, ensure_ascii=False, indent=2))
 
