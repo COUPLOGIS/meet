@@ -66,8 +66,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent2)}
 .btn.sm{padding:3px 8px;font-size:10px}
 
-.tw{flex:1;overflow-y:auto}
-.table{width:100%;border-collapse:collapse}
+.tw{flex:1;overflow:auto}
+.table{width:100%;min-width:700px;border-collapse:collapse}
 .table th{position:sticky;top:0;background:var(--bg);font-size:10px;font-weight:600;color:var(--muted);
   text-transform:uppercase;letter-spacing:.8px;padding:10px 16px;text-align:left;border-bottom:1px solid var(--border2);z-index:2}
 .table td{padding:11px 16px;border-bottom:1px solid var(--border2);font-size:13px;vertical-align:middle}
@@ -173,7 +173,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
   <div class="modal">
     <h4>+ New Task</h4>
     <label>Title</label><input id="aTitle" placeholder="Task title">
-    <label>Assignee</label><input id="aAssignee" placeholder="e.g. John">
+    <label>Assignee</label><input id="aAssignee" placeholder="조한표">
     <label>Due Date</label><input id="aDue" type="date">
     <label>Priority</label><select id="aPri"><option>Medium</option><option>High</option><option>Low</option></select>
     <div class="btns"><button class="btn" onclick="mClose('addModal')">Cancel</button><button class="btn primary" onclick="addTask()">Create</button></div>
@@ -276,17 +276,17 @@ function renderTasks(){
   document.getElementById('listHeader').innerHTML=`<h3>📊 ${lmap[PAGE]||'Tasks'}<span class="c">${list.length}</span></h3><button class="btn primary" onclick="mShow('addModal')">+ New Task</button>`;
   document.getElementById('listContent').innerHTML=`<table class="table"><thead><tr>
     <th style="width:55px">ID</th><th>Title</th><th style="width:75px">Assignee</th>
-    <th class="hm" style="width:85px">Due</th><th class="hm" style="width:150px">Meeting</th>
-    <th style="width:90px">Status</th></tr></thead><tbody>
+    <th class="hm" style="width:150px">Meeting</th>
+    <th style="width:90px">Status</th><th class="hm" style="width:85px">Due</th></tr></thead><tbody>
     ${list.length===0?`<tr><td colspan="6"><div class="empty"><div class="ei">📭</div><p>No tasks</p></div></td></tr>`
     :list.map(t=>{
       const mid=t.meeting_id||t.meeting_date,meet=mid?M.find(m=>m.id===mid):null;
       return`<tr class="${t.status==='완료'?'done':''}${SEL===t.id?' sel':''}" onclick="selTask('${t.id}')">
         <td class="tid">${t.id}</td><td class="tt-c">${esc(t.title)}</td>
         <td><span class="editable" onclick="event.stopPropagation();ie('${t.id}','assignee')">${esc(t.assignee)}</span></td>
-        <td class="hm"><span class="editable" onclick="event.stopPropagation();ie('${t.id}','due_date')">${t.due_date||'-'}</span></td>
         <td class="hm">${meet?`<span class="mlink" onclick="event.stopPropagation();SEL=null;PAGE='meetings-all';selMeet('${meet.id}')">📋 ${(meet.date||meet.id).slice(0,16)}</span>`:'<span style="color:var(--muted2)">-</span>'}</td>
-        <td>${sbdg(t)}</td></tr>`}).join('')}</tbody></table>`;
+        <td>${sbdg(t)}</td>
+        <td class="hm"><span class="editable" onclick="event.stopPropagation();ie('${t.id}','due_date')">${t.due_date||'-'}</span></td></tr>`}).join('')}</tbody></table>`;
 }
 
 function renderMeetings(){
@@ -299,9 +299,7 @@ function renderMeetings(){
       <div class="mc-tasks">${m.ts.length} tasks</div></div>`).join('');
 }
 
-function sbdg(t){const cl={대기중:'wait',진행중:'progress',완료:'done',보류:'hold'};
-  return`<span class="sbdg ${cl[t.status]||'wait'}" onclick="event.stopPropagation();cyc('${t.id}')">${STL[t.status]||t.status}</span>`;
-}
+function sbdg(t){return sbdgSpan(t).outerHTML}
 
 function selTask(id){SEL=id;PAGE=`tasks-${ap(T.find(t=>t.id===id))?.status==='진행중'?'progress':ap(T.find(t=>t.id===id))?.status==='대기중'?'wait':ap(T.find(t=>t.id===id))?.status==='완료'?'done':'all'}`;render()}
 function selMeet(id){SEL=id;render()}
@@ -341,7 +339,22 @@ function renderMD(m){
 }
 
 // ── Edit ──
-function cyc(id){const t=ap(T.find(t=>t.id===id)),i=ST.indexOf(t.status);ufx(id,'status',ST[(i+1)%ST.length]);toast('Status changed')}
+function cyc(id,el){
+  el.stopPropagation();
+  const t=ap(T.find(t=>t.id===id));
+  const sel=document.createElement('select');
+  sel.style.cssText='font-family:var(--font);font-size:11px;background:var(--surface3);color:var(--text);border:1px solid var(--accent);border-radius:4px;padding:3px 6px;outline:none';
+  sel.innerHTML=ST.map(s=>`<option value="${s}" ${t.status===s?'selected':''}>${STL[s]}</option>`).join('');
+  sel.onchange=function(){ufx(id,'status',this.value);sel.replaceWith(sbdgSpan(ap(T.find(t=>t.id===id))))};
+  sel.onblur=function(){sel.replaceWith(sbdgSpan(ap(T.find(t=>t.id===id))))};
+  el.target.replaceWith(sel);
+  sel.focus();
+}
+function sbdgSpan(t){const cl={대기중:'wait',진행중:'progress',완료:'done',보류:'hold'};
+  const s=document.createElement('span');s.className=`sbdg ${cl[t.status]||'wait'}`;
+  s.textContent=STL[t.status]||t.status;s.onclick=function(e){cyc(t.id,e)};
+  return s;
+}
 function uf(f,v){if(!SEL)return;ufx(SEL,f,v)}
 function ufx(id,f,v){const old=ap(T.find(t=>t.id===id));if(old[f]===v)return;const e=ED[id]||{};e[f]=v;e._ha=[...(e._ha||[]),{t:now(),a:`${fl(f)} → ${v}`,n:''}];ED[id]=e;s();render();updateDetail();toast('Saved')}
 function fl(f){return{title:'Title',assignee:'Assignee',due_date:'Due',priority:'Priority',status:'Status'}[f]||f}
@@ -351,7 +364,7 @@ function addNote(){const n=document.getElementById('ni')?.value?.trim();if(!n)re
 function addTask(){
   const title=document.getElementById('aTitle').value.trim();if(!title)return;
   const ids=T.map(t=>parseInt(t.id.slice(1))).filter(n=>!isNaN(n));const nid=`T${String((Math.max(0,...ids)+1)).padStart(3,'0')}`;
-  ED[nid]={title,assignee:document.getElementById('aAssignee').value.trim()||'Unassigned',due_date:document.getElementById('aDue').value||'N/A',priority:document.getElementById('aPri').value,status:'대기중',_ha:[{t:now(),a:'Created (web)',n:''}],_new:true};
+  ED[nid]={title,assignee:document.getElementById('aAssignee').value.trim()||'조한표',due_date:document.getElementById('aDue').value||'N/A',priority:document.getElementById('aPri').value,status:'대기중',_ha:[{t:now(),a:'Created (web)',n:''}],_new:true};
   T.push({id:nid,title:'',assignee:'',due_date:'',priority:'보통',status:'대기중',meeting_id:'',_h:[]});
   s();mClose('addModal');SEL=nid;PAGE='tasks-all';render();updateDetail();toast('Task created');
 }
