@@ -22,7 +22,7 @@ import os
 import re
 import sys
 import time
-import subprocess
+import urllib.request
 from datetime import datetime, date, timedelta
 from pathlib import Path
 from typing import Optional
@@ -70,16 +70,41 @@ def load_notifications() -> list:
 def save_notifications(data: list):
     save_json(NOTIF_FILE, data)
 
-# ── Telegram delivery (via Hermes send_message bridge) ──
-def send_telegram(chat_id: str, message: str) -> bool:
-    """Send message via TeamLog bot (teamlog profile). Returns True if successful."""
+# ── Telegram delivery (via TeamLog bot API) ──
+TELEGRAM_TOKEN = ""
+
+def _load_token():
+    global TELEGRAM_TOKEN
+    if TELEGRAM_TOKEN:
+        return TELEGRAM_TOKEN
     try:
-        result = subprocess.run(
-            ["hermes", "send", "--to", f"telegram:{chat_id}", message],
-            capture_output=True, text=True, timeout=30,
-            env={**os.environ, "HERMES_PROFILE": "teamlog"},
-        )
-        return result.returncode == 0
+        env_path = Path.home() / ".hermes" / "profiles" / "teamlog" / ".env"
+        for line in env_path.read_text().splitlines():
+            if line.startswith("TELEGRAM_BOT_TOKEN="):
+                TELEGRAM_TOKEN = line.split("=", 1)[1].strip()
+                break
+    except Exception:
+        pass
+    return TELEGRAM_TOKEN
+
+def send_telegram(chat_id: str, message: str) -> bool:
+    """Send message via TeamLog bot (Telegram API direct). Returns True if successful."""
+    token = _load_token()
+    if not token:
+        print("[send_telegram] No token", file=sys.stderr)
+        return False
+    try:
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        data = json.dumps({
+            "chat_id": chat_id,
+            "text": message,
+            "parse_mode": "Markdown",
+            "disable_web_page_preview": True,
+        }).encode()
+        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            result = json.loads(resp.read())
+        return result.get("ok", False)
     except Exception as e:
         print(f"[send_telegram] Error: {e}", file=sys.stderr)
         return False
