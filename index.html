@@ -22,7 +22,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 
 #sidebar{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);
   display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;z-index:10}
-.sb-header{padding:18px 18px 14px;flex-shrink:0}
+.sb-header{padding:14px 18px 10px;flex-shrink:0;display:flex;align-items:center;gap:10px}
+.sb-header img{width:32px;height:32px;border-radius:8px;flex-shrink:0}
 .sb-header h2{font-size:14px;font-weight:700;letter-spacing:-.2px}
 .sb-nav{flex:1;overflow-y:auto;padding:0 10px 12px}
 
@@ -271,7 +272,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 <div class="ham-menu" id="hamMenu"></div>
 
 <nav id="sidebar">
-  <div class="sb-header"><h2>📋 TeamLog</h2></div>
+  <div class="sb-header"><img src="logo.png" alt="TeamLog"><h2>TeamLog</h2></div>
   <div class="sb-nav" id="sbNav"></div>
   <div class="sb-footer"><span class="live"></span> Connected</div>
 </nav>
