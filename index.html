@@ -227,7 +227,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 
 <script>
 const USER_ID = new URLSearchParams(location.search).get('user') || '';
-let T=[],M=[],MH={},ED={},EV={},calY,calM,PAGE=USER_ID?'my-tasks':'team-tasks-all',SEL=null,USERS={},SORT_BY='id',SORT_DIR='asc',Q='';
+let T=[],M=[],MH={},ED={},EV={},calY,calM,PAGE=USER_ID?'my-tasks':'team-tasks-all',SEL=null,USERS={};
+var SORT_BY='id',SORT_DIR='asc',Q='',FILTER_STATUS='',FILTER_PRIORITY='';
 const SKEY='t5',EKEY='ev1',ST=['대기중','진행중','완료','보류'];
 const STL={대기중:'Waiting',진행중:'In Progress',완료:'Done',보류:'Hold'};
 const PRI={높음:'High',보통:'Medium',낮음:'Low'};
@@ -338,9 +339,12 @@ function renderTasks(){
   else if(PAGE==='tasks-done')list=all.filter(t=>t.status==='완료');
   else list=all;
   const lmap={'my-tasks':'My Tasks','team-tasks-all':'All Team Tasks','team-tasks-progress':'Team — In Progress','team-tasks-wait':'Team — Waiting','team-tasks-done':'Team — Done','tasks-all':'All Tasks','tasks-progress':'In Progress','tasks-wait':'Waiting','tasks-done':'Done'};
-  document.getElementById('listHeader').innerHTML=`<h3>${PAGE.startsWith('my-tasks')?'👤':PAGE.startsWith('team')?'👥':'📊'} ${lmap[PAGE]||'Tasks'}<span class="c">${list.length}</span></h3><div style="display:flex;align-items:center;gap:8px"><input id="sq" style="font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:5px 10px;outline:none;width:160px" placeholder="Search..." value="${Q.replace(/\"/g,'&quot;').replace(/</g,'&lt;')}" oninput="Q=this.value;render();"><button class="btn primary" onclick="mShow('addModal')">+ New Task</button></div>`;
+  document.getElementById('listHeader').innerHTML=`<h3>${PAGE.startsWith('my-tasks')?'👤':PAGE.startsWith('team')?'👥':'📊'} ${lmap[PAGE]||'Tasks'}<span class="c">${list.length}</span></h3><div style="display:flex;align-items:center;gap:8px"><input id="sq" style="font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:5px 10px;outline:none;width:130px" placeholder="Search..." value="${Q.replace(/\"/g,'&quot;').replace(/</g,'&lt;')}" oninput="Q=this.value;render();"><select onchange="FILTER_STATUS=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_STATUS?'selected':''}>All Status</option>${ST.map(s=>`<option value="${s}" ${FILTER_STATUS===s?'selected':''}>${STL[s]}</option>`).join('')}</select><select onchange="FILTER_PRIORITY=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_PRIORITY?'selected':''}>All Priority</option>${['높음','보통','낮음'].map(p=>`<option value="${p}" ${FILTER_PRIORITY===p?'selected':''}>${PRI[p]}</option>`).join('')}</select><button class="btn primary" onclick="mShow('addModal')">+ New Task</button></div>`;
   // Apply search
   if(Q){const q=Q.toLowerCase();list=list.filter(t=>t.id.toLowerCase().includes(q)||(t.title||'').toLowerCase().includes(q)||(t.assignee||'').toLowerCase().includes(q))}
+  // Apply filters
+  if(FILTER_STATUS)list=list.filter(t=>t.status===FILTER_STATUS);
+  if(FILTER_PRIORITY)list=list.filter(t=>t.priority===FILTER_PRIORITY);
   // Apply sort
   const sd=SORT_DIR==='asc'?1:-1;
   list.sort((a,b)=>{
