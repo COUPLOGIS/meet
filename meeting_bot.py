@@ -18,6 +18,7 @@ Usage:
 """
 
 import json
+import fcntl
 import re
 import sys
 import time
@@ -35,19 +36,24 @@ NOTIF_FILE = DATA_DIR / "notifications.json"  # pending notification queue
 
 WBS_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-# ── Data loading ──
+# ── Data loading with file locking ──
 def load_json(path: Path, default=None) -> dict:
     if default is None:
         default = {}
     try:
         with open(path) as f:
-            return json.load(f)
+            fcntl.flock(f, fcntl.LOCK_SH)
+            data = json.load(f)
+            fcntl.flock(f, fcntl.LOCK_UN)
+            return data
     except (FileNotFoundError, json.JSONDecodeError):
         return default
 
 def save_json(path: Path, data: dict):
-    with open(path, 'w') as f:
+    with open(path, "w") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
         json.dump(data, f, ensure_ascii=False, indent=2)
+        fcntl.flock(f, fcntl.LOCK_UN)
 
 def load_wbs() -> dict:
     return load_json(WBS_FILE, {"tasks": [], "users": {}})
@@ -149,7 +155,7 @@ def is_admin(chat_id: str) -> bool:
 
 # ── Task operations ──
 def get_next_task_id(wbs: dict) -> str:
-    existing = [int(t["id"][1:]) for t in wbs["tasks"] if t["id"].startswith("T")]
+    existing = [int(t["id"][1:]) for t in wbs["tasks"] if t.get("id","").startswith("T") and t["id"][1:].isdigit()]
     next_id = max(existing, default=0) + 1
     return f"T{next_id:03d}"
 
@@ -685,7 +691,7 @@ def process_command(cmd: str, chat_id: str, sender_name: str) -> dict:
         )
 
     else:
-        result["replies"].append(f"❓ 알 수 없는 명령어입니다. /help 를 입력해보세요.")
+        result["replies"].append("❓ 알 수 없는 명령어입니다. /help 를 입력해보세요.")
 
     return result
 
