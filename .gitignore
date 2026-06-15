@@ -2,3 +2,5 @@ node_modules/
 package-lock.json
 package.json
 __pycache__/
+target/
+desktop/src-tauri/target/
