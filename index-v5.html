@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tasks — 회의록 · 과제 관리</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#090c10;--surface:#0d1117;--surface2:#161b22;--surface3:#21262d;
+  --border:#30363d;--border2:#21262d;
+  --text:#f0f6fc;--text2:#c9d1d9;--muted:#8b949e;--muted2:#484f58;
+  --accent:#58a6ff;--accent2:#79c0ff;
+  --green:#3fb950;--orange:#d2991d;--red:#f85149;
+  --radius:8px;--radius-sm:6px;--radius-lg:10px;
+  --sw:240px;--dw:400px;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;
+  --mono:'SF Mono','JetBrains Mono','Cascadia Code',monospace;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;display:flex}
+
+/* ── Sidebar ── */
+#sidebar{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;z-index:10}
+.sb-header{padding:18px 18px 14px;flex-shrink:0}
+.sb-header h2{font-size:14px;font-weight:700;letter-spacing:-.2px}
+.sb-header .ver{font-size:10px;color:var(--muted2);margin-top:1px}
+.sb-nav{flex:1;overflow-y:auto;padding:0 10px 12px}
+
+/* menu group */
+.menu-group{margin-bottom:2px}
+.menu-parent{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:var(--radius);
+  cursor:pointer;font-size:13px;font-weight:600;color:var(--text2);transition:all .12s;user-select:none}
+.menu-parent:hover{background:var(--surface2);color:var(--text)}
+.menu-parent .arrow{font-size:10px;margin-left:auto;transition:transform .15s;color:var(--muted)}
+.menu-parent.open .arrow{transform:rotate(90deg)}
+.menu-parent .ic{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.menu-parent .badge{font-size:10px;background:var(--accent);color:#fff;border-radius:8px;padding:0 6px;font-weight:700;line-height:16px;margin-left:auto;margin-right:4px}
+.menu-parent.open .badge{display:none}
+.menu-parent .arrow{display:none}
+.menu-parent.has-sub .arrow{display:block}
+.menu-parent.has-sub .badge{display:none}
+
+.menu-children{overflow:hidden;max-height:0;transition:max-height .2s ease}
+.menu-children.open{max-height:600px}
+.menu-child{display:flex;align-items:center;gap:8px;padding:7px 12px 7px 40px;border-radius:var(--radius-sm);
+  cursor:pointer;font-size:12px;color:var(--muted);transition:all .1s;user-select:none}
+.menu-child:hover{background:var(--surface2);color:var(--text2)}
+.menu-child.active{color:var(--accent);font-weight:600}
+.menu-child .cc{font-size:10px;margin-left:auto;color:var(--muted2)}
+
+.sb-footer{padding:10px 16px;border-top:1px solid var(--border2);flex-shrink:0;font-size:10px;
+  color:var(--muted);display:flex;align-items:center;gap:6px}
+.sb-footer .live{width:5px;height:5px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── Main ── */
+#main{flex:1;display:flex;overflow:hidden;min-width:0}
+#list-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#detail-panel{width:var(--dw);border-left:1px solid var(--border);background:var(--surface);
+  display:flex;flex-direction:column;overflow:hidden;transition:all .2s;flex-shrink:0}
+#detail-panel.collapsed{width:0;opacity:0;border-left:none}
+
+/* ── List header ── */
+.lh{padding:16px 24px;border-bottom:1px solid var(--border2);flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between}
+.lh h3{font-size:15px;font-weight:700}
+.lh .count{font-size:11px;color:var(--muted);font-weight:400;margin-left:6px}
+.btn{font-size:11px;font-weight:600;padding:6px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:var(--surface2);color:var(--text2);cursor:pointer;transition:all .12s;
+  display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.btn:hover{background:var(--surface3);color:var(--text)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent2)}
+.btn.sm{padding:3px 8px;font-size:10px}
+
+/* ── Table ── */
+.tw{flex:1;overflow-y:auto}
+.table{width:100%;border-collapse:collapse}
+.table th{position:sticky;top:0;background:var(--bg);font-size:10px;font-weight:600;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.8px;padding:10px 16px;text-align:left;
+  border-bottom:1px solid var(--border2);z-index:2;white-space:nowrap}
+.table td{padding:11px 16px;border-bottom:1px solid var(--border2);font-size:13px;vertical-align:middle}
+.table tr{cursor:pointer;transition:all .1s}
+.table tr:hover td{background:var(--surface2)}
+.table tr.sel td{background:var(--surface2)}
+.table tr.done td{opacity:.5}.table tr.done .tt-c{text-decoration:line-through}
+.tid{font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:600}
+.mlink{font-size:10px;color:var(--accent2);cursor:pointer;text-decoration:underline}
+.mlink:hover{color:var(--accent)}
+.editable{cursor:pointer;padding:1px 4px;margin:-1px -4px;border-radius:3px}.editable:hover{background:var(--surface3)}
+
+/* status */
+.sbdg{display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:99px;font-size:11px;
+  font-weight:600;cursor:pointer;transition:all .1s;border:1px solid transparent}
+.sbdg.wait{background:rgba(210,153,29,.12);color:var(--orange);border-color:rgba(210,153,29,.25)}
+.sbdg.progress{background:rgba(88,166,255,.12);color:var(--accent);border-color:rgba(88,166,255,.25)}
+.sbdg.done{background:rgba(63,185,80,.12);color:var(--green);border-color:rgba(63,185,80,.25)}
+.sbdg.hold{background:rgba(139,148,158,.12);color:var(--muted);border-color:rgba(139,148,158,.25)}
+.sbdg:hover{filter:brightness(1.3)}
+
+.pribdg{font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px}
+.pri-high{background:rgba(248,81,73,.15);color:var(--red)}
+.pri-mid{background:rgba(210,153,29,.15);color:var(--orange)}
+.pri-low{background:rgba(139,148,158,.15);color:var(--muted)}
+
+/* ── Meeting cards ── */
+.mcard{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);
+  padding:14px 18px;cursor:pointer;transition:all .12s;margin-bottom:8px;display:flex;align-items:center;gap:14px}
+.mcard:hover{border-color:var(--border)}
+.mcard.active{border-color:var(--accent)}
+.mcard .mc-icon{font-size:24px;flex-shrink:0}
+.mcard .mc-body{flex:1;min-width:0}
+.mcard .mc-date{font-size:10px;color:var(--muted)}
+.mcard .mc-title{font-size:14px;font-weight:600;margin-top:2px}
+.mcard .mc-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.mcard .mc-tasks{font-size:10px;background:var(--surface3);padding:3px 8px;border-radius:99px;
+  color:var(--accent);font-weight:600;white-space:nowrap;flex-shrink:0}
+
+/* ── Detail panel ── */
+.dh{padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between}
+.dh h4{font-size:14px;font-weight:600}
+.dclose{width:28px;height:28px;border-radius:var(--radius-sm);border:1px solid var(--border2);
+  background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;
+  justify-content:center;font-size:16px;transition:all .1s}
+.dclose:hover{background:var(--surface3);color:var(--text)}
+.db{flex:1;overflow-y:auto;padding:18px 20px}
+.db h5{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.8px;margin:20px 0 8px}.db h5:first-child{margin-top:0}
+.df{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);
+  padding:10px 14px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.df:hover{border-color:var(--border)}
+.df .fl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;min-width:48px;flex-shrink:0}
+.df .fv{flex:1;font-size:13px;cursor:pointer;padding:2px 4px;margin:-2px -4px;border-radius:3px}
+.df .fv:hover{background:var(--surface3)}
+.df select,.df input{font-family:var(--font);font-size:13px;background:var(--surface3);
+  color:var(--text);border:1px solid var(--accent);border-radius:4px;padding:5px 8px;outline:none;width:100%}
+.lmeet{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(88,166,255,.06);
+  border:1px solid rgba(88,166,255,.15);border-radius:var(--radius-sm);cursor:pointer;
+  transition:all .1s;font-size:12px;margin-top:6px}
+.lmeet:hover{background:rgba(88,166,255,.12);border-color:var(--accent)}
+.tl{position:relative;padding-left:14px;margin-top:6px}
+.tl::before{content:'';position:absolute;left:4px;top:2px;bottom:2px;width:1px;background:var(--border2)}
+.tl-i{position:relative;padding:4px 0 4px 16px;font-size:11px}
+.tl-i::before{content:'';position:absolute;left:-11px;top:8px;width:5px;height:5px;border-radius:50%;
+  background:var(--accent);border:1px solid var(--surface)}
+.tl-t{font-family:var(--mono);font-size:10px;color:var(--muted2)}
+.tl-n{color:var(--muted);font-size:10px;margin-top:2px;line-height:1.5}
+.ni{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);
+  color:var(--text);padding:10px 12px;font-family:var(--font);font-size:12px;resize:vertical;
+  min-height:60px;outline:none;margin-top:8px}.ni:focus{border-color:var(--accent)}
+
+/* meet detail inline */
+.meta-tags{display:flex;gap:6px;flex-wrap:wrap}
+.mtag{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);
+  padding:4px 10px;font-size:11px;color:var(--muted)}.mtag span{color:var(--text);margin-left:3px}
+.sum-list{list-style:none}.sum-list li{padding:6px 0;border-bottom:1px solid var(--border2);
+  font-size:12px;display:flex;gap:6px}.sum-list li:last-child{border-bottom:none}
+.sum-list li::before{content:'▸';color:var(--accent2);font-size:10px;margin-top:3px;flex-shrink:0}
+
+/* toast */
+#toast{position:fixed;bottom:20px;right:20px;background:var(--surface3);border:1px solid var(--border);
+  border-radius:var(--radius);padding:10px 18px;font-size:12px;color:var(--text);z-index:1000;
+  transform:translateY(80px);opacity:0;transition:all .2s}#toast.show{transform:translateY(0);opacity:1}
+
+/* modal */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:center;justify-content:center}
+.mo.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:24px;width:400px;max-width:90vw;max-height:80vh;overflow-y:auto}
+.modal h4{font-size:15px;font-weight:700;margin-bottom:16px}
+.modal label{display:block;font-size:10px;font-weight:600;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;margin-top:10px}
+.modal input,.modal select{width:100%;font-family:var(--font);font-size:13px;background:var(--surface2);
+  color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 10px;outline:none}
+.modal input:focus,.modal select:focus{border-color:var(--accent)}
+.modal .btns{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+
+/* empty */
+.empty{padding:60px 20px;text-align:center;color:var(--muted)}.empty .ei{font-size:36px;margin-bottom:8px}
+
+/* mobile */
+.hambtn{display:none;position:fixed;top:10px;left:10px;z-index:30;width:32px;height:32px;
+  border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border);
+  cursor:pointer;align-items:center;justify-content:center;flex-direction:column;gap:3px}
+.hambtn span{width:14px;height:1.5px;background:var(--text);border-radius:1px}
+@media(max-width:900px){
+  :root{--sw:0px;--dw:0px}
+  #sidebar{position:fixed;left:0;top:0;bottom:0;width:260px;transform:translateX(-100%);transition:transform .2s;z-index:15}
+  #sidebar.open{transform:translateX(0)}
+  #detail-panel{position:fixed;right:0;top:0;bottom:0;width:100vw;z-index:15;border-left:none}
+  #detail-panel.collapsed{width:0}
+  .hambtn{display:flex}.hm{display:none!important}
+}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+</style>
+</head>
+<body>
+
+<div class="hambtn" id="ham" onclick="document.getElementById('sidebar').classList.toggle('open')"><span></span><span></span><span></span></div>
+
+<nav id="sidebar">
+  <div class="sb-header"><h2>📋 Tasks</h2><div class="ver">회의록 · 과제 관리</div></div>
+  <div class="sb-nav" id="sbNav"></div>
+  <div class="sb-footer"><span class="live"></span> Hermes 연결됨</div>
+</nav>
+
+<div id="main">
+  <div id="list-panel">
+    <div class="lh" id="listHeader"></div>
+    <div class="tw" id="listContent"></div>
+  </div>
+  <div id="detail-panel" class="collapsed">
+    <div class="dh"><h4 id="dTitle">상세</h4><button class="dclose" onclick="closeDetail()">✕</button></div>
+    <div class="db" id="dBody"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div class="mo" id="addModal">
+  <div class="modal">
+    <h4>➕ 새 과제</h4>
+    <label>과제명</label><input id="aTitle" placeholder="과제 제목">
+    <label>담당자</label><input id="aAssignee" placeholder="예: 홍길동">
+    <label>목표일</label><input id="aDue" type="date">
+    <label>우선순위</label><select id="aPri"><option>보통</option><option>높음</option><option>낮음</option></select>
+    <div class="btns"><button class="btn" onclick="mClose('addModal')">취소</button><button class="btn primary" onclick="addTask()">추가</button></div>
+  </div>
+</div>
+
+<script>
+// ── State ──
+let T=[], M=[], MH={}, ED={}, PAGE='tasks-all', SEL=null;
+const SKEY='t4', ST=['대기중','진행중','완료','보류'];
+
+// ── Menu definition (easily extendable) ──
+const MENU = [
+  { id:'tasks', icon:'📊', label:'Tasks', 
+    children:[
+      {id:'tasks-all',label:'All'},
+      {id:'tasks-progress',label:'In Progress'},
+      {id:'tasks-wait',label:'Waiting'},
+      {id:'tasks-done',label:'Done'},
+    ]},
+  { id:'meetings', icon:'📝', label:'Meetings',
+    children:[
+      {id:'meetings-all',label:'All Meetings'},
+    ]},
+];
+
+function l(){try{ED=JSON.parse(localStorage.getItem(SKEY)||'{}');}catch(e){ED={}}}
+function s(){localStorage.setItem(SKEY,JSON.stringify(ED))}
+function ap(t){const e=ED[t.id]||{};return{...t,...e,_h:[...(t._h||[]),...(e._ha||[])]}}
+
+// ── Boot ──
+async function boot(){
+  l();
+  try{
+    const w=await(await fetch('wbs.json?'+Date.now())).json();
+    T=(w.tasks||[]).map(t=>({...t,_h:[{t:t.meeting_date||t.meeting_id||'?',a:'등록',n:''}]}));
+  }catch(e){T=[]}
+  const mids=new Set();T.forEach(t=>{if(t.meeting_id)mids.add(t.meeting_id);if(t.meeting_date)mids.add(t.meeting_date)});
+  for(const id of mids){try{MH[id]=await(await fetch(id+'.html?'+Date.now())).text()}catch(e){}}
+  M=[...mids].map(id=>{
+    const ts=T.filter(t=>(t.meeting_id||t.meeting_date)===id);
+    let date='',p='',tp='',sm=[];
+    if(MH[id]){const d=new DOMParser().parseFromString(MH[id],'text/html');
+      date=d.querySelector('.meta-item:nth-child(1)')?.textContent?.replace(/.*일시/,'').trim()||id.replace(/_/g,' ');
+      p=d.querySelector('.meta-item:nth-child(2)')?.textContent?.replace(/.*참여자/,'').trim()||'';
+      tp=d.querySelector('.meta-item:nth-child(3)')?.textContent?.replace(/.*주제/,'').trim()||'';
+      sm=[...d.querySelectorAll('.box li')].map(li=>li.textContent.trim());}
+    return{id,date,p,tp,sm,ts};
+  });M.sort((a,b)=>b.id.localeCompare(a.id));
+  render();
+}
+
+// ── Menu ──
+function renderMenu(){
+  const tasks=document.querySelector('[data-menu="tasks"]');
+  const open=(tasks&&tasks.classList.contains('open'))||PAGE.startsWith('tasks');
+  document.getElementById('sbNav').innerHTML=MENU.map(g=>{
+    const open=PAGE.startsWith(g.id);
+    return `<div class="menu-group">
+      <div class="menu-parent has-sub${open?' open':''}" onclick="toggleMenu('${g.id}')">
+        <span class="ic">${g.icon}</span>${g.label}<span class="arrow">▸</span>
+      </div>
+      <div class="menu-children${open?' open':''}">
+        ${(g.children||[]).map(c=>`<div class="menu-child${PAGE===c.id?' active':''}" onclick="navTo('${c.id}')">${c.label}<span class="cc" id="cnt-${c.id}"></span></div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  updateCounts();
+}
+
+function toggleMenu(id){
+  const g=MENU.find(m=>m.id===id);if(!g||!g.children)return;
+  // If already viewing this group, collapse; otherwise expand and go to first child
+  if(PAGE.startsWith(id)){
+    // collapse
+    PAGE='';SEL=null;document.getElementById('detail-panel').classList.add('collapsed');
+  } else {
+    PAGE=g.children[0].id;
+  }
+  render();
+}
+
+function navTo(page){
+  PAGE=page;SEL=null;document.getElementById('detail-panel').classList.add('collapsed');
+  render();
+}
+
+function updateCounts(){
+  const all=T.map(ap);
+  const cnts={
+    'tasks-all':all.length,
+    'tasks-progress':all.filter(t=>t.status==='진행중').length,
+    'tasks-wait':all.filter(t=>t.status==='대기중').length,
+    'tasks-done':all.filter(t=>t.status==='완료').length,
+    'meetings-all':M.length,
+  };
+  for(const [k,v] of Object.entries(cnts)){
+    const el=document.getElementById('cnt-'+k);if(el)el.textContent=v||'';
+  }
+}
+
+// ── Render ──
+function render(){renderMenu();renderContent();}
+
+function renderContent(){
+  if(PAGE.startsWith('tasks')) renderTasks();
+  else if(PAGE.startsWith('meetings')) renderMeetings();
+  updateDetail();
+}
+
+function renderTasks(){
+  const all=T.map(ap);
+  let list;
+  if(PAGE==='tasks-progress')list=all.filter(t=>t.status==='진행중');
+  else if(PAGE==='tasks-wait')list=all.filter(t=>t.status==='대기중');
+  else if(PAGE==='tasks-done')list=all.filter(t=>t.status==='완료');
+  else list=all;
+
+  const label=PAGE==='tasks-all'?'전체 과제':PAGE==='tasks-progress'?'진행중':PAGE==='tasks-wait'?'대기중':'완료';
+  document.getElementById('listHeader').innerHTML=`<h3>📊 ${label}<span class="count">${list.length}건</span></h3><button class="btn primary" onclick="mShow('addModal')">+ 새 과제</button>`;
+  document.getElementById('listContent').innerHTML=`<table class="table"><thead><tr>
+    <th style="width:55px">ID</th><th>과제명</th><th style="width:75px">담당자</th>
+    <th class="hm" style="width:85px">마감일</th><th class="hm" style="width:150px">출처 회의</th>
+    <th style="width:85px">상태</th></tr></thead><tbody>
+    ${list.length===0?`<tr><td colspan="6"><div class="empty"><div class="ei">📭</div><p>과제 없음</p></div></td></tr>`
+    :list.map(t=>{
+      const mid=t.meeting_id||t.meeting_date,meet=mid?M.find(m=>m.id===mid):null;
+      return`<tr class="${t.status==='완료'?'done':''}${SEL===t.id?' sel':''}" onclick="selTask('${t.id}')">
+        <td class="tid">${t.id}</td><td class="tt-c">${esc(t.title)}</td>
+        <td><span class="editable" onclick="event.stopPropagation();ie('${t.id}','assignee')">${esc(t.assignee)}</span></td>
+        <td class="hm"><span class="editable" onclick="event.stopPropagation();ie('${t.id}','due_date')">${t.due_date||'미정'}</span></td>
+        <td class="hm">${meet?`<span class="mlink" onclick="event.stopPropagation();SEL=null;PAGE='meetings-all';selMeet('${meet.id}')">📋 ${(meet.date||meet.id).slice(0,16)}</span>`:'<span style="color:var(--muted2)">-</span>'}</td>
+        <td>${sbdg(t)}</td></tr>`}).join('')}</tbody></table>`;
+}
+
+function renderMeetings(){
+  document.getElementById('listHeader').innerHTML=`<h3>📝 회의록<span class="count">${M.length}건</span></h3><span></span>`;
+  document.getElementById('listContent').innerHTML=M.length===0
+    ?'<div class="empty"><div class="ei">📭</div><p>회의록 없음</p></div>'
+    :M.map(m=>`<div class="mcard${SEL===m.id?' active':''}" onclick="selMeet('${m.id}')">
+      <div class="mc-icon">📋</div><div class="mc-body">
+      <div class="mc-date">${esc(m.date||m.id.replace(/_/g,' '))}</div>
+      <div class="mc-title">${esc(m.tp||'회의')}</div>
+      <div class="mc-meta">👥 ${esc(m.p||'')}</div></div>
+      <div class="mc-tasks">과제 ${m.ts.length}건</div></div>`).join('');
+}
+
+function sbdg(t){
+  const lb={대기중:'대기',진행중:'진행',완료:'완료',보류:'보류'};
+  const cl={대기중:'wait',진행중:'progress',완료:'done',보류:'hold'};
+  return`<span class="sbdg ${cl[t.status]||'wait'}" onclick="event.stopPropagation();cyc('${t.id}')">${lb[t.status]||t.status}</span>`;
+}
+
+// ── Select ──
+function selTask(id){SEL=id;PAGE=`tasks-${ap(T.find(t=>t.id===id))?.status==='진행중'?'progress':ap(T.find(t=>t.id===id))?.status==='대기중'?'wait':ap(T.find(t=>t.id===id))?.status==='완료'?'done':'all'}`;render();}
+function selMeet(id){SEL=id;render();}
+
+function closeDetail(){SEL=null;document.getElementById('detail-panel').classList.add('collapsed');render();}
+
+// ── Detail ──
+function updateDetail(){
+  if(!SEL){document.getElementById('detail-panel').classList.add('collapsed');return}
+  document.getElementById('detail-panel').classList.remove('collapsed');
+  const tm=T.find(t=>t.id===SEL);
+  if(tm){renderTD(ap(tm));return}
+  const mm=M.find(m=>m.id===SEL);
+  if(mm){renderMD(mm);return}
+}
+
+function renderTD(t){
+  document.getElementById('dTitle').textContent=t.id;
+  const mid=t.meeting_id||t.meeting_date,meet=mid?M.find(m=>m.id===mid):null;
+  const h=t._h||[];
+  document.getElementById('dBody').innerHTML=`
+    <h5>기본 정보</h5>
+    <div class="df"><span class="fl">제목</span><span class="fv" onclick="edf('title')">${esc(t.title)}</span></div>
+    <div class="df"><span class="fl">담당자</span><span class="fv" onclick="edf('assignee')">${esc(t.assignee)}</span></div>
+    <div class="df"><span class="fl">마감일</span><span class="fv" onclick="edf('due_date')">${t.due_date||'미정'}</span></div>
+    <div class="df"><span class="fl">우선순위</span><span class="fv" onclick="edf('priority')">${pb(t.priority)}</span></div>
+    <div class="df"><span class="fl">상태</span><select onchange="uf('status',this.value)">${ST.map(s=>`<option value="${s}" ${t.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+    ${meet?`<h5>출처 회의</h5><div class="lmeet" onclick="SEL=null;PAGE='meetings-all';selMeet('${meet.id}')">📋 <strong>${esc(meet.date||meet.id.replace(/_/g,' '))}</strong><span style="color:var(--muted);font-size:11px">${esc(meet.tp||'')}</span><span style="margin-left:auto;font-size:10px;color:var(--accent)">클릭 → 회의록</span></div>`:''}
+    <h5>진행 히스토리</h5><div class="tl">${h.map(e=>`<div class="tl-i"><div class="tl-t">${e.t}</div><div>${e.a}</div>${e.n?`<div class="tl-n">${esc(e.n)}</div>`:''}</div>`).join('')}</div>
+    <textarea class="ni" id="ni" placeholder="진행 노트..."></textarea>
+    <div style="margin-top:8px"><button class="btn sm primary" onclick="addNote()">노트 추가</button></div>`;
+}
+
+function renderMD(m){
+  document.getElementById('dTitle').textContent='📋 회의록';
+  const ts=m.ts.map(ap);
+  document.getElementById('dBody').innerHTML=`
+    <h4 style="font-size:15px;margin-bottom:12px">${esc(m.date||m.id.replace(/_/g,' '))}</h4>
+    <div class="meta-tags" style="margin-bottom:12px">
+      <div class="mtag">📅<span>${esc(m.date||m.id.replace(/_/g,' '))}</span></div>
+      <div class="mtag">👥<span>${esc(m.p||'')}</span></div>
+      <div class="mtag">📌<span>${esc(m.tp||'')}</span></div></div>
+    <h5>회의 요약</h5>${m.sm.length?`<ul class="sum-list">${m.sm.map(l=>`<li>${esc(l)}</li>`).join('')}</ul>`:'<div style="color:var(--muted);font-size:12px;padding:8px 0">요약 없음</div>'}
+    <h5>연결된 과제 (${ts.length}건)</h5>${ts.length===0?'<div style="color:var(--muted);font-size:12px">없음</div>':ts.map(t=>`<div class="lmeet" onclick="selTask('${t.id}')"><span class="tid">${t.id}</span> ${esc(t.title)}<span style="margin-left:auto;font-size:10px;color:var(--accent)">${t.status}</span></div>`).join('')}`;
+}
+
+// ── Edit ──
+function cyc(id){const t=ap(T.find(t=>t.id===id)),i=ST.indexOf(t.status);ufx(id,'status',ST[(i+1)%ST.length]);toast('✅ 상태 변경됨')}
+function uf(f,v){if(!SEL)return;ufx(SEL,f,v)}
+function ufx(id,f,v){
+  const old=ap(T.find(t=>t.id===id));if(old[f]===v)return;
+  const e=ED[id]||{};
+  e[f]=v;e._ha=[...(e._ha||[]),{t:now(),a:`${fl(f)} → ${v}`,n:''}];
+  ED[id]=e;s();render();updateDetail();toast('✅ 저장됨');
+}
+function fl(f){return{title:'제목',assignee:'담당자',due_date:'마감일',priority:'우선순위',status:'상태'}[f]||f}
+function edf(f){const t=ap(T.find(t=>t.id===SEL));if(!t)return;const d=prompt(`${fl(f)}:`,t[f]||'');if(d!==null&&d!==t[f])uf(f,d)}
+function ie(id,f){selTask(id);const t=ap(T.find(t=>t.id===id));const d=prompt(`${fl(f)}:`,t[f]||'');if(d!==null&&d!==t[f])ufx(id,f,d)}
+function addNote(){const n=document.getElementById('ni')?.value?.trim();if(!n)return;const e=ED[SEL]||{};e._ha=[...(e._ha||[]),{t:now(),a:'노트',n}];ED[SEL]=e;s();render();updateDetail();toast('📝 노트 추가됨')}
+function addTask(){
+  const title=document.getElementById('aTitle').value.trim();if(!title)return;
+  const ids=T.map(t=>parseInt(t.id.slice(1))).filter(n=>!isNaN(n));
+  const nid=`T${String((Math.max(0,...ids)+1)).padStart(3,'0')}`;
+  ED[nid]={title,assignee:document.getElementById('aAssignee').value.trim()||'미지정',
+    due_date:document.getElementById('aDue').value||'미정',priority:document.getElementById('aPri').value,
+    status:'대기중',_ha:[{t:now(),a:'등록 (웹)',n:''}],_new:true};
+  T.push({id:nid,title:'',assignee:'',due_date:'',priority:'보통',status:'대기중',meeting_id:'',_h:[]});
+  s();mClose('addModal');SEL=nid;PAGE='tasks-all';render();updateDetail();toast('✅ 추가됨');
+}
+function pb(p){const m={높음:'pri-high',보통:'pri-mid',낮음:'pri-low'};return`<span class="pribdg ${m[p]||'pri-mid'}">${p||'보통'}</span>`}
+
+// ── Helpers ──
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function now(){return new Date().toLocaleString('ko-KR')}
+function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),1800)}
+function mShow(id){document.getElementById(id).classList.add('show')}
+function mClose(id){document.getElementById(id).classList.remove('show');if(id==='addModal')document.getElementById('aTitle').value=document.getElementById('aAssignee').value=document.getElementById('aDue').value=''}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDetail();mClose('addModal')}});
+boot();
+</script>
+</body>
+</html>
