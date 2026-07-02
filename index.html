@@ -1225,7 +1225,15 @@ function renderTD(t){
     ${subtaskHtml}
     ${linksHtml}
     ${meet?`<h5>Source Meeting</h5><div class="lmeet" onclick="SEL=null;PAGE='meetings-all';selMeet('${meet.id}')">📋 <strong>${esc(meet.date||meet.id.replace(/_/g,' '))}</strong><span style="color:var(--muted);font-size:11px">${esc(meet.tp||'')}</span><span style="margin-left:auto;font-size:10px;color:var(--accent)">→ Meeting</span></div>`:''}
-    <h5>History</h5><div class="tl">${h.map(e=>`<div class="tl-i"><div class="tl-t">${e.t}</div><div>${e.a}</div>${e.n?`<div class="tl-n">${esc(e.n)}</div>`:''}</div>`).join('')}</div>
+    <h5>History</h5><div class="tl">${(()=>{
+      const MAX=3;
+      if(h.length<=MAX)return h.map(e=>`<div class="tl-i"><div class="tl-t">${e.t}</div><div>${e.a}</div>${e.n?`<div class="tl-n">${esc(e.n)}</div>`:''}</div>`).join('');
+      const shown=h.slice(-MAX);
+      const hidden=h.slice(0,-MAX);
+      return shown.map(e=>`<div class="tl-i"><div class="tl-t">${e.t}</div><div>${e.a}</div>${e.n?`<div class="tl-n">${esc(e.n)}</div>`:''}</div>`).join('')
+        +`<div id="histMore" style="display:none">${hidden.map(e=>`<div class="tl-i"><div class="tl-t">${e.t}</div><div>${e.a}</div>${e.n?`<div class="tl-n">${esc(e.n)}</div>`:''}</div>`).join('')}</div>`
+        +`<div class="tl-i" style="cursor:pointer;color:var(--accent2);font-weight:600;text-align:center" onclick="const m=document.getElementById('histMore');const t=this;m.style.display=m.style.display==='none'?'block':'none';t.textContent=m.style.display==='none'?'\u25bc Show ${hidden.length} more':'\u25b2 Collapse'">\u25bc Show ${hidden.length} more</div>`;
+    })()}</div>
     <h5>Comments</h5><div class="tl">${cmts.length?cmts.map(c=>`<div class="tl-i"><div class="tl-t">${c.timestamp||''}</div><div><strong>@${esc(c.author||'unknown')}</strong>: ${hm(c.text||'')}</div>${c.mentions&&c.mentions.length?`<div class="tl-n" style="color:var(--accent)">👥 ${c.mentions.map(m=>'@'+m).join(', ')}</div>`:''}</div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0">No comments</div>'}</div>
     <div style="display:flex;gap:6px;margin-top:8px"><input id="ci" style="flex:1;font-family:var(--font);font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:6px 10px;outline:none;min-height:32px" placeholder="Comment... **bold** *italic* \`code\` @name"><button class="btn sm" style="background:var(--surface3)" onclick="addFilePath()" title="Add file path">📎</button><button class="btn sm primary" onclick="addComment()">Add</button></div>
     <h5>Attachments</h5>${(t._fa||[]).length?t._fa.map((f,i)=>`<div class="df"><span class="fl">📎</span><span class="fv" style="cursor:pointer;color:var(--accent2)" onclick="navigator.clipboard.writeText('${esc(f).replace(/'/g,"\\'")}');toast('Path copied')">${esc(f)}</span><span style="color:var(--muted2);font-size:12px;cursor:pointer;padding:0 4px" onclick="rmFile('${t.id}',${i})" title="Remove">✕</span></div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0\">No attachments</div>'}
