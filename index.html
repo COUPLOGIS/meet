@@ -382,7 +382,7 @@ function l(){
 async function apiGet(endpoint){
   if(!API_BASE)return null;
   try{
-    const res=await fetch(API_BASE+endpoint,{headers:{'ngrok-skip-browser-warning':'1'}});
+    const res=await fetch(API_BASE+endpoint);
     const ct=res.headers.get('content-type')||'';
     if(!res.ok)throw new Error('HTTP '+res.status);
     if(!ct.includes('json'))throw new Error('Not JSON: '+ct);
@@ -403,7 +403,7 @@ async function apiPost(endpoint, body){
   try{
     const res=await fetch(API_BASE+endpoint,{
       method:'POST',
-      headers:{'Content-Type':'application/json','ngrok-skip-browser-warning':'1'},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify(body)
     });
     const ct=res.headers.get('content-type')||'';
