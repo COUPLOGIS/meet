@@ -1322,8 +1322,13 @@ async function rmLink(tid,i){
   ED[tid]=e;s();render();updateDetail();toast('Link removed');
 }
 function openPreview(label,url){
-  document.getElementById('iframe-label').textContent=label;
-  document.getElementById('preview-iframe').src=url;
+  document.getElementById('iframe-label').textContent=label||'Preview';
+  // Convert Google URLs to embed-friendly format (Google blocks /edit in iframes)
+  let embedUrl=url;
+  if(url.includes('docs.google.com/spreadsheets')) embedUrl=url.replace(/\/edit.*/,'/preview');
+  else if(url.includes('docs.google.com/document')) embedUrl=url.replace(/\/edit.*/,'/preview');
+  else if(url.includes('docs.google.com/presentation')) embedUrl=url.replace(/\/edit.*/,'/embed');
+  document.getElementById('preview-iframe').src=embedUrl;
   document.getElementById('iframe-panel').classList.add('show');
   // Resize iframe panel
   const dp=document.getElementById('dp');
