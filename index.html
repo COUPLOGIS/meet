@@ -664,7 +664,7 @@ function renderTasksTable(list){
       added.add(c.id);
     });
   });
-  document.getElementById('listContent').innerHTML=`<table class="table"><thead><tr>
+  return `<table class="table"><thead><tr>
     ${th('id','ID','width:55px')+th('title','Title','width:140px')+th('assignee','Assignee','width:65px')}
     <th class="hm" style="width:110px">Meeting</th>
     ${th('status','Status','width:80px')+th('due','Due','width:75px')}
@@ -673,8 +673,7 @@ function renderTasksTable(list){
     ${allRows.length===0?`<tr><td colspan="8"><div class="empty"><div class="ei">📭</div><p>No tasks</p></div></td></tr>`
     :allRows.join('')}</tbody></table>`;
 }
-
-function renderTasksBoard(list){/* same as before */
+function renderTasksBoard(list){
   const cols={'대기중':[],'진행중':[],'완료':[],'보류':[]};
   list.forEach(t=>{if(cols[t.status])cols[t.status].push(t);else cols['대기중'].push(t)});
   const cc={'대기중':'kcol-wait','진행중':'kcol-progress','완료':'kcol-done','보류':'kcol-hold'};
