@@ -704,6 +704,20 @@ function startPolling(){
       if(data&&data.ok){
         // Merge updates: replace T, EV, USERS, COMMENTS while preserving local ED
         T=(data.tasks||[]).map(t=>({...t,_h:t._h||[{t:t.meeting_date||t.meeting_id||'?',a:'Created',n:''}]}));
+        // Merge localStorage ED tasks not yet synced to API
+        Object.keys(ED).forEach(id => {
+          if (!T.find(t => t.id === id)) {
+            const e = ED[id];
+            T.push({
+              id, title: e.title || '', description: e.description || '',
+              tags: e.tags || [], parent_id: e.parent_id || null,
+              assignee: e.assignee || '', collaborators: e.collaborators || [],
+              due_date: e.due_date || '', priority: e.priority || '보통',
+              status: e.status || '대기중', meeting_id: '', created_by: e.created_by || '',
+              _h: e._ha || [{t: e.created_at || '?', a: 'Created', n: ''}]
+            });
+          }
+        });
         USERS=data.users||{};
         EV=data.events||{};
         COMMENTS=data.comments||[];
