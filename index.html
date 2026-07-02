@@ -417,14 +417,17 @@ async function apiPost(endpoint, body){
 function ap(t){
   const e=ED[t.id]||{};
   if(API_BASE){
-    // API mode: comments from COMMENTS, not from ED._ca
+    // API mode: base t from API, only apply local-only ED fields (not API-managed fields)
     const taskComments=COMMENTS.filter(c=>c.task_id===t.id);
-    return {...t,...e,title:t.title||e.title||'(no title)',
+    return {...t,
+      title:t.title||e.title||'(no title)',
+      description:t.description||e.description||'',
       comments:taskComments,
       _h:[...(t._h||[]),...(e._ha||[])],
       _fa:[...(e._fa||[])],
-      links:[...(e.links||[])],
-      ...e.links!==undefined?{links:e.links}:{}};
+      links:e.links!==undefined?e.links:(t.links||[]),
+      tags:t.tags||e.tags||[],
+      collaborators:t.collaborators||e.collaborators||[]};
   }
   // localStorage fallback: original behavior
   return {...t,...e,title:t.title||e.title||'(no title)',
