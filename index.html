@@ -128,7 +128,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .lmeet{display:flex;align-items:center;gap:8px;padding:8px 12px;margin:2px 0;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;background:var(--surface2);border:1px solid var(--border2);transition:all .1s}
 .lmeet:hover{border-color:var(--accent2)}
 .tl{margin-top:4px;border-left:2px solid var(--border2)}
-.tl-i{padding:6px 0 6px 14px;font-size:12px}.tl-t{font-size:10px;color:var(--muted);margin-bottom:1px}.tl-n{font-size:11px;color:var(--accent2);margin-top:2px}
+.tl-i{padding:6px 0 6px 14px;font-size:12px}.tl-i.done{opacity:.5}.tl-t{font-size:10px;color:var(--muted);margin-bottom:1px}.tl-n{font-size:11px;color:var(--accent2);margin-top:2px}
+.cm-check{cursor:pointer;font-size:14px;flex-shrink:0;opacity:.4;transition:opacity .15s;user-select:none}.cm-check:hover{opacity:1}
 
 /* Toast */
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:8px 20px;border-radius:99px;font-size:12px;font-weight:600;z-index:999;opacity:0;transition:opacity .2s}#toast.show{opacity:1}
@@ -292,14 +293,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
   <div id="lp">
     <div class="lh" id="listHeader"></div>
     <div class="tw" id="listContent"></div>
-  </div>
-  <div id="dp" class="closed">
-    <div class="dh"><h4 id="dTitle">Detail</h4><button class="dclose" onclick="closeDetail()">✕</button></div>
-    <div class="db" id="dBody"></div>
     <div id="iframe-panel">
       <div id="iframe-bar"><span id="iframe-label">Preview</span><span class="ifr-close" onclick="closePreview()" title="Close">✕</span></div>
       <div id="iframe-wrap"><iframe id="preview-iframe" src="" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe></div>
     </div>
+  </div>
+  <div id="dp" class="closed">
+    <div class="dh"><h4 id="dTitle">Detail</h4><button class="dclose" onclick="closeDetail()">✕</button></div>
+    <div class="db" id="dBody"></div>
   </div>
 </div>
 
@@ -908,7 +909,7 @@ function renderTasksTable(list){
   topList.forEach(t=>{
     const mid=t.meeting_id||t.meeting_date,meet=mid?M.find(m=>m.id===mid):null;
     const cmts=t.comments||[];
-    const doneCount=cmts.filter(c=>/완료|✓/.test(c.text||'')).length;
+    const doneCount=cmts.filter(c=>c.completed).length;
     const prog=cmts.length?`<span class="prog-bar"><span class="pg-done">${doneCount}</span><span class="pg-total">/${cmts.length}</span></span>`:'-';
     const isAdmin=USERS[t.created_by||'']?.role==='admin';
     const childCount=list.filter(c=>c.parent_id===t.id).length;
@@ -931,7 +932,7 @@ function renderTasksTable(list){
     list.filter(c=>c.parent_id===t.id).forEach(c=>{
       const cmid=c.meeting_id||c.meeting_date,cmeet=cmid?M.find(m=>m.id===cmid):null;
       const ccmts=c.comments||[];
-      const cdone=ccmts.filter(x=>/완료|✓/.test(x.text||'')).length;
+      const cdone=ccmts.filter(x=>x.completed).length;
       const cprog=ccmts.length?`<span class="prog-bar"><span class="pg-done">${cdone}</span><span class="pg-total">/${ccmts.length}</span></span>`:'-';
       const isAdmin2=USERS[c.created_by||'']?.role==='admin';
       const clinks=(c.links||[]);
@@ -1202,7 +1203,7 @@ function renderTD(t){
   document.getElementById('dTitle').innerHTML=`${t.id}${USERS[t.created_by||'']?.role==='admin'?' 👑':''} ${mirrorBadge}`;
   const mid=t.meeting_id||t.meeting_date,meet=mid?M.find(m=>m.id===mid):null,h=t._h||[];
   const cmts=t.comments||[];
-  const doneCount=cmts.filter(c=>/완료|✓/.test(c.text||'')).length;
+  const doneCount=cmts.filter(c=>c.completed).length;
   const progHtml=cmts.length?`<div class="df"><span class="fl">Progress</span><span class="fv"><span class="prog-bar"><span class="pg-done">${doneCount}</span><span class="pg-total">/${cmts.length}</span></span></span></div>`:'';
   const tagsHtml=(t.tags||[]).length?`<div class="df"><span class="fl">Tags</span><span class="fv" style="display:flex;gap:4px;flex-wrap:wrap;cursor:default">${t.tags.map(tg=>`<span class="tag-chip" onclick="event.stopPropagation();FILTER_TAG='${tg}';render()">#${esc(tg)}</span>`).join('')}</span></div>`:'';
   const descHtml=`<h5>Description <button class="btn sm" style="font-size:9px;padding:1px 5px;margin-left:6px" onclick="event.stopPropagation();editDesc()">✏️</button></h5><div class="desc-md" id="descDisplay" onclick="editDesc()" style="cursor:pointer" title="Click to edit">${t.description?hm(t.description):'<span style="color:var(--muted);font-style:italic">Click to add description...</span>'}</div><textarea id="descEdit" style="display:none;width:100%;font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--accent);border-radius:var(--radius-sm);color:var(--text);padding:8px 10px;outline:none;resize:vertical;min-height:80px" onblur="saveDesc()" onkeydown="if(event.key==='Escape')cancelDesc()"></textarea>`;
@@ -1251,7 +1252,7 @@ function renderTD(t){
         +`<div id="histMore" style="display:none">${hidden.map(e=>`<div class="tl-i"><div class="tl-t">${e.t}</div><div>${e.a}</div>${e.n?`<div class="tl-n">${esc(e.n)}</div>`:''}</div>`).join('')}</div>`
         +`<div class="tl-i" style="cursor:pointer;color:var(--accent2);font-weight:600;text-align:center" onclick="const m=document.getElementById('histMore');const t=this;m.style.display=m.style.display==='none'?'block':'none';t.textContent=m.style.display==='none'?'\u25bc Show ${hidden.length} more':'\u25b2 Collapse'">\u25bc Show ${hidden.length} more</div>`;
     })()}</div>
-    <h5>Comments</h5><div class="tl">${cmts.length?cmts.map(c=>`<div class="tl-i"><div class="tl-t">${c.timestamp||''}</div><div><strong>@${esc(c.author||'unknown')}</strong>: ${hm(c.text||'')}</div>${c.mentions&&c.mentions.length?`<div class="tl-n" style="color:var(--accent)">👥 ${c.mentions.map(m=>'@'+m).join(', ')}</div>`:''}</div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0">No comments</div>'}</div>
+    <h5>Comments</h5><div class="tl">${cmts.length?cmts.map(c=>`<div class="tl-i${c.completed?' done':''}"><div class="tl-t">${c.timestamp||''}</div><div style="display:flex;align-items:flex-start;gap:6px"><span style="flex:1"><strong>@${esc(c.author||'unknown')}</strong>: ${hm(c.text||'')}</span><span class="cm-check" onclick="event.stopPropagation();toggleComment(${c.id})" title="${c.completed?'Mark incomplete':'Mark complete'}">${c.completed?'✅':'○'}</span></div>${c.mentions&&c.mentions.length?`<div class="tl-n" style="color:var(--accent)">👥 ${c.mentions.map(m=>'@'+m).join(', ')}</div>`:''}</div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0">No comments</div>'}</div>
     <div style="display:flex;gap:6px;margin-top:8px"><input id="ci" style="flex:1;font-family:var(--font);font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:6px 10px;outline:none;min-height:32px" placeholder="Comment... **bold** *italic* \`code\` @name"><button class="btn sm" style="background:var(--surface3)" onclick="addFilePath()" title="Add file path">📎</button><button class="btn sm primary" onclick="addComment()">Add</button></div>
     <h5>Attachments</h5>${(t._fa||[]).length?t._fa.map((f,i)=>`<div class="df"><span class="fl">📎</span><span class="fv" style="cursor:pointer;color:var(--accent2)" onclick="navigator.clipboard.writeText('${esc(f).replace(/'/g,"\\'")}');toast('Path copied')">${esc(f)}</span><span style="color:var(--muted2);font-size:12px;cursor:pointer;padding:0 4px" onclick="rmFile('${t.id}',${i})" title="Remove">✕</span></div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0\">No attachments</div>'}
     <button class="btn sm" style="margin-top:6px" onclick="attachFile()">📎 Attach</button>
@@ -1329,18 +1330,16 @@ function openPreview(label,url){
   else if(url.includes('docs.google.com/document')) embedUrl=url.replace(/\/edit.*/,'/preview');
   else if(url.includes('docs.google.com/presentation')) embedUrl=url.replace(/\/edit.*/,'/embed');
   document.getElementById('preview-iframe').src=embedUrl;
-  document.getElementById('iframe-panel').classList.add('show');
-  // Resize iframe panel
-  const dp=document.getElementById('dp');
-  const db=document.getElementById('dBody');
   const ip=document.getElementById('iframe-panel');
-  ip.style.height='300px';
-  db.style.maxHeight='calc(100% - 300px)';
+  const lc=document.getElementById('listContent');
+  ip.classList.add('show');
+  ip.style.height='320px';
+  lc.style.maxHeight='calc(100% - 320px)';
 }
 function closePreview(){
   document.getElementById('iframe-panel').classList.remove('show');
   document.getElementById('preview-iframe').src='';
-  document.getElementById('dBody').style.maxHeight='';
+  document.getElementById('listContent').style.maxHeight='';
 }
 
 // ── Edit ──
@@ -1493,6 +1492,20 @@ async function ufx(id,f,v){
 function fl(f){return{title:'Title',assignee:'Assignee',due_date:'Due',priority:'Priority',status:'Status'}[f]||f}
 function edf(f){const t=ap(T.find(t=>t.id===SEL));if(!t)return;const d=prompt(`${fl(f)}:`,t[f]||'');if(d!==null&&d!==t[f])uf(f,d)}
 function ie(id,f){selTask(id);const t=ap(T.find(t=>t.id===id));const d=prompt(`${fl(f)}:`,t[f]||'');if(d!==null&&d!==t[f])ufx(id,f,d)}
+async function toggleComment(cid){
+  if(!API_BASE)return;
+  try{
+    const result=await apiPost('/api/comment/toggle',{comment_id:cid});
+    if(result&&result.ok){
+      // Update local COMMENTS array
+      const cmt=COMMENTS.find(c=>c.id===cid);
+      if(cmt)cmt.completed=result.completed;
+      _dirty=true;_lastLocal=Date.now();
+      render();updateDetail();
+      setTimeout(()=>{_dirty=false;},2000);
+    }
+  }catch(e){console.error('toggleComment failed',e);}
+}
 async function addComment(){
   if(!SEL)return;
   const text=document.getElementById('ci')?.value?.trim();if(!text)return;
