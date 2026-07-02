@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,15 +7,16 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#090c10;--surface:#0d1117;--surface2:#161b22;--surface3:#21262d;
-  --border:#30363d;--border2:#21262d;
-  --text:#f0f6fc;--text2:#c9d1d9;--muted:#8b949e;--muted2:#484f58;
-  --accent:#58a6ff;--accent2:#79c0ff;
-  --green:#3fb950;--orange:#d2991d;--red:#f85149;
+  --bg:#ffffff;--surface:#f8f9fa;--surface2:#f1f3f5;--surface3:#e9ecef;
+  --border:#dee2e6;--border2:#e9ecef;
+  --text:#111111;--text2:#444444;--muted:#777777;--muted2:#adb5bd;
+  --accent:#e94733;--accent2:#ee751e;
+  --green:#2e7d32;--orange:#ee751e;--red:#e94733;
   --radius:8px;--radius-sm:6px;
   --sw:240px;--dw:400px;
   --font:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;
   --mono:'SF Mono','JetBrains Mono','Cascadia Code',monospace;
+  --main-size:14px;
 }
 html,body{height:100%;overflow:hidden}
 body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;display:flex}
@@ -24,7 +25,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
   display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;z-index:10}
 .sb-header{padding:14px 18px 10px;flex-shrink:0;display:flex;align-items:center;gap:10px}
 .sb-header img{width:32px;height:32px;border-radius:8px;flex-shrink:0}
-.sb-header h2{font-size:14px;font-weight:700;letter-spacing:-.2px}
+.sb-header h2{font-size:14px;font-weight:700;letter-spacing:-.2px;color:var(--accent)}
 .sb-nav{flex:1;overflow-y:auto;padding:0 10px 12px}
 
 .menu-group{margin-bottom:2px}
@@ -64,8 +65,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .btn{font-size:11px;font-weight:600;padding:6px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);
   background:var(--surface2);color:var(--text2);cursor:pointer;transition:all .12s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .btn:hover{background:var(--surface3);color:var(--text)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent2);border-color:var(--accent2)}
 .btn.sm{padding:3px 8px;font-size:10px}
+.btn.outline{background:transparent;border:1px solid var(--accent);color:var(--accent)}.btn.outline:hover{background:var(--accent);color:#fff}
 
 .tw{flex:1;overflow:auto}
 .table{width:100%;table-layout:fixed;border-collapse:collapse}
@@ -75,92 +77,88 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .table tr{cursor:pointer;transition:all .1s}.table tr:hover td{background:var(--surface2)}
 .table tr.sel td{background:var(--surface2)}.table tr.done td{opacity:.5}.table tr.done .tt-c{text-decoration:line-through}
 .tt-c{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+/* main task (not subtask) */ .tt-main{font-size:var(--main-size);font-weight:700}
 .tid{font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:600}
 .mlink{font-size:10px;color:var(--accent2);cursor:pointer;text-decoration:underline}.mlink:hover{color:var(--accent)}
 .editable{cursor:pointer;padding:1px 4px;margin:-1px -4px;border-radius:3px}.editable:hover{background:var(--surface3)}
 
 .sbdg{display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:99px;font-size:11px;
   font-weight:600;cursor:pointer;transition:all .1s;border:1px solid transparent}
-.sbdg.wait{background:rgba(210,153,29,.12);color:var(--orange);border-color:rgba(210,153,29,.25)}
-.sbdg.progress{background:rgba(88,166,255,.12);color:var(--accent);border-color:rgba(88,166,255,.25)}
-.sbdg.done{background:rgba(63,185,80,.12);color:var(--green);border-color:rgba(63,185,80,.25)}
-.sbdg.hold{background:rgba(139,148,158,.12);color:var(--muted);border-color:rgba(139,148,158,.25)}
-.sbdg:hover{filter:brightness(1.3)}
+.sbdg.wait{background:rgba(233,71,51,.1);color:var(--red);border-color:rgba(233,71,51,.2)}
+.sbdg.progress{background:rgba(238,117,30,.1);color:var(--orange);border-color:rgba(238,117,30,.2)}
+.sbdg.done{background:rgba(46,125,50,.1);color:var(--green);border-color:rgba(46,125,50,.2)}
+.sbdg.hold{background:rgba(119,119,119,.1);color:var(--muted);border-color:rgba(119,119,119,.2)}
+.sbdg:hover{filter:brightness(1.2)}
 
 .pribdg{font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px}
-.pri-high{background:rgba(248,81,73,.15);color:var(--red)}.pri-mid{background:rgba(210,153,29,.15);color:var(--orange)}.pri-low{background:rgba(139,148,158,.15);color:var(--muted)}
+.pri-high{background:rgba(233,71,51,.1);color:var(--red)}.pri-mid{background:rgba(238,117,30,.1);color:var(--orange)}.pri-low{background:rgba(119,119,119,.1);color:var(--muted)}
 
-.mcard{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);
+.mcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
   padding:14px 18px;cursor:pointer;transition:all .12s;margin-bottom:8px;display:flex;align-items:center;gap:14px}
-.mcard:hover{border-color:var(--border)}.mcard.active{border-color:var(--accent)}
+.mcard:hover{border-color:var(--accent2)}.mcard.active{border-color:var(--accent)}
 .mcard .mc-icon{font-size:24px;flex-shrink:0}.mcard .mc-body{flex:1;min-width:0}
 .mcard .mc-date{font-size:10px;color:var(--muted)}.mcard .mc-title{font-size:14px;font-weight:600;margin-top:2px}
 .mcard .mc-meta{font-size:11px;color:var(--muted);margin-top:2px}
 .mcard .mc-tasks{font-size:10px;background:var(--surface3);padding:3px 8px;border-radius:99px;color:var(--accent);font-weight:600;white-space:nowrap;flex-shrink:0}
 
-.dh{padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
-.dh h4{font-size:14px;font-weight:600}
-.dclose{width:28px;height:28px;border-radius:var(--radius-sm);border:1px solid var(--border2);
-  background:transparent;color:var(--muted);cursor:pointer}
-.dclose:hover{background:var(--surface3);color:var(--text)}
-.db{flex:1;overflow-y:auto;padding:18px 20px}
-.db h5{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin:20px 0 8px}.db h5:first-child{margin-top:0}
-.df{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 14px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
-.df:hover{border-color:var(--border)}
-.df .fl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;min-width:48px;flex-shrink:0}
-.df .fv{flex:1;font-size:13px;cursor:pointer;padding:2px 4px;margin:-2px -4px;border-radius:3px}.df .fv:hover{background:var(--surface3)}
-.df select,.df input{font-family:var(--font);font-size:13px;background:var(--surface3);color:var(--text);border:1px solid var(--accent);border-radius:4px;padding:5px 8px;outline:none;width:100%}
-.lmeet{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.15);border-radius:var(--radius-sm);cursor:pointer;transition:all .1s;font-size:12px;margin-top:6px}
-.lmeet:hover{background:rgba(88,166,255,.12);border-color:var(--accent)}
-.tl{position:relative;padding-left:14px;margin-top:6px}.tl::before{content:'';position:absolute;left:4px;top:2px;bottom:2px;width:1px;background:var(--border2)}
-.tl-i{position:relative;padding:4px 0 4px 16px;font-size:11px}.tl-i::before{content:'';position:absolute;left:-11px;top:8px;width:5px;height:5px;border-radius:50%;background:var(--accent);border:1px solid var(--surface)}
-.tl-t{font-family:var(--mono);font-size:10px;color:var(--muted2)}.tl-n{color:var(--muted);font-size:10px;margin-top:2px;line-height:1.5}
-.ni{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:10px 12px;font-family:var(--font);font-size:12px;resize:vertical;min-height:60px;outline:none;margin-top:8px}.ni:focus{border-color:var(--accent)}
+/* Detail panel */
+.dh{padding:14px 20px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.dh h4{font-size:14px;font-weight:700;color:var(--accent)}
+.dclose{width:28px;height:28px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}.dclose:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.db{flex:1;overflow-y:auto;padding:16px 20px}
+.db h5{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin:14px 0 6px}.db h5:first-child{margin-top:0}
+.df{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px}
+.df .fl{font-size:10px;font-weight:600;color:var(--muted);width:72px;flex-shrink:0;text-align:right;text-transform:uppercase;letter-spacing:.5px}
+.df .fv{flex:1;min-width:0;word-break:break-word}
+.db select{font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:5px 8px;outline:none;cursor:pointer}
 
-.meta-tags{display:flex;gap:6px;flex-wrap:wrap}.mtag{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:4px 10px;font-size:11px;color:var(--muted)}.mtag span{color:var(--text);margin-left:3px}
-.sum-list{list-style:none}.sum-list li{padding:6px 0;border-bottom:1px solid var(--border2);font-size:12px;display:flex;gap:6px}.sum-list li:last-child{border-bottom:none}.sum-list li::before{content:'▸';color:var(--accent2);font-size:10px;margin-top:3px;flex-shrink:0}
+.meta-tags{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mtag{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--text2);background:var(--surface2);padding:4px 10px;border-radius:var(--radius-sm)}
+.sum-list{list-style:none;padding:0}.sum-list li{padding:4px 0 4px 16px;font-size:13px;color:var(--text2);position:relative}.sum-list li::before{content:'•';position:absolute;left:2px;color:var(--accent2)}
 
-/* ── Calendar ── */
-.cal-hdr{display:flex;align-items:center;gap:12px;padding:4px 0 12px}
-.cal-hdr h4{font-size:16px;font-weight:700;min-width:140px}
-.cal-nav{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .1s}
-.cal-nav:hover{background:var(--surface3);color:var(--text)}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
-.cal-grid .dow{padding:8px 4px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-.cal-day{aspect-ratio:1;border-radius:var(--radius-sm);padding:4px;cursor:pointer;transition:all .1s;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;font-size:13px;color:var(--text2);min-height:40px}
-.cal-day:hover{background:var(--surface3)}
-.cal-day.today{background:var(--accent);color:#fff;font-weight:700;border-radius:var(--radius)}
-.cal-day.other{color:var(--muted2)}
-.cal-day.has-task::after{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent2);position:absolute;bottom:5px}
-.cal-day.has-task.today::after{background:#fff}
-.cal-day.has-event::after{content:'';width:5px;height:5px;border-radius:50%;background:var(--orange);position:absolute;bottom:5px;left:calc(50% - 8px)}
-.cal-day.has-task.has-event::after{left:calc(50% - 2.5px)}
-.cal-day.has-task.has-event::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent2);position:absolute;bottom:5px}
-.cal-day.has-task.has-event.today::after,.cal-day.has-task.has-event.today::before{background:#fff}
+.lmeet{display:flex;align-items:center;gap:8px;padding:8px 12px;margin:2px 0;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;background:var(--surface2);border:1px solid var(--border2);transition:all .1s}
+.lmeet:hover{border-color:var(--accent2)}
+.tl{margin-top:4px;border-left:2px solid var(--border2)}
+.tl-i{padding:6px 0 6px 14px;font-size:12px}.tl-t{font-size:10px;color:var(--muted);margin-bottom:1px}.tl-n{font-size:11px;color:var(--accent2);margin-top:2px}
 
-.ev-list{padding:12px 0}
-.ev-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:4px;cursor:pointer;transition:all .1s;border-left:3px solid transparent}
-.ev-item:hover{background:var(--surface2)}
-.ev-item.task{border-left-color:var(--accent)}
-.ev-item.personal{border-left-color:var(--orange)}
-.ev-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.ev-dot.task{background:var(--accent)}.ev-dot.personal{background:var(--orange)}
-.ev-body{flex:1;min-width:0}.ev-title{font-size:13px;font-weight:600}.ev-meta{font-size:10px;color:var(--muted);margin-top:1px}
-.ev-status{font-size:10px;padding:2px 8px;border-radius:99px;font-weight:600;flex-shrink:0}
+/* Toast */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:8px 20px;border-radius:99px;font-size:12px;font-weight:600;z-index:999;opacity:0;transition:opacity .2s}#toast.show{opacity:1}
 
-#toast{position:fixed;bottom:20px;right:20px;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 18px;font-size:12px;color:var(--text);z-index:1000;transform:translateY(80px);opacity:0;transition:all .2s}#toast.show{transform:translateY(0);opacity:1}
+/* Modal */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;display:none;align-items:center;justify-content:center}
+.mo.show{display:flex}
+.modal{background:var(--bg);border-radius:var(--radius);padding:24px;width:420px;max-width:90vw;box-shadow:0 12px 40px rgba(0,0,0,.15)}
+.modal h4{font-size:16px;font-weight:700;margin-bottom:16px;color:var(--accent)}
+.modal label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;display:block;margin:10px 0 4px}
+.modal input,.modal select,.modal textarea{width:100%;font-family:var(--font);font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:8px 10px;outline:none}.modal input:focus,.modal select:focus,.modal textarea:focus{border-color:var(--accent)}
+.modal .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 
-.mo{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:center;justify-content:center}.mo.show{display:flex}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:400px;max-width:90vw;max-height:80vh;overflow-y:auto}
-.modal h4{font-size:15px;font-weight:700;margin-bottom:16px}
-.modal label{display:block;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;margin-top:10px}
-.modal input,.modal select{width:100%;font-family:var(--font);font-size:13px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 10px;outline:none}.modal input:focus,.modal select:focus{border-color:var(--accent)}
-.modal .btns{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
-.empty{padding:60px 20px;text-align:center;color:var(--muted)}.empty .ei{font-size:36px;margin-bottom:8px}
+.ni{width:100%;font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:8px 10px;outline:none;resize:vertical;min-height:50px;margin-top:8px}
 
-/* ── Command Palette ── */
-.cp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:600;display:none;align-items:flex-start;justify-content:center;padding-top:15vh}
+/* Links section */
+.link-card{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:4px 0;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border2);font-size:12px}
+.link-card .lk-label{font-weight:600;color:var(--text);min-width:60px}
+.link-card .lk-url{flex:1;font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.link-card .lk-actions{display:flex;gap:4px;flex-shrink:0}
+.link-card .btn-sm{font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer}.link-card .btn-sm:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.link-card .btn-sm.accent{background:var(--accent2);color:#fff;border-color:var(--accent2)}.link-card .btn-sm.accent:hover{background:var(--accent)}
+.link-del{color:var(--muted);cursor:pointer;padding:2px 6px;font-size:14px}.link-del:hover{color:var(--red)}
+
+/* Inline iframe preview */
+#iframe-panel{display:none;border-top:1px solid var(--border2);background:var(--bg);flex-shrink:0}
+#iframe-panel.show{display:flex;flex-direction:column}
+#iframe-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-bottom:1px solid var(--border2);font-size:11px;color:var(--text2)}
+#iframe-bar .ifr-close{cursor:pointer;font-size:16px;color:var(--muted);padding:2px 6px}.iframe-bar .ifr-close:hover{color:var(--red)}
+#iframe-wrap{flex:1;overflow:hidden}
+#iframe-wrap iframe{width:100%;height:100%;border:none;min-height:300px}
+
+.empty{text-align:center;padding:60px 20px}.empty .ei{font-size:48px;color:var(--muted2);margin-bottom:12px}
+.empty p{font-size:14px;color:var(--muted)}
+
+/* Command Palette */
+.cp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:600;display:none;align-items:flex-start;justify-content:center;padding-top:15vh}
 .cp-overlay.show{display:flex}
-.cp-container{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:480px;max-width:90vw;box-shadow:0 12px 40px rgba(0,0,0,.5);overflow:hidden}
+.cp-container{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);width:480px;max-width:90vw;box-shadow:0 12px 40px rgba(0,0,0,.15);overflow:hidden}
 .cp-input-w{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border2)}
 .cp-input-w .cp-ic{font-size:18px;color:var(--muted);flex-shrink:0}
 .cp-input-w input{flex:1;font-family:var(--font);font-size:14px;background:transparent;color:var(--text);border:none;outline:none}
@@ -172,7 +170,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .cp-empty{padding:24px;text-align:center;color:var(--muted);font-size:13px}
 .cp-section{padding:4px 14px 2px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
 
-/* ── Calendar ── */
+/* Calendar */
 .cal-hdr{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cal-hdr h4{font-size:15px;font-weight:700;flex:1;text-align:center}
 .cal-nav{width:28px;height:28px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}.cal-nav:hover{background:var(--surface3);color:var(--text)}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:16px}
@@ -183,15 +181,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .cal-day.has-task::after,.cal-day.has-event::after{content:'';position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%}
 .cal-day.has-task::after{background:var(--accent)}.cal-day.has-event::after{background:var(--green);left:calc(50% - 6px)}.cal-day.has-task.has-event::after{left:calc(50% - 2px)}.cal-day.has-task.has-event::before{content:'';position:absolute;bottom:3px;left:calc(50% - 6px);width:4px;height:4px;border-radius:50%;background:var(--green)}
 .cal-day.today::after,.cal-day.today::before{background:#fff!important}
-.ev-list{display:flex;flex-direction:column;gap:4px}.ev-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);cursor:pointer;transition:all .1s}
+.ev-list{display:flex;flex-direction:column;gap:4px}.ev-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);cursor:pointer;transition:all .1s}
 .ev-item:hover{border-color:var(--border)}.ev-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.ev-dot.task{background:var(--accent)}.ev-dot.personal{background:var(--green)}
 .ev-body{flex:1;min-width:0}.ev-title{font-size:13px;font-weight:600;color:var(--text)}.ev-meta{font-size:10px;color:var(--muted);margin-top:1px}
 .ev-status{font-size:10px;padding:2px 8px;border-radius:99px;white-space:nowrap;flex-shrink:0}
 
-/* ── mobile hamburger dropdown ── */
-.hambtn{display:none;position:fixed;top:10px;left:10px;z-index:30;width:32px;height:32px;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border);cursor:pointer;align-items:center;justify-content:center;flex-direction:column;gap:3px}
+/* Hamburger */
+.hambtn{display:none;position:fixed;top:10px;left:10px;z-index:30;width:32px;height:32px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--border);cursor:pointer;align-items:center;justify-content:center;flex-direction:column;gap:3px}
 .hambtn span{width:14px;height:1.5px;background:var(--text);border-radius:1px}
-.ham-menu{display:none;position:fixed;top:48px;left:10px;z-index:35;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:4px;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.ham-menu{display:none;position:fixed;top:48px;left:10px;z-index:35;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:4px;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,.1)}
 .ham-menu.show{display:block}
 .ham-item{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;color:var(--text2);transition:all .1s}
 .ham-item:hover{background:var(--surface2)}.ham-item .hi-icon{font-size:15px}
@@ -204,8 +202,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
   .kanban-board{flex-direction:column;padding:12px}
   .kanban-col{max-width:100%;min-width:0;max-height:none}
   .kanban-col-body{max-height:300px}
+  /* 모바일: 미리보기 버튼 숨김 */
+  .preview-only{display:none!important}
+  #iframe-panel{display:none!important}
 }
-/* ── Kanban Board ── */
+
+/* Kanban Board */
 .vtg-group{display:flex;border:1px solid var(--border2);border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0}
 .vtg{font-size:11px;font-weight:600;padding:5px 10px;border:none;background:transparent;color:var(--muted);cursor:pointer;transition:all .12s}
 .vtg:hover{background:var(--surface2);color:var(--text2)}
@@ -216,53 +218,52 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .kanban-col-header .kdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .kanban-col-header .kcount{font-size:10px;font-weight:400;color:var(--muted);margin-left:auto}
 .kanban-col-body{flex:1;overflow-y:auto;padding:8px}
-.kanban-card{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all .12s}
-.kanban-card:hover{border-color:var(--accent);background:var(--surface3)}
-.kanban-card.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.kanban-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all .12s}
+.kanban-card:hover{border-color:var(--accent2)}.kanban-card.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 .kanban-card .kc-id{font-family:var(--mono);font-size:10px;color:var(--accent);font-weight:600;margin-bottom:4px}
-.kanban-card .kc-title{font-size:13px;font-weight:600;margin-bottom:6px;line-height:1.4;word-break:break-word}
+.kanban-card .kc-title{font-size:13px;font-weight:600;margin-bottom:6px;line-height:1.4;word-break:break-word;color:var(--text)}
 .kanban-card .kc-meta{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--muted);flex-wrap:wrap}
 .kanban-card .kc-assignee{display:flex;align-items:center;gap:3px}
 .kanban-card .kc-due{display:flex;align-items:center;gap:3px}
-.kcol-wait .kanban-col-header{border-bottom-color:rgba(210,153,29,.3)}.kcol-wait .kdot{background:var(--orange)}
-.kcol-progress .kanban-col-header{border-bottom-color:rgba(88,166,255,.3)}.kcol-progress .kdot{background:var(--accent)}
-.kcol-done .kanban-col-header{border-bottom-color:rgba(63,185,80,.3)}.kcol-done .kdot{background:var(--green)}
-.kcol-hold .kanban-col-header{border-bottom-color:rgba(139,148,158,.3)}.kcol-hold .kdot{background:var(--muted)}
+.kcol-wait .kanban-col-header{border-bottom-color:rgba(233,71,51,.3)}.kcol-wait .kdot{background:var(--red)}
+.kcol-progress .kanban-col-header{border-bottom-color:rgba(238,117,30,.3)}.kcol-progress .kdot{background:var(--orange)}
+.kcol-done .kanban-col-header{border-bottom-color:rgba(46,125,50,.3)}.kcol-done .kdot{background:var(--green)}
+.kcol-hold .kanban-col-header{border-bottom-color:rgba(119,119,119,.3)}.kcol-hold .kdot{background:var(--muted)}
+
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
-/* ── Week Calendar ── */
+
+/* Week Calendar */
 .week-strip{display:flex;gap:4px;overflow-x:auto;padding-bottom:8px}
 .week-day{flex:1;min-width:110px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:10px;cursor:pointer;transition:all .12s;display:flex;flex-direction:column}
-.week-day:hover{border-color:var(--border);background:var(--surface2)}
-.week-day.today{border-color:var(--accent);background:var(--surface2)}
-.wd-date{font-size:20px;font-weight:700;color:var(--text)}
-.week-day.today .wd-date{color:var(--accent)}
+.week-day:hover{border-color:var(--border)}.week-day.today{border-color:var(--accent)}
+.wd-date{font-size:20px;font-weight:700;color:var(--text)}.week-day.today .wd-date{color:var(--accent)}
 .wd-dow{font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase}
 .wd-items{flex:1;display:flex;flex-direction:column;gap:3px;overflow-y:auto;max-height:300px;font-size:11px}
 .wd-item{padding:3px 6px;border-radius:4px;cursor:pointer;transition:all .1s;word-break:break-word;line-height:1.3;display:flex;align-items:flex-start;gap:4px}
-.wd-item.task{background:rgba(88,166,255,.1);color:var(--accent2)}.wd-item.task:hover{background:rgba(88,166,255,.18)}
-.wd-item.event{background:rgba(63,185,80,.1);color:var(--green)}.wd-item.event:hover{background:rgba(63,185,80,.18)}
-.wi-dot{flex-shrink:0;font-size:8px;margin-top:2px}
-.wd-empty{color:var(--muted2);font-size:11px;text-align:center;padding:8px 0}
-/* ── Comment markdown ── */
+.wd-item.task{background:rgba(233,71,51,.08);color:var(--accent)}.wd-item.task:hover{background:rgba(233,71,51,.15)}
+.wd-item.event{background:rgba(46,125,50,.08);color:var(--green)}.wd-item.event:hover{background:rgba(46,125,50,.15)}
+.wi-dot{flex-shrink:0;font-size:8px;margin-top:2px}.wd-empty{color:var(--muted2);font-size:11px;text-align:center;padding:8px 0}
+
+/* Comments */
 .cm-bold{font-weight:700}.cm-italic{font-style:italic}.cm-code{font-family:var(--mono);font-size:11px;background:var(--surface3);padding:1px 4px;border-radius:3px}
-.cm-file{display:inline-flex;align-items:center;gap:3px;color:var(--accent2);cursor:pointer;font-size:10px;background:var(--surface3);padding:2px 8px;border-radius:4px;margin:2px 0}.cm-file:hover{color:var(--accent);background:var(--surface2)}
-/* ── Progress ── */
+.cm-file{display:inline-flex;align-items:center;gap:3px;color:var(--accent2);cursor:pointer;font-size:10px;background:var(--surface3);padding:2px 8px;border-radius:4px;margin:2px 0}.cm-file:hover{color:var(--accent)}
+
+/* Progress */
 .prog-bar{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);font-weight:600}
 .prog-bar .pg-done{color:var(--green)}.prog-bar .pg-total{color:var(--muted2)}
-/* ── Tags ── */
+
+/* Tags */
 .tag-chip{display:inline-flex;align-items:center;gap:2px;font-size:9px;padding:1px 6px;border-radius:99px;background:var(--surface3);color:var(--accent2);font-weight:600;margin-right:3px;white-space:nowrap;cursor:pointer}
-.tag-chip:hover{background:var(--accent);color:#fff}
-.tag-chip.active{background:var(--accent);color:#fff}
-/* ── Sub-tasks ── */
+.tag-chip:hover{background:var(--accent);color:#fff}.tag-chip.active{background:var(--accent);color:#fff}
+
+/* Subtask table */
 .subtask td:first-child{padding-left:32px}
-.subtask .tid::before{content:'└ ';color:var(--muted2)}
-.subtask .tid{font-size:10px}
-/* ── Description markdown ── */
+.subtask .tid::before{content:'└ ';color:var(--muted2)}.subtask .tid{font-size:10px}
+
+/* Description */
 .desc-md{font-size:12px;color:var(--text2);line-height:1.6;padding:8px 0;word-break:break-word}
-.desc-md p{margin:4px 0}
-.desc-md code{font-family:var(--mono);font-size:11px;background:var(--surface3);padding:1px 4px;border-radius:3px}
-.desc-md a{color:var(--accent2)}
-.desc-md ul,.desc-md ol{padding-left:18px;margin:4px 0}
+.desc-md p{margin:4px 0}.desc-md code{font-family:var(--mono);font-size:11px;background:var(--surface3);padding:1px 4px;border-radius:3px}
+.desc-md a{color:var(--accent2)}.desc-md ul,.desc-md ol{padding-left:18px;margin:4px 0}
 .desc-md blockquote{border-left:2px solid var(--accent);padding-left:10px;color:var(--muted);margin:4px 0}
 </style>
 </head>
@@ -285,6 +286,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
   <div id="dp" class="closed">
     <div class="dh"><h4 id="dTitle">Detail</h4><button class="dclose" onclick="closeDetail()">✕</button></div>
     <div class="db" id="dBody"></div>
+    <div id="iframe-panel">
+      <div id="iframe-bar"><span id="iframe-label">Preview</span><span class="ifr-close" onclick="closePreview()" title="Close">✕</span></div>
+      <div id="iframe-wrap"><iframe id="preview-iframe" src="" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe></div>
+    </div>
   </div>
 </div>
 
@@ -299,13 +304,22 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
     <label>Due Date</label><input id="aDue" type="date">
     <label>Priority</label><select id="aPri"><option>Medium</option><option>High</option><option>Low</option></select>
     <label>Parent Task</label><select id="aParent"><option value="">(None — top level)</option></select>
-    <label>Description</label><textarea id="aDesc" placeholder="Markdown supported..." style="width:100%;font-family:var(--font);font-size:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 10px;outline:none;resize:vertical;min-height:60px"></textarea>
+    <label>Description</label><textarea id="aDesc" placeholder="Markdown supported..." style="width:100%;font-family:var(--font);font-size:12px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;outline:none;resize:vertical;min-height:60px"></textarea>
     <label>Tags</label><input id="aTags" placeholder="comma, separated (e.g. urgent, design)">
     <div class="btns"><button class="btn" onclick="mClose('addModal')">Cancel</button><button class="btn primary" onclick="addTask()">Create</button></div>
   </div>
 </div>
 
-<!-- ── Command Palette ── -->
+<div class="mo" id="linkModal">
+  <div class="modal">
+    <h4>🔗 Add Link</h4>
+    <label>Label</label><input id="lkLabel" placeholder="주간 매출">
+    <label>URL</label><input id="lkUrl" placeholder="https://docs.google.com/spreadsheets/...">
+    <label>Sheet (optional)</label><input id="lkSheet" placeholder="Sheet1">
+    <div class="btns"><button class="btn" onclick="mClose('linkModal')">Cancel</button><button class="btn primary" onclick="addLink()">Add</button></div>
+  </div>
+</div>
+
 <div class="cp-overlay" id="cpOverlay" onclick="if(event.target===this)cpClose()">
   <div class="cp-container">
     <div class="cp-input-w"><span class="cp-ic">⌘</span><input id="cpInput" placeholder="Search tasks, navigate..." oninput="cpFilter()" onkeydown="cpKey(event)"></div>
@@ -323,36 +337,27 @@ const STL={대기중:'Waiting',진행중:'In Progress',완료:'Done',보류:'Hol
 const PRI={높음:'High',보통:'Medium',낮음:'Low'};
 var calWeekOffset=0;
 
-// My username from users map
 function myName(){return USERS[USER_ID]?.username||''}
 
 const MENU=[
-  {id:'my-tasks',icon:'👤',label:'My Tasks',children:[
-    {id:'my-tasks',label:'All My Tasks'},
-  ]},
+  {id:'my-tasks',icon:'👤',label:'My Tasks',children:[{id:'my-tasks',label:'All My Tasks'}]},
   {id:'team-tasks',icon:'👥',label:'Team Tasks',children:[
-    {id:'team-tasks-all',label:'All'},
-    {id:'team-tasks-progress',label:'In Progress'},
-    {id:'team-tasks-wait',label:'Waiting'},
-    {id:'team-tasks-done',label:'Done'},
+    {id:'team-tasks-all',label:'All'},{id:'team-tasks-progress',label:'In Progress'},
+    {id:'team-tasks-wait',label:'Waiting'},{id:'team-tasks-done',label:'Done'},
   ]},
-  {id:'meetings',icon:'📝',label:'Meetings',children:[
-    {id:'meetings-all',label:'All Meetings'},
-  ]},
+  {id:'meetings',icon:'📝',label:'Meetings',children:[{id:'meetings-all',label:'All Meetings'}]},
   {id:'calendar',icon:'📅',label:'Calendar',children:[
-    {id:'calendar-month',label:'Month'},
-    {id:'calendar-week',label:'Week'},
-    {id:'calendar-events',label:'All Events'},
+    {id:'calendar-month',label:'Month'},{id:'calendar-week',label:'Week'},{id:'calendar-events',label:'All Events'},
   ]},
-  {id:'board',icon:'📌',label:'Board',children:[
-    {id:'board',label:'Kanban Board'},
-  ]},
+  {id:'board',icon:'📌',label:'Board',children:[{id:'board',label:'Kanban Board'}]},
 ];
 
 function l(){try{ED=JSON.parse(localStorage.getItem(SKEY)||'{}');EV=JSON.parse(localStorage.getItem(EKEY)||'{}');}catch(e){ED={};EV={}}}
 function s(){localStorage.setItem(SKEY,JSON.stringify(ED));localStorage.setItem(EKEY,JSON.stringify(EV))}
-function ap(t){const e=ED[t.id]||{};return{...t,...e,comments:[...(t.comments||[]),...(e._ca||[])],_h:[...(t._h||[]),...(e._ha||[])],_fa:[...(e._fa||[])]}}
+function ap(t){const e=ED[t.id]||{};return{...t,...e,comments:[...(t.comments||[]),...(e._ca||[])],_h:[...(t._h||[]),...(e._ha||[])],_fa:[...(e._fa||[])],links:[...(e.links||[])],...e.links!==undefined?{links:e.links}:{}}}
 function allTags(){const s=new Set();T.forEach(t=>{(t.tags||[]).forEach(tg=>s.add(tg));const e=ED[t.id];if(e&&e.tags)e.tags.forEach(tg=>s.add(tg))});return[...s].sort()}
+// Helper: get all tasks with ED applied
+function all(){return T.map(ap)}
 
 async function boot(){
   l();
@@ -371,7 +376,7 @@ async function boot(){
   render();
 }
 
-// ── Menu (sidebar + hamburger) ──
+// ── Menu ──
 function renderMenu(){
   document.getElementById('sbNav').innerHTML=MENU.map(g=>{
     const open=PAGE.startsWith(g.id);
@@ -391,30 +396,23 @@ function renderMenu(){
 }
 
 function toggleHam(){document.getElementById('hamMenu').classList.toggle('show')}
-
 function toggleMenu(id){
   const g=MENU.find(m=>m.id===id);if(!g||!g.children)return;
   if(PAGE.startsWith(id)){PAGE='';SEL=null;document.getElementById('dp').classList.add('closed')}
   else PAGE=g.children[0].id;
   render();
 }
-
-function navTo(page){
-  PAGE=page;SEL=null;document.getElementById('dp').classList.add('closed');
-  document.getElementById('hamMenu').classList.remove('show');
-  render();
-}
-
+function navTo(page){PAGE=page;SEL=null;document.getElementById('dp').classList.add('closed');document.getElementById('hamMenu').classList.remove('show');render()}
 function updateCounts(){
-  const all=T.map(ap),team=all.filter(t=>!!(t.meeting_date||t.meeting_id)),mine=all.filter(t=>!(t.meeting_date||t.meeting_id));
+  const al=all(),team=al.filter(t=>!!(t.meeting_date||t.meeting_id)),mine=al.filter(t=>!(t.meeting_date||t.meeting_id));
   const el=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v||''};
   const elg=(id,f,arr)=>el(id,arr.filter(t=>t.status===f).length);
   function setgrp(pre,arr){el(pre+'-all',arr.length);elg(pre+'-progress','진행중',arr);elg(pre+'-wait','대기중',arr);elg(pre+'-done','완료',arr)}
   setgrp('cnt-team-tasks',team);
-  if(USER_ID){el('cnt-my-tasks',all.filter(t=>t.assignee===myName()||String(t.created_by||'')===USER_ID||(t.collaborators||[]).some(c=>c===myName().replace(/^@/,''))).length)}
+  if(USER_ID){el('cnt-my-tasks',al.filter(t=>t.assignee===myName()||String(t.created_by||'')===USER_ID||(t.collaborators||[]).some(c=>c===myName().replace(/^@/,''))).length)}
   el('cnt-meetings-all',M.length);
   el('cnt-calendar-events',Object.keys(EV).length);
-  el('cnt-board',all.length);
+  el('cnt-board',al.length);
 }
 
 // ── Render ──
@@ -422,28 +420,25 @@ function render(){renderMenu();renderContent()}
 function renderContent(){if(PAGE.startsWith('my-tasks')||PAGE.startsWith('team-tasks')||PAGE.startsWith('tasks'))renderTasks();else if(PAGE.startsWith('board'))renderBoardPage();else if(PAGE.startsWith('meetings'))renderMeetings();else if(PAGE.startsWith('calendar'))renderCalendar();updateDetail()}
 
 function renderTasks(){
-  const all=T.map(ap);let list;
+  const al=all();let list;
   if(PAGE==='my-tasks'){
     const myN=myName();
-    list=all.filter(t=>t.assignee===myN||String(t.created_by||'')===USER_ID||(t.collaborators||[]).some(c=>c===myN.replace(/^@/,'')));
-  }else if(PAGE==='team-tasks-progress')list=all.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='진행중');
-  else if(PAGE==='team-tasks-wait')list=all.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='대기중');
-  else if(PAGE==='team-tasks-done')list=all.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='완료');
-  else if(PAGE==='team-tasks-all')list=all.filter(t=>!!(t.meeting_date||t.meeting_id));
-  else if(PAGE==='tasks-progress')list=all.filter(t=>t.status==='진행중');
-  else if(PAGE==='tasks-wait')list=all.filter(t=>t.status==='대기중');
-  else if(PAGE==='tasks-done')list=all.filter(t=>t.status==='완료');
-  else list=all;
+    list=al.filter(t=>t.assignee===myN||String(t.created_by||'')===USER_ID||(t.collaborators||[]).some(c=>c===myN.replace(/^@/,'')));
+  }else if(PAGE==='team-tasks-progress')list=al.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='진행중');
+  else if(PAGE==='team-tasks-wait')list=al.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='대기중');
+  else if(PAGE==='team-tasks-done')list=al.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='완료');
+  else if(PAGE==='team-tasks-all')list=al.filter(t=>!!(t.meeting_date||t.meeting_id));
+  else if(PAGE==='tasks-progress')list=al.filter(t=>t.status==='진행중');
+  else if(PAGE==='tasks-wait')list=al.filter(t=>t.status==='대기중');
+  else if(PAGE==='tasks-done')list=al.filter(t=>t.status==='완료');
+  else list=al;
   const lmap={'my-tasks':'My Tasks','team-tasks-all':'All Team Tasks','team-tasks-progress':'Team — In Progress','team-tasks-wait':'Team — Waiting','team-tasks-done':'Team — Done','tasks-all':'All Tasks','tasks-progress':'In Progress','tasks-wait':'Waiting','tasks-done':'Done'};
-  document.getElementById('listHeader').innerHTML=`<h3>${PAGE.startsWith('my-tasks')?'👤':PAGE.startsWith('team')?'👥':'📊'} ${lmap[PAGE]||'Tasks'}<span class="c">${list.length}</span></h3><div style="display:flex;align-items:center;gap:8px"><div class="vtg-group"><button class="vtg${KANBAN?'':' active'}" onclick="KANBAN=false;render()">📋 Table</button><button class="vtg${KANBAN?' active':''}" onclick="KANBAN=true;render()">📌 Board</button></div><input id="sq" style="font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:5px 10px;outline:none;width:130px" placeholder="Search..." value="${Q.replace(/\\\\"/g,'&quot;').replace(/</g,'&lt;')}" oninput="Q=this.value;render();"><select onchange="FILTER_STATUS=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_STATUS?'selected':''}>All Status</option>${ST.map(s=>`<option value="${s}" ${FILTER_STATUS===s?'selected':''}>${STL[s]}</option>`).join('')}</select><select onchange="FILTER_PRIORITY=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_PRIORITY?'selected':''}>All Priority</option>${['높음','보통','낮음'].map(p=>`<option value="${p}" ${FILTER_PRIORITY===p?'selected':''}>${PRI[p]}</option>`).join('')}</select><button class="btn primary" onclick="mShow('addModal')">+ New Task</button></div>`;
-  document.getElementById('listHeader').innerHTML=`<h3>${PAGE.startsWith('my-tasks')?'👤':PAGE.startsWith('team')?'👥':'📊'} ${lmap[PAGE]||'Tasks'}<span class="c">${list.length}</span></h3><div style="display:flex;align-items:center;gap:8px"><div class="vtg-group"><button class="vtg${KANBAN?'':' active'}" onclick="KANBAN=false;render()">📋 Table</button><button class="vtg${KANBAN?' active':''}" onclick="KANBAN=true;render()">📌 Board</button></div><input id="sq" style="font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);padding:5px 10px;outline:none;width:130px" placeholder="Search..." value="${Q.replace(/\\\\"/g,'&quot;').replace(/</g,'&lt;')}" oninput="Q=this.value;render();"><select onchange="FILTER_STATUS=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_STATUS?'selected':''}>All Status</option>${ST.map(s=>`<option value="${s}" ${FILTER_STATUS===s?'selected':''}>${STL[s]}</option>`).join('')}</select><select onchange="FILTER_PRIORITY=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_PRIORITY?'selected':''}>All Priority</option>${['높음','보통','낮음'].map(p=>`<option value="${p}" ${FILTER_PRIORITY===p?'selected':''}>${PRI[p]}</option>`).join('')}</select><select onchange="FILTER_TAG=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_TAG?'selected':''}>All Tags</option>${allTags().map(tg=>`<option value="${tg}" ${FILTER_TAG===tg?'selected':''}>#${tg}</option>`).join('')}</select><button class="btn primary" onclick="mShow('addModal')">+ New Task</button></div>`;
-  // Apply search
+  document.getElementById('listHeader').innerHTML=`<h3>${PAGE.startsWith('my-tasks')?'👤':PAGE.startsWith('team')?'👥':'📊'} ${lmap[PAGE]||'Tasks'}<span class="c">${list.length}</span></h3><div style="display:flex;align-items:center;gap:8px"><div class="vtg-group"><button class="vtg${KANBAN?'':' active'}" onclick="KANBAN=false;render()">📋 Table</button><button class="vtg${KANBAN?' active':''}" onclick="KANBAN=true;render()">📌 Board</button></div><input id="sq" style="font-family:var(--font);font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:5px 10px;outline:none;width:130px" placeholder="Search..." value="${Q.replace(/\\\\/g,'\\\\').replace(/"/g,'&quot;').replace(/</g,'&lt;')}" oninput="Q=this.value;render();"><select onchange="FILTER_STATUS=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_STATUS?'selected':''}>All Status</option>${ST.map(s=>`<option value="${s}" ${FILTER_STATUS===s?'selected':''}>${STL[s]}</option>`).join('')}</select><select onchange="FILTER_PRIORITY=this.value;render()" style="font-family:var(--font);font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text2);padding:5px 6px;outline:none;cursor:pointer"><option value="" ${!FILTER_PRIORITY?'selected':''}>All Priority</option>${['높음','보통','낮음'].map(p=>`<option value="${p}" ${FILTER_PRIORITY===p?'selected':''}>${PRI[p]}</option>`).join('')}</select><button class="btn primary" onclick="mShow('addModal')">+ New Task</button></div>`;
+  // Apply search and filters
   if(Q){const q=Q.toLowerCase();list=list.filter(t=>t.id.toLowerCase().includes(q)||(t.title||'').toLowerCase().includes(q)||(t.assignee||'').toLowerCase().includes(q))}
-  // Apply filters
   if(FILTER_STATUS)list=list.filter(t=>t.status===FILTER_STATUS);
   if(FILTER_PRIORITY)list=list.filter(t=>t.priority===FILTER_PRIORITY);
   if(FILTER_TAG)list=list.filter(t=>(t.tags||[]).includes(FILTER_TAG));
-  // Apply sort
   const sd=SORT_DIR==='asc'?1:-1;
   list.sort((a,b)=>{
     if(SORT_BY==='id')return (a.id||'').localeCompare(b.id)*sd;
@@ -455,6 +450,7 @@ function renderTasks(){
   });
   if(KANBAN)renderTasksBoard(list);else renderTasksTable(list);
 }
+
 function renderTasksTable(list){
   const th=(col,label,w)=>{
     const a=SORT_BY===col?(SORT_DIR==='asc'?' ▴':' ▾'):'';
@@ -472,9 +468,10 @@ function renderTasksTable(list){
     const childCount=list.filter(c=>c.parent_id===t.id).length;
     const tags=(t.tags||[]).map(tg=>`<span class="tag-chip" onclick="event.stopPropagation();FILTER_TAG='${tg}';render()">#${esc(tg)}</span>`).join('');
     const cls=[t.status==='완료'?'done':'',SEL===t.id?'sel':''].filter(Boolean).join(' ');
+    const hasParent=!t.parent_id||!list.some(p=>p.id===t.parent_id);
     allRows.push(`<tr class="${cls}" onclick="selTask('${t.id}')">
       <td class="tid">${t.id}${isAdmin?' 👑':''}${childCount?` <span style="font-size:9px;color:var(--muted)">+${childCount}</span>`:''}</td>
-      <td class="tt-c">${(t.collaborators||[]).length?'👥 ':''}${mid?'📋 ':''}${esc(t.title)}</td>
+      <td class="tt-c tt-main">${(t.collaborators||[]).length?'👥 ':''}${mid?'📋 ':''}${esc(t.title)}</td>
       <td><span class="editable" onclick="event.stopPropagation();ie('${t.id}','assignee')">${esc(t.assignee)}</span></td>
       <td class="hm">${meet?`<span class="mlink" onclick="event.stopPropagation();SEL=null;PAGE='meetings-all';selMeet('${meet.id}')">📋 ${(meet.date||meet.id).slice(0,16)}</span>`:'<span style="color:var(--muted2)">-</span>'}</td>
       <td>${sbdg(t)}</td>
@@ -511,7 +508,8 @@ function renderTasksTable(list){
     ${allRows.length===0?`<tr><td colspan="8"><div class="empty"><div class="ei">📭</div><p>No tasks</p></div></td></tr>`
     :allRows.join('')}</tbody></table>`;
 }
-function renderTasksBoard(list){
+
+function renderTasksBoard(list){/* same as before */
   const cols={'대기중':[],'진행중':[],'완료':[],'보류':[]};
   list.forEach(t=>{if(cols[t.status])cols[t.status].push(t);else cols['대기중'].push(t)});
   const cc={'대기중':'kcol-wait','진행중':'kcol-progress','완료':'kcol-done','보류':'kcol-hold'};
@@ -541,17 +539,17 @@ function renderTasksBoard(list){
 }
 
 function renderBoardPage(){
-  const all=T.map(ap);
+  const al=all();
   const cols={'대기중':[],'진행중':[],'완료':[],'보류':[]};
-  all.forEach(t=>{if(cols[t.status])cols[t.status].push(t);else cols['대기중'].push(t)});
+  al.forEach(t=>{if(cols[t.status])cols[t.status].push(t);else cols['대기중'].push(t)});
   const cc={'대기중':'kcol-wait','진행중':'kcol-progress','완료':'kcol-done','보류':'kcol-hold'};
-  document.getElementById('listHeader').innerHTML=`<h3>📌 Board<span class=\"c\">${all.length}</span></h3><button class=\"btn primary\" onclick=\"mShow('addModal')\"">+ New Task</button>`;
-  let html='<div class=\"kanban-board\" style=\"padding:0 20px 16px;height:100%\">';
+  document.getElementById('listHeader').innerHTML=`<h3>📌 Board<span class="c">${al.length}</span></h3><button class="btn primary" onclick="mShow('addModal')">+ New Task</button>`;
+  let html='<div class="kanban-board" style="padding:0 20px 16px;height:100%">';
   for(const [st,tasks] of Object.entries(cols)){
-    html+=`<div class=\"kanban-col ${cc[st]||''}\">
-      <div class=\"kanban-col-header\"><span class=\"kdot\"></span>${STL[st]}<span class=\"kcount\">${tasks.length}</span></div>
-      <div class=\"kanban-col-body\">`;
-    if(tasks.length===0)html+=`<div style=\"color:var(--muted2);font-size:11px;text-align:center;padding:20px 0\">Empty</div>`;
+    html+=`<div class="kanban-col ${cc[st]||''}">
+      <div class="kanban-col-header"><span class="kdot"></span>${STL[st]}<span class="kcount">${tasks.length}</span></div>
+      <div class="kanban-col-body">`;
+    if(tasks.length===0)html+=`<div style="color:var(--muted2);font-size:11px;text-align:center;padding:20px 0">Empty</div>`;
     else tasks.forEach(t=>{
       const isAdmin=USERS[t.created_by||'']?.role==='admin'||USERS[USER_ID]?.role==='admin';
       html+=`<div class="kanban-card${SEL===t.id?' sel':''}" onclick="selTask('${t.id}')">
@@ -572,7 +570,7 @@ function renderBoardPage(){
 }
 
 function boardStatusDropdown(tid,st){
-  return `<select onchange=\"event.stopPropagation();ufx('${tid}','status',this.value)\" style=\"font-family:var(--font);font-size:10px;background:var(--surface3);color:var(--text);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;outline:none;cursor:pointer;width:100%\">${ST.map(s=>`<option value=\"${s}\" ${st===s?'selected':''}>${STL[s]}</option>`).join('')}</select>`;
+  return `<select onchange="event.stopPropagation();ufx('${tid}','status',this.value)" style="font-family:var(--font);font-size:10px;background:var(--surface3);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 6px;outline:none;cursor:pointer;width:100%">${ST.map(s=>`<option value="${s}" ${st===s?'selected':''}>${STL[s]}</option>`).join('')}</select>`;
 }
 
 function renderMeetings(){
@@ -600,7 +598,6 @@ function evOnDay(y,m,d){
   const events=[];Object.entries(EV).forEach(([id,e])=>{if(e&&e.date&&e.date.replace(/-/g,'')===ds)events.push({id,...e})});
   return {tasks,events};
 }
-
 function renderCalendar(){
   const now=new Date();
   if(calY===undefined){calY=now.getFullYear();calM=now.getMonth()}
@@ -609,7 +606,6 @@ function renderCalendar(){
   const ds=dueSet(),totalDays=calDays(calY,calM),startDow=calDow(calY,calM);
   const dows=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const mName=calY+'년 '+(calM+1)+'월';
-
   if(PAGE==='calendar-events'){
     const allEv=[];Object.entries(EV).forEach(([id,e])=>{if(e)allEv.push({id,...e})});
     allEv.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
@@ -619,8 +615,6 @@ function renderCalendar(){
       :`<div class="ev-list">${allEv.map(e=>`<div class="ev-item personal" onclick="editEvent('${e.id}')"><div class="ev-dot personal"></div><div class="ev-body"><div class="ev-title">${esc(e.title)}</div><div class="ev-meta">📅 ${e.date}${e.time?' ⏰ '+e.time:''}</div></div><span class="ev-status" style="color:var(--muted)">✎</span></div>`).join('')}</div>`;
     return;
   }
-
-  // Week view
   if(PAGE==='calendar-week'){
     const today=new Date();
     const baseDate=new Date(today);baseDate.setDate(today.getDate()-today.getDay()+calWeekOffset);
@@ -633,8 +627,7 @@ function renderCalendar(){
     for(let i=0;i<7;i++){
       const d=new Date(startOfWeek);d.setDate(startOfWeek.getDate()+i);
       const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-      const dk=ds.replace(/-/g,'');
-      const isToday=dk===`${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+      const isToday=ds===todayStr;
       const dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
       const dayTasks=T.filter(t=>t.due_date&&t.due_date!=='N/A'&&t.due_date===ds);
       const dayEvents=[];Object.entries(EV).forEach(([id,e])=>{if(e&&e.date===ds)dayEvents.push({id,...e})});
@@ -650,7 +643,6 @@ function renderCalendar(){
     document.getElementById('listContent').innerHTML=whtml;
     return;
   }
-
   document.getElementById('listHeader').innerHTML=`<h3>📅 Calendar</h3><button class="btn primary" onclick="addEvent()">+ Event</button>`;
   let html=`<div class="cal-hdr"><button class="cal-nav" onclick="calNav(-1)">◀</button><h4>${mName}</h4><button class="cal-nav" onclick="calNav(1)">▶</button><button class="btn sm" onclick="calGoToday()">Today</button></div>`;
   html+=`<div class="cal-grid">${dows.map(d=>`<div class="dow">${d}</div>`).join('')}`;
@@ -658,37 +650,31 @@ function renderCalendar(){
   for(let d=1;d<=totalDays;d++){
     const dk=`${calY}${String(calM+1).padStart(2,'0')}${String(d).padStart(2,'0')}`;
     const cls=['cal-day'];if(dk===today)cls.push('today');if(ds.has(dk))cls.push('has-task');
-    // check personal events
     let hasEv=false;Object.values(EV).forEach(e=>{if(e&&e.date&&e.date.replace(/-/g,'')===dk)hasEv=true});
     if(hasEv)cls.push('has-event');
     html+=`<div class="${cls.join(' ')}" onclick="calClick(${d})">${d}</div>`;
   }
   html+=`</div>`;
-
-  // Events for today
   if(PAGE==='calendar-month'&&!SEL){
     const{events}=evOnDay(calY,calM,now.getDate());
     const todayTasks=T.filter(t=>t.due_date&&t.due_date!=='N/A'&&t.due_date===todayStr);
     if(todayTasks.length||events.length){
       html+=`<h5 style="margin-top:16px">📌 Today — ${todayStr}</h5><div class="ev-list">`;
-      todayTasks.forEach(t=>{html+=`<div class="ev-item task" onclick="selTask('${t.id}')"><div class="ev-dot task"></div><div class="ev-body"><div class="ev-title">${esc(t.title)}</div><div class="ev-meta">👤 ${esc(t.assignee)} · ${STL[t.status]}</div></div><span class="ev-status" style="background:rgba(88,166,255,.12);color:var(--accent)">⏳ ${t.due_date}</span></div>`});
+      todayTasks.forEach(t=>{html+=`<div class="ev-item task" onclick="selTask('${t.id}')"><div class="ev-dot task"></div><div class="ev-body"><div class="ev-title">${esc(t.title)}</div><div class="ev-meta">👤 ${esc(t.assignee)} · ${STL[t.status]}</div></div><span class="ev-status" style="background:rgba(238,117,30,.1);color:var(--accent2)">⏳ ${t.due_date}</span></div>`});
       events.forEach(e=>{html+=`<div class="ev-item personal" onclick="editEvent('${e.id}')"><div class="ev-dot personal"></div><div class="ev-body"><div class="ev-title">${esc(e.title)}</div><div class="ev-meta">${e.time?'⏰ '+e.time:'종일'}</div></div><span class="ev-status" style="color:var(--muted);font-size:10px">개인</span></div>`});
       html+=`</div>`;
     }
   }
-
   if(SEL&&PAGE==='calendar-month'){
-    const dk=`${calY}${String(calM+1).padStart(2,'0')}${String(SEL).padStart(2,'0')}`;
     const dt=`${calY}-${String(calM+1).padStart(2,'0')}-${String(SEL).padStart(2,'0')}`;
     const{events}=evOnDay(calY,calM,SEL);
     const dayTasks=T.filter(t=>t.due_date&&t.due_date!=='N/A'&&t.due_date===dt);
     html+=`<h5 style="margin-top:16px">📌 ${mName} ${SEL}일</h5><div class="ev-list">`;
     if(!dayTasks.length&&!events.length)html+=`<div style="color:var(--muted);font-size:12px;padding:8px 0">No tasks or events</div>`;
-    dayTasks.forEach(t=>{html+=`<div class="ev-item task" onclick="selTask('${t.id}')"><div class="ev-dot task"></div><div class="ev-body"><div class="ev-title">${esc(t.title)}</div><div class="ev-meta">👤 ${esc(t.assignee)} · ${STL[t.status]}</div></div><span class="ev-status" style="background:rgba(88,166,255,.12);color:var(--accent)">과제</span></div>`});
+    dayTasks.forEach(t=>{html+=`<div class="ev-item task" onclick="selTask('${t.id}')"><div class="ev-dot task"></div><div class="ev-body"><div class="ev-title">${esc(t.title)}</div><div class="ev-meta">👤 ${esc(t.assignee)} · ${STL[t.status]}</div></div><span class="ev-status" style="background:rgba(238,117,30,.1);color:var(--accent2)">과제</span></div>`});
     events.forEach(e=>{html+=`<div class="ev-item personal" onclick="editEvent('${e.id}')"><div class="ev-dot personal"></div><div class="ev-body"><div class="ev-title">${esc(e.title)}</div><div class="ev-meta">${e.time?'⏰ '+e.time:'종일'}</div></div><span class="ev-status" style="color:var(--muted);font-size:10px">개인</span></div>`});
     html+=`</div><button class="btn sm" style="margin-top:8px" onclick="addEvent('${dt}')">+ Add Event</button>`;
   }
-
   document.getElementById('listContent').innerHTML=html;
 }
 
@@ -702,8 +688,7 @@ function addEvent(date){
   const title=prompt('이벤트 제목:');if(!title)return;
   const d=date||prompt('날짜 (YYYY-MM-DD):',new Date().toISOString().slice(0,10));if(!d)return;
   const time=prompt('시간 (선택, HH:MM):','');
-  const id='ev'+Date.now();
-  EV[id]={title,date:d,time:time||'',created:now()};
+  const id='ev'+Date.now();EV[id]={title,date:d,time:time||'',created:now()};
   s();render();updateDetail();toast('Event added');
 }
 function editEvent(id){
@@ -715,10 +700,9 @@ function editEvent(id){
 }
 
 function sbdg(t){return sbdgSpan(t).outerHTML}
-
-function selTask(id){SEL=id;PAGE=`tasks-${ap(T.find(t=>t.id===id))?.status==='진행중'?'progress':ap(T.find(t=>t.id===id))?.status==='대기중'?'wait':ap(T.find(t=>t.id===id))?.status==='완료'?'done':'all'}`;render()}
+function selTask(id){const at=ap(T.find(t=>t.id===id));PAGE=`tasks-${at?.status==='진행중'?'progress':at?.status==='대기중'?'wait':at?.status==='완료'?'done':'all'}`;render()}
 function selMeet(id){SEL=id;render()}
-function closeDetail(){SEL=null;document.getElementById('dp').classList.add('closed');render()}
+function closeDetail(){SEL=null;closePreview();document.getElementById('dp').classList.add('closed');render()}
 
 function updateDetail(){
   if(!SEL||PAGE.startsWith('calendar')){document.getElementById('dp').classList.add('closed');return}
@@ -736,10 +720,28 @@ function renderTD(t){
   const progHtml=cmts.length?`<div class="df"><span class="fl">Progress</span><span class="fv"><span class="prog-bar"><span class="pg-done">${doneCount}</span><span class="pg-total">/${cmts.length}</span></span></span></div>`:'';
   const tagsHtml=(t.tags||[]).length?`<div class="df"><span class="fl">Tags</span><span class="fv" style="display:flex;gap:4px;flex-wrap:wrap;cursor:default">${t.tags.map(tg=>`<span class="tag-chip" onclick="event.stopPropagation();FILTER_TAG='${tg}';render()">#${esc(tg)}</span>`).join('')}</span></div>`:'';
   const descHtml=t.description?`<h5>Description</h5><div class="desc-md">${hm(t.description)}</div>`:'';
-  const parent=t.parent_id?T.find(x=>x.id===t.parent_id):null;
-  const parentHtml=`<div class="df"><span class="fl">Parent</span><span class="fv">${parent?`<span style="color:var(--accent2);cursor:pointer" onclick="selTask('${parent.id}')">📌 ${esc(parent.title)}</span>`:'<span style="color:var(--muted2)">—</span>'} <select onchange="uf('parent_id',this.value)" style="font-family:var(--font);font-size:11px;background:var(--surface3);color:var(--text);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;outline:none;cursor:pointer;margin-left:8px"><option value="">None</option>${T.filter(x=>x.id!==t.id&&x.parent_id!==t.id).map(x=>`<option value="${x.id}" ${t.parent_id===x.id?'selected':''}>${x.id} — ${esc(x.title)}</option>`).join('')}</select></span></div>`;
+  // FIX: use all() instead of raw T for parent lookup
+  const parent=(t.parent_id?all().find(x=>x.id===t.parent_id):null)||T.find(x=>x.id===t.parent_id);
+  const parentHtml=parent?`<div class="df"><span class="fl">Parent</span><span class="fv" style="color:var(--accent2);cursor:pointer" onclick="selTask('${parent.id}')">📌 ${esc(parent.title||parent.id)}</span></div>`:'';
   const childTasks=T.filter(x=>x.parent_id===t.id);
-  const subtaskHtml=childTasks.length?`<h5>Sub-tasks (${childTasks.length})</h5>${childTasks.map(c=>`<div class="lmeet" onclick="selTask('${c.id}')"><span class="tid">${c.id}</span> ${esc(c.title)}<span style="margin-left:auto;font-size:10px">${STL[c.status]}</span></div>`).join('')}`:'';
+  const subtaskHtml=childTasks.length?`<h5>Sub-tasks (${childTasks.length})</h5>${childTasks.map(c=>`<div class="lmeet" onclick="selTask('${c.id}')"><span class="tid">${c.id}</span> ${esc(c.title||c.id)}<span style="margin-left:auto;font-size:10px">${STL[c.status]}</span></div>`).join('')}`:'';
+
+  // External links
+  const links=t.links||[];
+  const linksHtml=`
+    <h5>🔗 Links</h5>
+    ${links.length===0?'<div style="color:var(--muted);font-size:11px;padding:4px 0">No links</div>':links.map((lk,i)=>`
+      <div class="link-card">
+        <span class="lk-label">${esc(lk.label||'Link')}</span>
+        <span class="lk-url" title="${esc(lk.url||'')}">${esc((lk.url||'').replace(/^https?:\/\//,'').slice(0,40))}${lk.sheet?' · 📊 '+esc(lk.sheet):''}</span>
+        <span class="lk-actions">
+          <button class="btn-sm" onclick="event.stopPropagation();window.open('${esc(lk.url)}','_blank')" title="새 탭에서 열기">바로가기</button>
+          <button class="btn-sm accent preview-only" onclick="event.stopPropagation();openPreview('${esc(lk.label)}','${esc(lk.url)}')" title="미리보기">미리보기</button>
+          <span class="link-del" onclick="event.stopPropagation();rmLink('${t.id}',${i})" title="삭제">✕</span>
+        </span>
+      </div>`).join('')}
+    <button class="btn sm" style="margin-top:6px" onclick="event.stopPropagation();mShow('linkModal')">+ 링크 추가</button>`;
+
   document.getElementById('dBody').innerHTML=`
     <h5>Info</h5>
     <div class="df"><span class="fl">Title</span><span class="fv" onclick="edf('title')">${esc(t.title)}</span></div>
@@ -753,24 +755,62 @@ function renderTD(t){
     <div class="df"><span class="fl">Status</span><select onchange="uf('status',this.value)">${ST.map(s=>`<option value="${s}" ${t.status===s?'selected':''}>${STL[s]}</option>`).join('')}</select></div>
     ${progHtml}
     ${subtaskHtml}
+    ${linksHtml}
     ${meet?`<h5>Source Meeting</h5><div class="lmeet" onclick="SEL=null;PAGE='meetings-all';selMeet('${meet.id}')">📋 <strong>${esc(meet.date||meet.id.replace(/_/g,' '))}</strong><span style="color:var(--muted);font-size:11px">${esc(meet.tp||'')}</span><span style="margin-left:auto;font-size:10px;color:var(--accent)">→ Meeting</span></div>`:''}
     <h5>History</h5><div class="tl">${h.map(e=>`<div class="tl-i"><div class="tl-t">${e.t}</div><div>${e.a}</div>${e.n?`<div class="tl-n">${esc(e.n)}</div>`:''}</div>`).join('')}</div>
     <h5>Comments</h5><div class="tl">${cmts.length?cmts.map(c=>`<div class="tl-i"><div class="tl-t">${c.timestamp||''}</div><div><strong>@${esc(c.author||'unknown')}</strong>: ${hm(c.text||'')}</div>${c.mentions&&c.mentions.length?`<div class="tl-n" style="color:var(--accent)">👥 ${c.mentions.map(m=>'@'+m).join(', ')}</div>`:''}</div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0">No comments</div>'}</div>
-    <div style="display:flex;gap:6px;margin-top:8px"><input id="ci" style="flex:1;font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:6px 10px;outline:none;min-height:32px" placeholder="Comment... **bold** *italic* \`code\` @name"><button class="btn sm" style="background:var(--surface3)" onclick="addFilePath()" title="Add file path">📎</button><button class="btn sm primary" onclick="addComment()">Add</button></div>
-    <h5>Attachments</h5>${(t._fa||[]).length?t._fa.map((f,i)=>`<div class="df"><span class="fl">📎</span><span class="fv" style="cursor:pointer;color:var(--accent2)" onclick="navigator.clipboard.writeText('${esc(f).replace(/'/g,"\\'")}');toast('Path copied')">${esc(f)}</span><span style="color:var(--muted2);font-size:12px;cursor:pointer;padding:0 4px" onclick="rmFile('${t.id}',${i})" title="Remove">✕</span></div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0">No attachments</div>'}
+    <div style="display:flex;gap:6px;margin-top:8px"><input id="ci" style="flex:1;font-family:var(--font);font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:6px 10px;outline:none;min-height:32px" placeholder="Comment... **bold** *italic* \`code\` @name"><button class="btn sm" style="background:var(--surface3)" onclick="addFilePath()" title="Add file path">📎</button><button class="btn sm primary" onclick="addComment()">Add</button></div>
+    <h5>Attachments</h5>${(t._fa||[]).length?t._fa.map((f,i)=>`<div class="df"><span class="fl">📎</span><span class="fv" style="cursor:pointer;color:var(--accent2)" onclick="navigator.clipboard.writeText('${esc(f).replace(/'/g,"\\'")}');toast('Path copied')">${esc(f)}</span><span style="color:var(--muted2);font-size:12px;cursor:pointer;padding:0 4px" onclick="rmFile('${t.id}',${i})" title="Remove">✕</span></div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0\">No attachments</div>'}
     <button class="btn sm" style="margin-top:6px" onclick="attachFile()">📎 Attach</button>
     <textarea class="ni" id="ni" placeholder="Add a progress note..."></textarea>
-    <div style="margin-top:8px;display:flex;gap:8px"><button class="btn sm primary" onclick="addNote()">Add Note</button><button class="btn sm" style="border-color:var(--red);color:var(--red)" onclick="deleteTask()">🗑 Delete</button></div>`;
+    <div style="margin-top:8px"><button class="btn sm primary" onclick="addNote()">Add Note</button></div>`;
 }
 
 function renderMD(m){
   document.getElementById('dTitle').textContent='📋 Meeting';
-  const ts=m.ts.map(ap);
+  // FIX: use ap() properly - m.ts contains task objects from T, map through ap
+  const ts=m.ts.map(id=>typeof id==='string'?ap(T.find(t=>t.id===id)||{id,title:'(deleted)',status:'대기중'}):ap(id));
   document.getElementById('dBody').innerHTML=`
     <h4 style="font-size:15px;margin-bottom:12px">${esc(m.date||m.id.replace(/_/g,' '))}</h4>
     <div class="meta-tags" style="margin-bottom:12px"><div class="mtag">📅<span>${esc(m.date||m.id.replace(/_/g,' '))}</span></div><div class="mtag">👥<span>${esc(m.p||'')}</span></div><div class="mtag">📌<span>${esc(m.tp||'')}</span></div></div>
     <h5>Summary</h5>${m.sm.length?`<ul class="sum-list">${m.sm.map(l=>`<li>${esc(l)}</li>`).join('')}</ul>`:'<div style="color:var(--muted);font-size:12px;padding:8px 0">No summary</div>'}
-    <h5>Linked Tasks (${ts.length})</h5>${ts.length===0?'<div style="color:var(--muted);font-size:12px">None</div>':ts.map(t=>`<div class="lmeet" onclick="selTask('${t.id}')"><span class="tid">${t.id}</span> ${esc(t.title)}<span style="margin-left:auto;font-size:10px;color:var(--accent)">${STL[t.status]}</span></div>`).join('')}`;
+    <h5>Linked Tasks (${ts.length})</h5>${ts.length===0?'<div style="color:var(--muted);font-size:12px">None</div>':ts.map(t=>`<div class="lmeet" onclick="selTask('${t.id}')"><span class="tid">${t.id}</span> ${esc(t.title||'(no title)')}<span style="margin-left:auto;font-size:10px;color:var(--accent)">${STL[t.status]||''}</span></div>`).join('')}`;
+}
+
+// ── External Links ──
+function addLink(){
+  if(!SEL)return;
+  const label=document.getElementById('lkLabel').value.trim();
+  const url=document.getElementById('lkUrl').value.trim();
+  const sheet=document.getElementById('lkSheet').value.trim();
+  if(!label||!url)return toast('Label and URL required');
+  const e=ED[SEL]||{};
+  const finalUrl=sheet&&url.includes('docs.google.com/spreadsheets')?url.replace(/#.*$/,'')+'#gid='+sheet:url;
+  e.links=[...(e.links||[]),{label,url:finalUrl,sheet:sheet||''}];
+  ED[SEL]=e;s();mClose('linkModal');
+  document.getElementById('lkLabel').value=document.getElementById('lkUrl').value=document.getElementById('lkSheet').value='';
+  render();updateDetail();toast('Link added');
+}
+function rmLink(tid,i){
+  const e=ED[tid];if(!e||!e.links)return;
+  e.links.splice(i,1);
+  ED[tid]=e;s();render();updateDetail();toast('Link removed');
+}
+function openPreview(label,url){
+  document.getElementById('iframe-label').textContent=label;
+  document.getElementById('preview-iframe').src=url.includes('docs.google.com/spreadsheets')?url.replace(/\/edit.*$/,'/preview'):url;
+  document.getElementById('iframe-panel').classList.add('show');
+  // Resize iframe panel
+  const dp=document.getElementById('dp');
+  const db=document.getElementById('dBody');
+  const ip=document.getElementById('iframe-panel');
+  ip.style.height='300px';
+  db.style.maxHeight='calc(100% - 300px)';
+}
+function closePreview(){
+  document.getElementById('iframe-panel').classList.remove('show');
+  document.getElementById('preview-iframe').src='';
+  document.getElementById('dBody').style.maxHeight='';
 }
 
 // ── Edit ──
@@ -782,21 +822,18 @@ function cyc(id,el){
   sel.innerHTML=ST.map(s=>`<option value="${s}" ${t.status===s?'selected':''}>${STL[s]}</option>`).join('');
   sel.onchange=function(){ufx(id,'status',this.value);sel.replaceWith(sbdgSpan(ap(T.find(t=>t.id===id))))};
   sel.onblur=function(){sel.replaceWith(sbdgSpan(ap(T.find(t=>t.id===id))))};
-  el.target.replaceWith(sel);
-  sel.focus();
+  el.target.replaceWith(sel);sel.focus();
 }
 function sbdgSpan(t){const cl={대기중:'wait',진행중:'progress',완료:'done',보류:'hold'};
   const s=document.createElement('span');s.className=`sbdg ${cl[t.status]||'wait'}`;
-  s.textContent=STL[t.status]||t.status;s.onclick=function(e){cyc(t.id,e)};
-  return s;
+  s.textContent=STL[t.status]||t.status;s.onclick=function(e){cyc(t.id,e)};return s;
 }
 function uf(f,v){if(!SEL)return;ufx(SEL,f,v)}
 function ufx(id,f,v){const old=ap(T.find(t=>t.id===id));if(old[f]===v)return;const e=ED[id]||{};e[f]=v;e._ha=[...(e._ha||[]),{t:now(),a:`${fl(f)} → ${v}`,n:''}];ED[id]=e;s();render();updateDetail();toast('Saved')}
-function fl(f){return{title:'Title',assignee:'Assignee',due_date:'Due',priority:'Priority',status:'Status',parent_id:'Parent'}[f]||f}
+function fl(f){return{title:'Title',assignee:'Assignee',due_date:'Due',priority:'Priority',status:'Status'}[f]||f}
 function edf(f){const t=ap(T.find(t=>t.id===SEL));if(!t)return;const d=prompt(`${fl(f)}:`,t[f]||'');if(d!==null&&d!==t[f])uf(f,d)}
 function ie(id,f){selTask(id);const t=ap(T.find(t=>t.id===id));const d=prompt(`${fl(f)}:`,t[f]||'');if(d!==null&&d!==t[f])ufx(id,f,d)}
 function addNote(){const n=document.getElementById('ni')?.value?.trim();if(!n)return;const e=ED[SEL]||{};e._ha=[...(e._ha||[]),{t:now(),a:'Note',n}];ED[SEL]=e;s();render();updateDetail();toast('Note added')}
-function deleteTask(){if(!SEL||!confirm('정말 삭제하시겠습니까?\\n'+SEL+' — '+ap(T.find(t=>t.id===SEL))?.title+'\\n\\n이 작업은 되돌릴 수 없습니다.'))return;const e=ED[SEL]||{};e._deleted=true;e._ha=[...(e._ha||[]),{t:now(),a:'Deleted',n:''}];ED[SEL]=e;T=T.filter(t=>t.id!==SEL);SEL=null;s();render();document.getElementById('dp').classList.add('closed');toast('Task deleted')}
 function addComment(){if(!SEL)return;const text=document.getElementById('ci')?.value?.trim();if(!text)return;const mentions=[];text.replace(/@([\w가-힣]+)/g,(_,m)=>{mentions.push(m);return''});const e=ED[SEL]||{};e._ca=[...(e._ca||[]),{author:myName().replace(/^@/,'')||USER_ID,text,timestamp:now(),mentions}];ED[SEL]=e;s();render();updateDetail();toast('Comment added')}
 function hm(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/📎\s*(\S+)/g,'<span class="cm-file" onclick="event.stopPropagation();navigator.clipboard.writeText(\'$1\');toast(\'Path copied: $1\')" title="Click to copy path">📁 $1</span>').replace(/\*\*(.+?)\*\*/g,'<span class="cm-bold">$1</span>').replace(/\*(.+?)\*/g,'<span class="cm-italic">$1</span>').replace(/`(.+?)`/g,'<span class="cm-code">$1</span>').replace(/\n/g,'<br>').replace(/@([\w가-힣]+)/g,'<span style="color:var(--accent);font-weight:600">@$1</span>')}
 function addFilePath(){if(!SEL)return;const path=prompt('Enter file path:');if(!path||!path.trim())return;const ci=document.getElementById('ci');if(ci)ci.value=(ci.value?ci.value+' ':'')+'📎 '+path.trim()}
@@ -819,95 +856,46 @@ function pb(p){const m={높음:'pri-high',High:'pri-high',보통:'pri-mid',Mediu
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function now(){return new Date().toLocaleString('ko-KR')}
 function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),1800)}
-function mShow(id){if(id==='addModal'){const sel=document.getElementById('aParent');sel.innerHTML='<option value="">(None — top level)</option>'+T.map(t=>`<option value="${t.id}">${t.id} — ${esc(t.title)}</option>`).join('')}document.getElementById(id).classList.add('show')}
-function mClose(id){document.getElementById(id).classList.remove('show');if(id==='addModal'){document.getElementById('aTitle').value=document.getElementById('aAssignee').value=document.getElementById('aCollab').value=document.getElementById('aDue').value=document.getElementById('aDesc').value=document.getElementById('aTags').value='';document.getElementById('aParent').innerHTML='<option value="">(None — top level)</option>'}}
+function mShow(id){
+  if(id==='addModal'){
+    const sel=document.getElementById('aParent');
+    sel.innerHTML='<option value="">(None — top level)</option>'+all().map(t=>`<option value="${t.id}">${t.id} — ${esc(t.title||'(no title)')}</option>`).join('');
+  }
+  document.getElementById(id).classList.add('show');
+}
+function mClose(id){
+  document.getElementById(id).classList.remove('show');
+  if(id==='addModal'){document.getElementById('aTitle').value=document.getElementById('aAssignee').value=document.getElementById('aCollab').value=document.getElementById('aDue').value=document.getElementById('aDesc').value=document.getElementById('aTags').value='';document.getElementById('aParent').innerHTML='<option value="">(None — top level)</option>'}
+}
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){cpClose();closeDetail();mClose('addModal')}
+  if(e.key==='Escape'){cpClose();closeDetail();mClose('addModal');mClose('linkModal')}
   if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();cpOpen()}
 });
+
 // ── Command Palette ──
-function cpOpen(){
-  document.getElementById('cpOverlay').classList.add('show');
-  document.getElementById('cpInput').value='';
-  document.getElementById('cpInput').focus();
-  cpFilter();
-}
-function cpClose(){
-  document.getElementById('cpOverlay').classList.remove('show');
-  CP_ITEMS=[];
-}
+function cpOpen(){document.getElementById('cpOverlay').classList.add('show');document.getElementById('cpInput').value='';document.getElementById('cpInput').focus();cpFilter()}
+function cpClose(){document.getElementById('cpOverlay').classList.remove('show');CP_ITEMS=[]}
 function cpKey(e){
   if(e.key==='Escape'){cpClose();return}
-  if(e.key==='Enter'){
-    const sel=document.querySelector('.cp-item.sel');
-    if(sel){sel.click();return}
-    const first=document.querySelector('.cp-item');
-    if(first){first.click();return}
-  }
+  if(e.key==='Enter'){const sel=document.querySelector('.cp-item.sel');if(sel){sel.click();return}const first=document.querySelector('.cp-item');if(first){first.click();return}}
   if(e.key==='ArrowDown'){e.preventDefault();cpMove(1)}
   if(e.key==='ArrowUp'){e.preventDefault();cpMove(-1)}
 }
-function cpMove(dir){
-  const items=[...document.querySelectorAll('.cp-item')];
-  const idx=items.findIndex(el=>el.classList.contains('sel'));
-  items.forEach(el=>el.classList.remove('sel'));
-  const next=idx<0?(dir>0?0:items.length-1):(idx+dir+items.length)%items.length;
-  if(items[next])items[next].classList.add('sel');
-}
+function cpMove(dir){const items=[...document.querySelectorAll('.cp-item')];const idx=items.findIndex(el=>el.classList.contains('sel'));items.forEach(el=>el.classList.remove('sel'));const next=idx<0?(dir>0?0:items.length-1):(idx+dir+items.length)%items.length;if(items[next])items[next].classList.add('sel')}
 function cpFilter(){
-  const q=document.getElementById('cpInput').value.trim().toLowerCase();
-  CP_ITEMS=[];
-  // Navigation
-  const navs=[
-    {label:'My Tasks',icon:'👤',action:()=>{navTo('my-tasks')},keys:'my'},
-    {label:'Team Tasks',icon:'👥',action:()=>{navTo('team-tasks-all')},keys:'team'},
-    {label:'Meetings',icon:'📝',action:()=>{navTo('meetings-all')},keys:'meet'},
-    {label:'Calendar',icon:'📅',action:()=>{navTo('calendar-month')},keys:'cal'},
-  ];
-  if(!q||navs.some(n=>n.keys.includes(q)||n.label.toLowerCase().includes(q))){
-    CP_ITEMS.push({section:'Navigate'});
-    navs.forEach(n=>{if(!q||n.keys.includes(q)||n.label.toLowerCase().includes(q))CP_ITEMS.push({label:n.label,icon:n.icon,action:n.action,keys:n.keys})});
-  }
-  // Task search
-  if(q&&q.toUpperCase().startsWith('T')){
-    const matching=T.map(ap).filter(t=>t.id.toLowerCase().includes(q));
-    if(matching.length){
-      CP_ITEMS.push({section:'Tasks'});
-      matching.slice(0,10).forEach(t=>{CP_ITEMS.push({label:t.id+' — '+t.title,icon:'📋',action:()=>{selTask(t.id)},keys:t.id})});
-    }
-  }
-  // Actions
-  const acts=[{label:'New Task',icon:'➕',action:()=>{mShow('addModal')},keys:'new'}];
-  const tm=q.match(/^done\s+(t\d+)/i);
-  if(tm){
-    const tid=tm[1].toUpperCase();
-    const t=T.find(t=>t.id===tid);
-    if(t)acts.push({label:'Mark '+tid+' as Done',icon:'✅',action:()=>{ufx(tid,'status','완료');toast(tid+' marked done')},keys:'done '+tid});
-  }
-  if(!q||acts.some(a=>a.keys.toLowerCase().includes(q.toLowerCase())||a.label.toLowerCase().includes(q))){
-    CP_ITEMS.push({section:'Actions'});
-    acts.forEach(a=>{if(!q||a.keys.toLowerCase().includes(q.toLowerCase())||a.label.toLowerCase().includes(q))CP_ITEMS.push({label:a.label,icon:a.icon,action:a.action,keys:a.keys})});
-  }
-  let html='';
-  CP_ITEMS.forEach((item,i)=>{if(item.section){html+=`<div class="cp-section">${item.section}</div>`;return}html+=`<div class="cp-item" onclick="cpExec(${i})">${item.icon} ${esc(item.label)}<span class="cp-k">${item.keys||''}</span></div>`});
-  document.getElementById('cpResults').innerHTML=html||'<div class="cp-empty">No results</div>';
+  const q=document.getElementById('cpInput').value.trim().toLowerCase();CP_ITEMS=[];
+  const navs=[{label:'My Tasks',icon:'👤',action:()=>{navTo('my-tasks')},keys:'my'},{label:'Team Tasks',icon:'👥',action:()=>{navTo('team-tasks-all')},keys:'team'},{label:'Meetings',icon:'📝',action:()=>{navTo('meetings-all')},keys:'meet'},{label:'Calendar',icon:'📅',action:()=>{navTo('calendar-month')},keys:'cal'}];
+  if(!q||navs.some(n=>n.keys.includes(q)||n.label.toLowerCase().includes(q))){CP_ITEMS.push({section:'Navigate'});navs.forEach(n=>{if(!q||n.keys.includes(q)||n.label.toLowerCase().includes(q))CP_ITEMS.push({label:n.label,icon:n.icon,action:n.action,keys:n.keys})})}
+  if(q&&q.toUpperCase().startsWith('T')){const matching=all().filter(t=>t.id.toLowerCase().includes(q));if(matching.length){CP_ITEMS.push({section:'Tasks'});matching.slice(0,10).forEach(t=>{CP_ITEMS.push({label:t.id+' — '+t.title,icon:'📋',action:()=>{selTask(t.id)},keys:t.id})})}}
+  const acts=[{label:'New Task',icon:'➕',action:()=>{mShow('addModal')},keys:'new'}];const tm=q.match(/^done\s+(t\d+)/i);if(tm){const tid=tm[1].toUpperCase();const t=T.find(t=>t.id===tid);if(t)acts.push({label:'Mark '+tid+' as Done',icon:'✅',action:()=>{ufx(tid,'status','완료');toast(tid+' marked done')},keys:'done '+tid})}
+  if(!q||acts.some(a=>a.keys.toLowerCase().includes(q.toLowerCase())||a.label.toLowerCase().includes(q))){CP_ITEMS.push({section:'Actions'});acts.forEach(a=>{if(!q||a.keys.toLowerCase().includes(q.toLowerCase())||a.label.toLowerCase().includes(q))CP_ITEMS.push({label:a.label,icon:a.icon,action:a.action,keys:a.keys})})}
+  let html='';CP_ITEMS.forEach((item,i)=>{if(item.section){html+=`<div class="cp-section">${item.section}</div>`;return}html+=`<div class="cp-item" onclick="cpExec(${i})">${item.icon} ${esc(item.label)}<span class="cp-k">${item.keys||''}</span></div>`});document.getElementById('cpResults').innerHTML=html||'<div class="cp-empty">No results</div>';
 }
 function cpExec(i){cpClose();const item=CP_ITEMS[i];if(item&&item.action)item.action()}
 
 // ── File Attachments ──
-function attachFile(){
-  if(!SEL)return;
-  const path=prompt('Enter file path:');
-  if(!path||!path.trim())return;
-  const e=ED[SEL]||{};
-  e._fa=[...(e._fa||[]),path.trim()];
-  ED[SEL]=e;s();render();updateDetail();toast('File attached');
-}
-function rmFile(tid,i){
-  const e=ED[tid];if(!e||!e._fa)return;
-  e._fa.splice(i,1);
-  ED[tid]=e;s();render();updateDetail();toast('Attachment removed');
-}
+function attachFile(){if(!SEL)return;const path=prompt('Enter file path:');if(!path||!path.trim())return;const e=ED[SEL]||{};e._fa=[...(e._fa||[]),path.trim()];ED[SEL]=e;s();render();updateDetail();toast('File attached')}
+function rmFile(tid,i){const e=ED[tid];if(!e||!e._fa)return;e._fa.splice(i,1);ED[tid]=e;s();render();updateDetail();toast('Attachment removed')}
 boot();
 </script>
 </body>
