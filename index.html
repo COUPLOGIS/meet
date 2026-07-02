@@ -665,6 +665,20 @@ async function boot(){
   // ── localStorage fallback (original behavior) ──
   l();
   try{const w=await(await fetch('wbs.json?'+Date.now())).json();T=(w.tasks||[]).map(t=>({...t,_h:[{t:t.meeting_date||t.meeting_id||'?',a:'Created',n:''}]}));USERS=w.users||{};}catch(e){T=[]}
+  // Merge localStorage ED tasks not yet synced to API/wbs
+  Object.keys(ED).forEach(id => {
+    if (!T.find(t => t.id === id)) {
+      const e = ED[id];
+      T.push({
+        id, title: e.title || '', description: e.description || '',
+        tags: e.tags || [], parent_id: e.parent_id || null,
+        assignee: e.assignee || '', collaborators: e.collaborators || [],
+        due_date: e.due_date || '', priority: e.priority || '보통',
+        status: e.status || '대기중', meeting_id: '', created_by: e.created_by || '',
+        _h: e._ha || [{t: e.created_at || '?', a: 'Created', n: ''}]
+      });
+    }
+  });
   const mids=new Set();T.forEach(t=>{if(t.meeting_id)mids.add(t.meeting_id);if(t.meeting_date)mids.add(t.meeting_date)});
   for(const id of mids){try{MH[id]=await(await fetch(id+'.html?'+Date.now())).text()}catch(e){}}
   M=[...mids].map(id=>{
