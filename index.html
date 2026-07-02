@@ -775,10 +775,10 @@ function renderTasks(){
     // Split: team-linked mirrors go to top section
     teamLinked=list.filter(t=>t.mirrored_from||t.source==='personal'&&t.mirrored_from);
     list=list.filter(t=>!teamLinked.includes(t));
-  }else if(PAGE==='team-tasks-progress')list=al.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='진행중');
-  else if(PAGE==='team-tasks-wait')list=al.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='대기중');
-  else if(PAGE==='team-tasks-done')list=al.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='완료');
-  else if(PAGE==='team-tasks-all')list=al.filter(t=>!!(t.meeting_date||t.meeting_id));
+  }else if(PAGE==='team-tasks-progress')list=al.filter(t=>t.status==='진행중');
+  else if(PAGE==='team-tasks-wait')list=al.filter(t=>t.status==='대기중');
+  else if(PAGE==='team-tasks-done')list=al.filter(t=>t.status==='완료');
+  else if(PAGE==='team-tasks-all')list=al.filter(t=>!!(t.meeting_date||t.meeting_id||t.source==='team'||(t.collaborators||[]).length));
   else if(PAGE==='tasks-progress')list=al.filter(t=>t.status==='진행중');
   else if(PAGE==='tasks-wait')list=al.filter(t=>t.status==='대기중');
   else if(PAGE==='tasks-done')list=al.filter(t=>t.status==='완료');
@@ -1413,6 +1413,7 @@ async function addTask(){
   const due_date=document.getElementById('aDue').value||'N/A';
   const priority=document.getElementById('aPri').value;
   const ids=T.map(t=>parseInt(t.id.slice(1))).filter(n=>!isNaN(n));const nid=`T${String((Math.max(0,...ids)+1)).padStart(3,'0')}`;
+  const source=collaborators.length?'team':'personal';
 
   // API mode: POST to /api/task/save
   if(API_BASE){
@@ -1420,7 +1421,7 @@ async function addTask(){
       const result=await apiPost('/api/task/save',{
         id:nid,title,description:desc,tags,parent_id:parentId,
         assignee,collaborators,due_date,priority,status:'대기중',
-        created_by:USER_ID
+        created_by:USER_ID,source
       });
       if(result&&result.ok){
         // Refresh from API
@@ -1433,8 +1434,8 @@ async function addTask(){
     }catch(e){console.error('API task create failed',e);}
   }
   // localStorage fallback
-  ED[nid]={title,description:desc,tags,parent_id:parentId,assignee,collaborators,due_date,priority,status:'대기중',created_by:USER_ID,_ha:[{t:now(),a:'Created (web)',n:collaborators.length?'👥 '+collaborators.join(', '):''}],_new:true};
-  T.push({id:nid,title:'',description:'',tags:[],parent_id:null,assignee:'',collaborators:[],due_date:'',priority:'보통',status:'대기중',meeting_id:'',created_by:USER_ID,_h:[]});
+  ED[nid]={title,description:desc,tags,parent_id:parentId,assignee,collaborators,due_date,priority,status:'대기중',created_by:USER_ID,source,_ha:[{t:now(),a:'Created (web)',n:collaborators.length?'👥 '+collaborators.join(', '):''}],_new:true};
+  T.push({id:nid,title:'',description:'',tags:[],parent_id:null,assignee:'',collaborators:[],due_date:'',priority:'보통',status:'대기중',meeting_id:'',created_by:USER_ID,source,_h:[]});
   s();mClose('addModal');SEL=nid;PAGE='my-tasks';render();updateDetail();toast('Task created'+(collaborators.length?' 👥':''));
 }
 function pb(p){const m={높음:'pri-high',High:'pri-high',보통:'pri-mid',Medium:'pri-mid',낮음:'pri-low',Low:'pri-low'};return`<span class="pribdg ${m[p]||'pri-mid'}">${p||'Medium'}</span>`}
