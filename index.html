@@ -818,8 +818,26 @@ function renderTasks(){
   if(FILTER_PRIORITY)list=list.filter(t=>t.priority===FILTER_PRIORITY);
   if(FILTER_TAG)list=list.filter(t=>(t.tags||[]).includes(FILTER_TAG));
   const sd=SORT_DIR==='asc'?1:-1;
+  // Hierarchical sort: parents first (by sort key), then children in order under parent
+  const allTasks=al;
   list.sort((a,b)=>{
-    if(SORT_BY==='id')return (a.id||'').localeCompare(b.id)*sd;
+    // Resolve full parent chain: get root ancestor for each
+    const rootA=(function getRoot(t){const p=allTasks.find(x=>x.id===t.parent_id);return p?getRoot(p):t})(a);
+    const rootB=(function getRoot(t){const p=allTasks.find(x=>x.id===t.parent_id);return p?getRoot(p):t})(b);
+    // Sort by root ancestor first
+    if(rootA.id!==rootB.id){
+      if(SORT_BY==='id')return (rootA.id||'').localeCompare(rootB.id||'')*sd;
+      if(SORT_BY==='title')return (rootA.title||'').localeCompare(rootB.title||'')*sd;
+      if(SORT_BY==='assignee')return (rootA.assignee||'').localeCompare(rootB.assignee||'')*sd;
+      if(SORT_BY==='status')return (rootA.status||'').localeCompare(rootB.status||'')*sd;
+      if(SORT_BY==='due')return (rootA.due_date||'').localeCompare(rootB.due_date||'')*sd;
+    }
+    // Same root: sort by depth (parent first), then by sort key
+    const depthA=(function getDepth(t,d){const p=allTasks.find(x=>x.id===t.parent_id);return p?getDepth(p,d+1):d})(a,0);
+    const depthB=(function getDepth(t,d){const p=allTasks.find(x=>x.id===t.parent_id);return p?getDepth(p,d+1):d})(b,0);
+    if(depthA!==depthB)return depthA-depthB;
+    // Same depth: sort by chosen key
+    if(SORT_BY==='id')return (a.id||'').localeCompare(b.id||'')*sd;
     if(SORT_BY==='title')return (a.title||'').localeCompare(b.title||'')*sd;
     if(SORT_BY==='assignee')return (a.assignee||'').localeCompare(b.assignee||'')*sd;
     if(SORT_BY==='status')return (a.status||'').localeCompare(b.status||'')*sd;
