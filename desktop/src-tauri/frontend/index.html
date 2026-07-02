@@ -328,6 +328,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 </div>
 
 <script>
+// ── API Sync Server Detection ──
+const API_BASE = (() => {
+  const h = location.hostname;
+  if (h === 'localhost' || h === '127.0.0.1' || h.includes('k12')) return 'http://localhost:8646';
+  return null; // no API available — use localStorage fallback
+})();
+
 const USER_ID = new URLSearchParams(location.search).get('user') || '';
 let T=[],M=[],MH={},ED={},EV={},calY,calM,PAGE=USER_ID?'my-tasks':'team-tasks-all',SEL=null,USERS={},CP_ITEMS=[];
 var SORT_BY='id',SORT_DIR='asc',Q='',FILTER_STATUS='',FILTER_PRIORITY='',KANBAN=false;
@@ -338,6 +345,12 @@ let TEAM_MIRRORS={}; // {teamTaskId: [mirrorTaskIds...]} — loaded from localSt
 const STL={대기중:'Waiting',진행중:'In Progress',완료:'Done',보류:'Hold'};
 const PRI={높음:'High',보통:'Medium',낮음:'Low'};
 var calWeekOffset=0;
+
+// ── API polling state ──
+let _dirty = false;        // set true after any local mutation
+let _lastLocal = 0;        // timestamp of last local change
+let _pollTimer = null;     // interval handle
+let COMMENTS = [];          // comments from API (separate from task objects)
 
 function myName(){return USERS[USER_ID]?.username||''}
 
@@ -354,9 +367,65 @@ const MENU=[
   {id:'board',icon:'📌',label:'Board',children:[{id:'board',label:'Kanban Board'}]},
 ];
 
-function l(){try{ED=JSON.parse(localStorage.getItem(SKEY)||'{}');EV=JSON.parse(localStorage.getItem(EKEY)||'{}');MENTIONS=JSON.parse(localStorage.getItem(MIRKEY)||'{}');const m=JSON.parse(localStorage.getItem('ml2')||'{}');TEAM_MIRRORS=m.tm||{};}catch(e){ED={};EV={};MENTIONS={};TEAM_MIRRORS={}}}
-function s(){localStorage.setItem(SKEY,JSON.stringify(ED));localStorage.setItem(EKEY,JSON.stringify(EV));localStorage.setItem(MIRKEY,JSON.stringify(MENTIONS));localStorage.setItem('ml2',JSON.stringify({tm:TEAM_MIRRORS}))}
-function ap(t){const e=ED[t.id]||{};return{...t,...e,title:t.title||e.title||'(no title)',comments:[...(t.comments||[]),...(e._ca||[])],_h:[...(t._h||[]),...(e._ha||[])],_fa:[...(e._fa||[])],links:[...(e.links||[])],...e.links!==undefined?{links:e.links}:{}}}
+// ── Data load/save ──
+// l(): load from localStorage (fallback when API unavailable)
+function l(){
+  try{
+    ED=JSON.parse(localStorage.getItem(SKEY)||'{}');
+    EV=JSON.parse(localStorage.getItem(EKEY)||'{}');
+    MENTIONS=JSON.parse(localStorage.getItem(MIRKEY)||'{}');
+    const m=JSON.parse(localStorage.getItem('ml2')||'{}');
+    TEAM_MIRRORS=m.tm||{};
+  }catch(e){ED={};EV={};MENTIONS={};TEAM_MIRRORS={}}
+}
+// s(): save to localStorage (fallback) or mark dirty for API
+function s(){
+  if(API_BASE){_dirty=true;_lastLocal=Date.now();}
+  localStorage.setItem(SKEY,JSON.stringify(ED));
+  localStorage.setItem(EKEY,JSON.stringify(EV));
+  localStorage.setItem(MIRKEY,JSON.stringify(MENTIONS));
+  localStorage.setItem('ml2',JSON.stringify({tm:TEAM_MIRRORS}));
+}
+// apiPost(): helper to POST to API endpoint
+async function apiPost(endpoint, body){
+  if(!API_BASE)return null;
+  try{
+    const res=await fetch(API_BASE+endpoint,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+    return await res.json();
+  }catch(e){console.error('API POST failed:',endpoint,e);return null;}
+}
+// apiGet(): helper to GET from API endpoint
+async function apiGet(endpoint){
+  if(!API_BASE)return null;
+  try{
+    const res=await fetch(API_BASE+endpoint);
+    return await res.json();
+  }catch(e){console.error('API GET failed:',endpoint,e);return null;}
+}
+// ap(): apply ED overrides to base task. In API mode, comments come from COMMENTS array.
+function ap(t){
+  const e=ED[t.id]||{};
+  if(API_BASE){
+    // API mode: comments from COMMENTS, not from ED._ca
+    const taskComments=COMMENTS.filter(c=>c.task_id===t.id);
+    return {...t,...e,title:t.title||e.title||'(no title)',
+      comments:taskComments,
+      _h:[...(t._h||[]),...(e._ha||[])],
+      _fa:[...(e._fa||[])],
+      links:[...(e.links||[])],
+      ...e.links!==undefined?{links:e.links}:{}};
+  }
+  // localStorage fallback: original behavior
+  return {...t,...e,title:t.title||e.title||'(no title)',
+    comments:[...(t.comments||[]),...(e._ca||[])],
+    _h:[...(t._h||[]),...(e._ha||[])],
+    _fa:[...(e._fa||[])],
+    links:[...(e.links||[])],
+    ...e.links!==undefined?{links:e.links}:{}};
+}
 function allTags(){const s=new Set();T.forEach(t=>{(t.tags||[]).forEach(tg=>s.add(tg));const e=ED[t.id];if(e&&e.tags)e.tags.forEach(tg=>s.add(tg))});return[...s].sort()}
 // Helper: get all tasks with ED applied
 function all(){return T.map(ap)}
@@ -375,7 +444,7 @@ function userByDisplay(disp){
   return null;
 }
 
-function createMirror(teamTaskId, subTaskId){
+async function createMirror(teamTaskId, subTaskId){
   // subTaskId: if set, mirror this sub-task (with its parent context)
   // otherwise mirror the teamTaskId directly
   const origId=subTaskId||teamTaskId;
@@ -388,6 +457,29 @@ function createMirror(teamTaskId, subTaskId){
   const mirrorId='P'+(+new Date()).toString(36).toUpperCase();
   const parentId=subTaskId?teamTaskId:null;
 
+  // API mode: POST to /api/mirror/create
+  if(API_BASE){
+    try{
+      const result=await apiPost('/api/mirror/create',{
+        task_id:origId,
+        user_id:USER_ID,
+        parent_id:parentId||null,
+        mirror_parent:subTaskId?teamTaskId:null
+      });
+      if(result&&result.ok){
+        // Track locally
+        if(!TEAM_MIRRORS[origId])TEAM_MIRRORS[origId]=[];
+        TEAM_MIRRORS[origId].push(mirrorId);
+        s();
+        // Refresh from API
+        const data=await apiGet('/api/state');
+        if(data&&data.ok){T=data.tasks||[];}
+        render();updateDetail();
+        return mirrorId;
+      }
+    }catch(e){console.error('API mirror create failed',e);}
+  }
+  // localStorage fallback
   ED[mirrorId]={
     title:teamTask.title,description:'',tags:[...teamTask.tags||[]],parent_id:parentId,
     assignee:myName().replace(/^@/,''),collaborators:[],due_date:teamTask.due_date||'N/A',
@@ -442,17 +534,29 @@ function syncOriginChange(taskId){
   s();
 }
 
-function promoteToTeam(taskId){
+async function promoteToTeam(taskId){
   const t=all().find(t=>t.id===taskId);
   if(!t||t.meeting_id||t.meeting_date)return toast('Already a team task');
   const date=new Date().toISOString().slice(0,10);
   const meetId='mtg_'+date+'_promoted';
+
+  // API mode: POST to /api/task/save with meeting info
+  if(API_BASE){
+    try{
+      await apiPost('/api/task/save',{id:taskId,title:t.title,description:t.description||'',
+        assignee:t.assignee,due_date:t.due_date,priority:t.priority,status:t.status,
+        meeting_id:meetId,meeting_date:date,source:'team'});
+      const data=await apiGet('/api/state');
+      if(data&&data.ok){T=data.tasks||[];M=data.meetings||[];}
+      render();updateDetail();toast('팀 과제로 승격됨!');
+      return;
+    }catch(e){console.error('API promote failed',e);}
+  }
+  // localStorage fallback
   const e=ED[taskId]||{};
   e.meeting_id=meetId;e.meeting_date=date;e.source='team';
-  // Remove personal-only fields
   delete e.mirrored_from;delete e.mirror_parent;
   ED[taskId]=e;
-  // Create meeting record
   const mid={id:meetId,date:date,p:myName().replace(/^@/,'')||USER_ID,tp:'개인→팀 승격',sm:[],ts:[taskId]};
   M.push(mid);
   s();render();updateDetail();toast('팀 과제로 승격됨!');
@@ -488,7 +592,56 @@ function processCommentMentions(taskId, text){
   });
 }
 
+// ── Boot: try API first, fallback to localStorage + wbs.json ──
 async function boot(){
+  // Try API sync server first
+  if(API_BASE){
+    try{
+      const data=await apiGet('/api/state');
+      if(data&&data.ok){
+        T=(data.tasks||[]).map(t=>({...t,_h:t._h||[{t:t.meeting_date||t.meeting_id||'?',a:'Created',n:''}]}));
+        USERS=data.users||{};
+        EV=data.events||{};
+        COMMENTS=data.comments||[];
+        // Build meetings from task meeting_ids
+        const mids=new Set();
+        T.forEach(t=>{if(t.meeting_id)mids.add(t.meeting_id);if(t.meeting_date)mids.add(t.meeting_date)});
+        // Also include API meeting records if present
+        if(data.meetings&&data.meetings.length){
+          data.meetings.forEach(m=>mids.add(m.id||m.date));
+        }
+        // Fetch meeting HTML from GitHub Pages (keep original logic)
+        for(const id of mids){
+          try{MH[id]=await(await fetch(id+'.html?'+Date.now())).text()}catch(e){}
+        }
+        // Build meeting list from API meetings + task meeting_ids
+        const apiMeetings=data.meetings||[];
+        const apiMids=new Set(apiMeetings.map(m=>m.id||m.date));
+        // Merge with tasks that reference meetings not in API
+        const extraMids=[...mids].filter(id=>!apiMids.has(id));
+        M=[...apiMeetings.map(m=>({id:m.id||m.date,date:m.date||m.id,p:m.p||'',tp:m.tp||'',sm:m.sm||[],ts:m.ts||[]}))];
+        extraMids.forEach(id=>{
+          const ts=T.filter(t=>(t.meeting_id||t.meeting_date)===id);
+          let date='',p='',tp='',sm=[];
+          if(MH[id]){
+            const d=new DOMParser().parseFromString(MH[id],'text/html');
+            date=d.querySelector('.meta-item:nth-child(1)')?.textContent?.replace(/.*일시/,'').trim()||id.replace(/_/g,' ');
+            p=d.querySelector('.meta-item:nth-child(2)')?.textContent?.replace(/.*참여자/,'').trim()||'';
+            tp=d.querySelector('.meta-item:nth-child(3)')?.textContent?.replace(/.*주제/,'').trim()||'';
+            sm=[...d.querySelectorAll('.box li')].map(li=>li.textContent.trim());
+          }
+          M.push({id,date,p,tp,sm,ts});
+        });
+        M.sort((a,b)=>b.id.localeCompare(a.id));
+        // Load localStorage as fallback cache
+        l();
+        render();
+        startPolling();
+        return;
+      }
+    }catch(e){console.error('API boot failed, falling back to localStorage',e);}
+  }
+  // ── localStorage fallback (original behavior) ──
   l();
   try{const w=await(await fetch('wbs.json?'+Date.now())).json();T=(w.tasks||[]).map(t=>({...t,_h:[{t:t.meeting_date||t.meeting_id||'?',a:'Created',n:''}]}));USERS=w.users||{};}catch(e){T=[]}
   const mids=new Set();T.forEach(t=>{if(t.meeting_id)mids.add(t.meeting_id);if(t.meeting_date)mids.add(t.meeting_date)});
@@ -503,6 +656,35 @@ async function boot(){
     return{id,date,p,tp,sm,ts};
   });M.sort((a,b)=>b.id.localeCompare(a.id));
   render();
+}
+
+// ── Smart Polling: fetch API state every 5s unless local changes pending ──
+function startPolling(){
+  if(!API_BASE||_pollTimer)return;
+  _pollTimer=setInterval(async()=>{
+    // Skip if there was a local change in the last 3 seconds
+    if(_dirty||Date.now()-_lastLocal<3000)return;
+    try{
+      const data=await apiGet('/api/state');
+      if(data&&data.ok){
+        // Merge updates: replace T, EV, USERS, COMMENTS while preserving local ED
+        T=(data.tasks||[]).map(t=>({...t,_h:t._h||[{t:t.meeting_date||t.meeting_id||'?',a:'Created',n:''}]}));
+        USERS=data.users||{};
+        EV=data.events||{};
+        COMMENTS=data.comments||[];
+        // Update meetings if changed
+        if(data.meetings&&data.meetings.length){
+          const apiMeetings=data.meetings.map(m=>({id:m.id||m.date,date:m.date||m.id,p:m.p||'',tp:m.tp||'',sm:m.sm||[],ts:m.ts||[]}));
+          const apiMids=new Set(apiMeetings.map(m=>m.id));
+          // Keep local meetings not in API
+          const localOnly=M.filter(m=>!apiMids.has(m.id));
+          M=[...localOnly,...apiMeetings];
+          M.sort((a,b)=>b.id.localeCompare(a.id));
+        }
+        render();
+      }
+    }catch(e){/* silent — poll failures are expected on flaky networks */}
+  },5000);
 }
 
 // ── Menu ──
@@ -848,17 +1030,48 @@ function calClick(d){SEL=d;render()}
 function calWeekNav(days){calWeekOffset+=days;render()}
 function calWeekGoToday(){calWeekOffset=0;render()}
 
-function addEvent(date){
+async function addEvent(date){
   const title=prompt('이벤트 제목:');if(!title)return;
   const d=date||prompt('날짜 (YYYY-MM-DD):',new Date().toISOString().slice(0,10));if(!d)return;
   const time=prompt('시간 (선택, HH:MM):','');
-  const id='ev'+Date.now();EV[id]={title,date:d,time:time||'',created:now()};
+  const id='ev'+Date.now();
+
+  // API mode: POST to /api/event
+  if(API_BASE){
+    try{
+      const result=await apiPost('/api/event',{id,title,date:d,time:time||'',action:'add'});
+      if(result&&result.ok){
+        EV[id]={title,date:d,time:time||'',created:now()};
+        s();render();updateDetail();toast('Event added');
+        return;
+      }
+    }catch(e){console.error('API event failed',e);}
+  }
+  // localStorage fallback
+  EV[id]={title,date:d,time:time||'',created:now()};
   s();render();updateDetail();toast('Event added');
 }
-function editEvent(id){
+async function editEvent(id){
   const e=EV[id];if(!e)return;
   const act=prompt('Edit / Delete?\n\n제목: '+e.title+'\n날짜: '+e.date+'\n시간: '+(e.time||'없음')+'\n\n"d" 입력 = 삭제, 새 제목 입력 = 수정');
   if(act===null)return;
+
+  // API mode: POST to /api/event
+  if(API_BASE){
+    try{
+      if(act.toLowerCase()==='d'){
+        await apiPost('/api/event',{id,title:e.title,date:e.date,time:e.time||'',action:'delete'});
+      }else if(act.trim()){
+        await apiPost('/api/event',{id,title:act.trim(),date:e.date,time:e.time||'',action:'add'});
+      }
+      // Refresh from API
+      const data=await apiGet('/api/state');
+      if(data&&data.ok){EV=data.events||{};}
+      render();toast(act.toLowerCase()==='d'?'Deleted':'Updated');
+      return;
+    }catch(e){console.error('API event edit failed',e);}
+  }
+  // localStorage fallback
   if(act.toLowerCase()==='d'){delete EV[id];s();render();toast('Deleted');return}
   if(act.trim()){EV[id].title=act.trim();s();render();toast('Updated')}
 }
@@ -945,12 +1158,28 @@ function renderMD(m){
 }
 
 // ── External Links ──
-function addLink(){
+async function addLink(){
   if(!SEL)return;
   const label=document.getElementById('lkLabel').value.trim();
   const url=document.getElementById('lkUrl').value.trim();
   const sheet=document.getElementById('lkSheet').value.trim();
   if(!label||!url)return toast('Label and URL required');
+
+  // API mode: POST to /api/link
+  if(API_BASE){
+    try{
+      const finalUrl=sheet&&url.includes('docs.google.com/spreadsheets')?url.replace(/#.*$/,'')+'#gid='+sheet:url;
+      await apiPost('/api/link',{task_id:SEL,action:'add',label,url:finalUrl,sheet:sheet||''});
+      // Refresh from API
+      const data=await apiGet('/api/state');
+      if(data&&data.ok){T=data.tasks||[];}
+      mClose('linkModal');
+      document.getElementById('lkLabel').value=document.getElementById('lkUrl').value=document.getElementById('lkSheet').value='';
+      render();updateDetail();toast('Link added');
+      return;
+    }catch(e){console.error('API link add failed',e);}
+  }
+  // localStorage fallback
   const e=ED[SEL]||{};
   const finalUrl=sheet&&url.includes('docs.google.com/spreadsheets')?url.replace(/#.*$/,'')+'#gid='+sheet:url;
   e.links=[...(e.links||[]),{label,url:finalUrl,sheet:sheet||''}];
@@ -958,7 +1187,20 @@ function addLink(){
   document.getElementById('lkLabel').value=document.getElementById('lkUrl').value=document.getElementById('lkSheet').value='';
   render();updateDetail();toast('Link added');
 }
-function rmLink(tid,i){
+async function rmLink(tid,i){
+  // API mode: POST to /api/link with action:'remove'
+  if(API_BASE){
+    const t=all().find(t=>t.id===tid);
+    const links=t?.links||[];
+    try{
+      await apiPost('/api/link',{task_id:tid,action:'remove',label:links[i]?.label||'',url:links[i]?.url||'',sheet:links[i]?.sheet||'',index:i});
+      const data=await apiGet('/api/state');
+      if(data&&data.ok){T=data.tasks||[];}
+      render();updateDetail();toast('Link removed');
+      return;
+    }catch(e){console.error('API link remove failed',e);}
+  }
+  // localStorage fallback
   const e=ED[tid];if(!e||!e.links)return;
   e.links.splice(i,1);
   ED[tid]=e;s();render();updateDetail();toast('Link removed');
@@ -993,15 +1235,106 @@ function cyc(id,el){
 }
 function sbdgSpan(t){const cl={대기중:'wait',진행중:'progress',완료:'done',보류:'hold'};
   const s=document.createElement('span');s.className=`sbdg ${cl[t.status]||'wait'}`;
-  s.textContent=STL[t.status]||t.status;s.onclick=function(e){cyc(t.id,e)};return s;
+  s.textContent=STL[t.status]||t.status;s.onclick=function(e){cyc(t.id,e)};return s;}
+function addNote(){
+  const n=document.getElementById('ni')?.value?.trim();if(!n)return;
+  // API mode: POST note as a task save with history update
+  if(API_BASE){
+    const t=all().find(t=>t.id===SEL);
+    if(t){
+      apiPost('/api/task/save',{id:SEL,title:t.title,description:t.description||'',
+        assignee:t.assignee,due_date:t.due_date,priority:t.priority,status:t.status,
+        note:{t:now(),a:'Note',n}}).then(()=>{
+        document.getElementById('ni').value='';
+        _dirty=true;_lastLocal=Date.now();
+        // Add locally for immediate display
+        const e=ED[SEL]||{};e._ha=[...(e._ha||[]),{t:now(),a:'Note',n}];ED[SEL]=e;
+        render();updateDetail();toast('Note added');
+        setTimeout(()=>{_dirty=false;},2000);
+      }).catch(()=>{
+        // Fallback: save locally
+        const e=ED[SEL]||{};e._ha=[...(e._ha||[]),{t:now(),a:'Note',n}];ED[SEL]=e;
+        s();render();updateDetail();toast('Note added (local)');
+      });
+      return;
+    }
+  }
+  // localStorage fallback
+  const e=ED[SEL]||{};e._ha=[...(e._ha||[]),{t:now(),a:'Note',n}];ED[SEL]=e;
+  s();render();updateDetail();toast('Note added');
 }
 function uf(f,v){if(!SEL)return;ufx(SEL,f,v)}
-function ufx(id,f,v){const old=ap(T.find(t=>t.id===id));if(old[f]===v)return;const e=ED[id]||{};e[f]=v;e._ha=[...(e._ha||[]),{t:now(),a:`${fl(f)} → ${v}`,n:''}];ED[id]=e;s();render();updateDetail();toast('Saved');if(old.mirrored_from){syncMirrorChange({...old,[f]:v})}else{syncOriginChange(id)}}
+async function ufx(id,f,v){
+  const old=ap(T.find(t=>t.id===id));if(old[f]===v)return;
+
+  // API mode: POST to /api/task/save with the changed field
+  if(API_BASE){
+    const update={id,
+      title:old.title||'',description:old.description||'',
+      assignee:f==='assignee'?v:(old.assignee||''),
+      due_date:f==='due_date'?v:(old.due_date||''),
+      priority:f==='priority'?v:(old.priority||'보통'),
+      status:f==='status'?v:(old.status||'대기중')};
+    try{
+      const result=await apiPost('/api/task/save',update);
+      if(result&&result.ok){
+        // Track history locally
+        const e=ED[id]||{};e[f]=v;
+        e._ha=[...(e._ha||[]),{t:now(),a:`${fl(f)} → ${v}`,n:''}];
+        ED[id]=e;
+        _dirty=true;_lastLocal=Date.now();
+        render();updateDetail();toast('Saved');
+        if(old.mirrored_from){syncMirrorChange({...old,[f]:v})}else{syncOriginChange(id)}
+        setTimeout(()=>{_dirty=false;},2000);
+        // Notify status changes
+        if(f==='status')notifyStatusChange(id,old.status,v);
+        return;
+      }
+    }catch(e){console.error('API task save failed',e);}
+  }
+  // localStorage fallback
+  const e=ED[id]||{};e[f]=v;
+  e._ha=[...(e._ha||[]),{t:now(),a:`${fl(f)} → ${v}`,n:''}];
+  ED[id]=e;s();render();updateDetail();toast('Saved');
+  if(old.mirrored_from){syncMirrorChange({...old,[f]:v})}else{syncOriginChange(id)}
+  // Notify status changes
+  if(f==='status')notifyStatusChange(id,old.status,v);
+}
 function fl(f){return{title:'Title',assignee:'Assignee',due_date:'Due',priority:'Priority',status:'Status'}[f]||f}
 function edf(f){const t=ap(T.find(t=>t.id===SEL));if(!t)return;const d=prompt(`${fl(f)}:`,t[f]||'');if(d!==null&&d!==t[f])uf(f,d)}
 function ie(id,f){selTask(id);const t=ap(T.find(t=>t.id===id));const d=prompt(`${fl(f)}:`,t[f]||'');if(d!==null&&d!==t[f])ufx(id,f,d)}
-function addNote(){const n=document.getElementById('ni')?.value?.trim();if(!n)return;const e=ED[SEL]||{};e._ha=[...(e._ha||[]),{t:now(),a:'Note',n}];ED[SEL]=e;s();render();updateDetail();toast('Note added')}
-function addComment(){if(!SEL)return;const text=document.getElementById('ci')?.value?.trim();if(!text)return;const mentions=[];text.replace(/@([\w가-힣]+)/g,(_,m)=>{mentions.push(m);return''});const e=ED[SEL]||{};e._ca=[...(e._ca||[]),{author:myName().replace(/^@/,'')||USER_ID,text,timestamp:now(),mentions}];ED[SEL]=e;s();render();updateDetail();toast('Comment added');processCommentMentions(SEL,text);notifyMentions(SEL,myName().replace(/^@/,'')||USER_ID,text,mentions);}
+async function addComment(){
+  if(!SEL)return;
+  const text=document.getElementById('ci')?.value?.trim();if(!text)return;
+  const mentions=[];text.replace(/@([\\w가-힣]+)/g,(_,m)=>{mentions.push(m);return''});
+  const author=myName().replace(/^@/,'')||USER_ID;
+
+  // API mode: POST to /api/comment/add
+  if(API_BASE){
+    try{
+      const result=await apiPost('/api/comment/add',{task_id:SEL,author,text,mentions});
+      if(result&&result.ok){
+        // Refresh comments from API immediately
+        const data=await apiGet('/api/state');
+        if(data&&data.ok){COMMENTS=data.comments||[];}
+        document.getElementById('ci').value='';
+        _dirty=true;_lastLocal=Date.now();
+        render();updateDetail();toast('Comment added');
+        processCommentMentions(SEL,text);
+        notifyMentions(SEL,author,text,mentions);
+        // Allow polling again after 2s
+        setTimeout(()=>{_dirty=false;},2000);
+        return;
+      }
+    }catch(e){console.error('API comment failed, using localStorage',e);}
+  }
+  // localStorage fallback
+  const e=ED[SEL]||{};
+  e._ca=[...(e._ca||[]),{author,text,timestamp:now(),mentions}];
+  ED[SEL]=e;s();render();updateDetail();toast('Comment added');
+  processCommentMentions(SEL,text);
+  notifyMentions(SEL,author,text,mentions);
+}
 
 // ── Notification bridge ──
 function notifyMentions(taskId, author, text, mentions){
@@ -1033,7 +1366,7 @@ function notifyStatusChange(taskId, oldStatus, newStatus){
 }
 function hm(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/📎\s*(\S+)/g,'<span class="cm-file" onclick="event.stopPropagation();navigator.clipboard.writeText(\'$1\');toast(\'Path copied: $1\')" title="Click to copy path">📁 $1</span>').replace(/\*\*(.+?)\*\*/g,'<span class="cm-bold">$1</span>').replace(/\*(.+?)\*/g,'<span class="cm-italic">$1</span>').replace(/`(.+?)`/g,'<span class="cm-code">$1</span>').replace(/\n/g,'<br>').replace(/@([\w가-힣]+)/g,'<span style="color:var(--accent);font-weight:600">@$1</span>')}
 function addFilePath(){if(!SEL)return;const path=prompt('Enter file path:');if(!path||!path.trim())return;const ci=document.getElementById('ci');if(ci)ci.value=(ci.value?ci.value+' ':'')+'📎 '+path.trim()}
-function addTask(){
+async function addTask(){
   const title=document.getElementById('aTitle').value.trim();if(!title)return;
   const desc=document.getElementById('aDesc').value.trim();
   const tagsRaw=document.getElementById('aTags').value.trim();
@@ -1041,8 +1374,31 @@ function addTask(){
   const parentId=document.getElementById('aParent').value||null;
   const collabRaw=document.getElementById('aCollab').value.trim();
   const collaborators=collabRaw?collabRaw.split(/[,，\s]+/).filter(c=>c).map(c=>c.replace(/^@/,'')):[];
+  const assignee=document.getElementById('aAssignee').value.trim()||'조한표';
+  const due_date=document.getElementById('aDue').value||'N/A';
+  const priority=document.getElementById('aPri').value;
   const ids=T.map(t=>parseInt(t.id.slice(1))).filter(n=>!isNaN(n));const nid=`T${String((Math.max(0,...ids)+1)).padStart(3,'0')}`;
-  ED[nid]={title,description:desc,tags,parent_id:parentId,assignee:document.getElementById('aAssignee').value.trim()||'조한표',collaborators,due_date:document.getElementById('aDue').value||'N/A',priority:document.getElementById('aPri').value,status:'대기중',created_by:USER_ID,_ha:[{t:now(),a:'Created (web)',n:collaborators.length?'👥 '+collaborators.join(', '):''}],_new:true};
+
+  // API mode: POST to /api/task/save
+  if(API_BASE){
+    try{
+      const result=await apiPost('/api/task/save',{
+        id:nid,title,description:desc,tags,parent_id:parentId,
+        assignee,collaborators,due_date,priority,status:'대기중',
+        created_by:USER_ID
+      });
+      if(result&&result.ok){
+        // Refresh from API
+        const data=await apiGet('/api/state');
+        if(data&&data.ok){T=data.tasks||[];}
+        mClose('addModal');SEL=nid;PAGE='my-tasks';
+        render();updateDetail();toast('Task created'+(collaborators.length?' 👥':''));
+        return;
+      }
+    }catch(e){console.error('API task create failed',e);}
+  }
+  // localStorage fallback
+  ED[nid]={title,description:desc,tags,parent_id:parentId,assignee,collaborators,due_date,priority,status:'대기중',created_by:USER_ID,_ha:[{t:now(),a:'Created (web)',n:collaborators.length?'👥 '+collaborators.join(', '):''}],_new:true};
   T.push({id:nid,title:'',description:'',tags:[],parent_id:null,assignee:'',collaborators:[],due_date:'',priority:'보통',status:'대기중',meeting_id:'',created_by:USER_ID,_h:[]});
   s();mClose('addModal');SEL=nid;PAGE='my-tasks';render();updateDetail();toast('Task created'+(collaborators.length?' 👥':''));
 }
@@ -1090,8 +1446,35 @@ function cpFilter(){
 function cpExec(i){cpClose();const item=CP_ITEMS[i];if(item&&item.action)item.action()}
 
 // ── File Attachments ──
-function attachFile(){if(!SEL)return;const path=prompt('Enter file path:');if(!path||!path.trim())return;const e=ED[SEL]||{};e._fa=[...(e._fa||[]),path.trim()];ED[SEL]=e;s();render();updateDetail();toast('File attached')}
-function rmFile(tid,i){const e=ED[tid];if(!e||!e._fa)return;e._fa.splice(i,1);ED[tid]=e;s();render();updateDetail();toast('Attachment removed')}
+function attachFile(){
+  if(!SEL)return;const path=prompt('Enter file path:');if(!path||!path.trim())return;
+  // API mode: include in task save
+  if(API_BASE){
+    const t=all().find(t=>t.id===SEL);
+    const fa=[...(t?._fa||[]),path.trim()];
+    if(t){
+      apiPost('/api/task/save',{id:SEL,title:t.title,description:t.description||'',
+        assignee:t.assignee,due_date:t.due_date,priority:t.priority,status:t.status,
+        _fa:fa}).then(()=>{_dirty=true;_lastLocal=Date.now();setTimeout(()=>{_dirty=false;},2000)}).catch(()=>{});
+    }
+  }
+  const e=ED[SEL]||{};e._fa=[...(e._fa||[]),path.trim()];ED[SEL]=e;
+  s();render();updateDetail();toast('File attached');
+}
+function rmFile(tid,i){
+  // API mode: include in task save
+  if(API_BASE){
+    const t=all().find(t=>t.id===tid);
+    if(t&&t._fa){
+      const fa=[...t._fa];fa.splice(i,1);
+      apiPost('/api/task/save',{id:tid,title:t.title,description:t.description||'',
+        assignee:t.assignee,due_date:t.due_date,priority:t.priority,status:t.status,
+        _fa:fa}).then(()=>{_dirty=true;_lastLocal=Date.now();setTimeout(()=>{_dirty=false;},2000)}).catch(()=>{});
+    }
+  }
+  const e=ED[tid];if(!e||!e._fa)return;
+  e._fa.splice(i,1);ED[tid]=e;s();render();updateDetail();toast('Attachment removed');
+}
 boot();
 </script>
 </body>
