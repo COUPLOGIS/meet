@@ -27,19 +27,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 /* Outlook-style collapsed sidebar */
 #sidebar.collapsed{width:48px;overflow:visible}
 #sidebar.collapsed .sb-header img,#sidebar.collapsed .menu-parent span,#sidebar.collapsed .menu-parent .arrow,#sidebar.collapsed .menu-child,#sidebar.collapsed .menu-children,#sidebar.collapsed .badge{display:none}
-#sidebar.collapsed .menu-parent{justify-content:center;padding:12px 0;border-radius:0;font-size:0;color:transparent}
+#sidebar.collapsed .menu-parent{justify-content:center;padding:12px 0;border-radius:0}
 #sidebar.collapsed .menu-parent .ic{font-size:20px;width:auto;margin:0}
 #sidebar.collapsed .menu-parent:hover{background:var(--surface2)}
-#sidebar.collapsed .sb-header{padding:12px 0;justify-content:center}
-#sidebar.collapsed .sb-pin{right:auto;bottom:auto;position:static;margin-top:4px}
+#sidebar.collapsed .sb-header{padding:8px 0;justify-content:center;min-height:0}
+
 #sidebar.collapsed .sb-footer{justify-content:center;padding:10px 0}
 #sidebar.collapsed .sb-footer span{display:none}
 #sidebar.collapsed .sb-nav{padding:0}
-.sb-pin{position:absolute;right:12px;bottom:4px;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:11px;color:var(--muted2);background:var(--surface2);transition:all .15s;user-select:none;z-index:2;opacity:0}
-.sb-pin:hover{background:var(--surface3);color:var(--text)}
-.sb-pin.pinned{color:var(--accent);background:rgba(233,71,51,.12);opacity:1}
-#sidebar:not(.collapsed) .sb-pin{opacity:1}
-#sidebar.collapsed:hover .sb-pin{opacity:1}
 .sb-header{position:relative;padding:14px 18px 10px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 /* Sidebar overlay when expanded but not pinned */
 
@@ -67,6 +62,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .menu-child:hover{background:var(--surface2);color:var(--text2)}
 .menu-child.active{color:var(--accent);font-weight:600}
 .menu-child .cc{font-size:10px;margin-left:auto;color:var(--muted2)}
+
+.sb-expand{display:flex;align-items:center;justify-content:center;padding:4px 0;cursor:pointer;flex-shrink:0;transition:background .12s}
+.sb-expand:hover{background:var(--surface2)}
+.sb-arrow{font-size:10px;color:var(--muted);transition:transform .2s}
+#sidebar:not(.collapsed) .sb-arrow{transform:rotate(180deg)}
 
 .sb-footer{padding:10px 16px;border-top:1px solid var(--border2);flex-shrink:0;font-size:10px;
   color:var(--muted);display:flex;align-items:center;gap:6px}
@@ -97,7 +97,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .table tr.sel td{background:var(--surface2)}.table tr.done td{opacity:.5}.table tr.done .tt-c{text-decoration:line-through}
 .tt-c{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
 /* main task (not subtask) */ .tt-main{font-size:var(--main-size);font-weight:700}
-.tid{font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:600}
+.tid{font-family:var(--mono);font-size:10px;color:var(--text);font-weight:600}
 .mlink{font-size:10px;color:var(--accent2);cursor:pointer;text-decoration:underline}.mlink:hover{color:var(--accent)}
 .editable{cursor:pointer;padding:1px 4px;margin:-1px -4px;border-radius:3px}.editable:hover{background:var(--surface3)}
 
@@ -139,7 +139,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .lmeet:hover{border-color:var(--accent2)}
 .tl{margin-top:4px;border-left:2px solid var(--border2)}
 .tl-i{padding:6px 0 6px 14px;font-size:12px}.tl-i.done{opacity:.5}.tl-t{font-size:10px;color:var(--muted);margin-bottom:1px}.tl-n{font-size:11px;color:var(--accent2);margin-top:2px}
-.cm-check{cursor:pointer;font-size:14px;flex-shrink:0;opacity:.4;transition:opacity .15s;user-select:none}.cm-check:hover{opacity:1}
+.cm-check{cursor:pointer;font-size:10px;flex-shrink:0;padding:1px 6px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--muted);transition:all .12s;user-select:none;white-space:nowrap}.cm-check:hover{border-color:var(--accent);color:var(--accent)}.cm-check.done{background:rgba(46,125,50,.08);border-color:rgba(46,125,50,.2);color:var(--green)}.cm-check.done:hover{background:rgba(46,125,50,.15)}
 
 /* Toast */
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:8px 20px;border-radius:99px;font-size:12px;font-weight:600;z-index:999;opacity:0;transition:opacity .2s}#toast.show{opacity:1}
@@ -293,7 +293,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 <div class="ham-menu" id="hamMenu"></div>
 
 <nav id="sidebar" class="collapsed">
-  <div class="sb-header"><img src="logo_new.png" alt="TeamLog"><span class="sb-pin" onclick="event.stopPropagation();togglePin()" title="메뉴 확장/접기">▶</span></div>
+  <div class="sb-header"><img src="logo_new.png" alt="TeamLog"></div>
+  <div class="sb-expand" onclick="togglePin()" title="메뉴 확장"><span class="sb-arrow">▶</span></div>
   <div class="sb-nav" id="sbNav"></div>
   <div class="sb-footer"><span class="live"></span> Connected</div>
 </nav>
@@ -796,7 +797,7 @@ function toggleMenu(id){
 function navTo(page){PAGE=page;SEL=null;document.getElementById('dp').classList.add('closed');document.getElementById('hamMenu').classList.remove('show');
   // Collapse sidebar if not pinned
   const sb=document.getElementById('sidebar');
-  if(!sb.classList.contains('collapsed')&&!document.querySelector('.sb-pin').classList.contains('pinned')){
+  if(!sb.classList.contains('collapsed')){
     sb.classList.add('collapsed');
   }
   render()}
@@ -909,7 +910,7 @@ function renderMiniTable(list){
     </tr>`;
   });
   return `<table class="table"><thead><tr>
-    ${th('id','ID','width:55px')+th('title','Title','width:auto')+th('status','Status','width:80px')+th('due','Due','width:70px')}
+    ${th('id','ID','width:45px')+th('title','Title','width:auto')+th('status','Status','width:80px')+th('due','Due','width:70px')}
     <th style="width:60px;font-size:10px;font-weight:600;color:var(--muted)">Tags</th></tr></thead><tbody>
     ${allRows.length===0?`<tr><td colspan="5"><div class="empty"><p>No tasks</p></div></td></tr>`:allRows.join('')}</tbody></table>`;
 }
@@ -931,7 +932,7 @@ function renderTasksTable(list){
     const childCount=list.filter(c=>c.parent_id===t.id).length;
     const tags=''; // removed — now using links below
     const links=(t.links||[]);
-    const linksCell=links.length?`<div style="display:flex;flex-direction:column;gap:2px"><button class="btn sm" style="font-size:9px;padding:1px 4px;width:100%" onclick="event.stopPropagation();window.open('${esc(links[0].url)}','_blank')">🔗 바로가기</button><button class="btn sm" style="font-size:9px;padding:1px 4px;width:100%" onclick="event.stopPropagation();openPreview('${esc(links[0].label||'')}','${esc(links[0].url)}')">👁 미리보기</button></div>`:'<span style="color:var(--muted2)">-</span>';
+    const linksCell=links.length?`<div style="display:flex;flex-direction:column;gap:2px"><button class="btn sm" style="font-size:10px;padding:2px 6px;width:100%" onclick="event.stopPropagation();window.open('${esc(links[0].url)}','_blank')">🔗 바로가기</button></div>`:'<span style="color:var(--muted2)">-</span>';
     const cls=[t.status==='완료'?'done':'',SEL===t.id?'sel':''].filter(Boolean).join(' ');
     const hasParent=!t.parent_id||!list.some(p=>p.id===t.parent_id);
     allRows.push(`<tr class="${cls}" onclick="selTask('${t.id}')">
@@ -952,7 +953,7 @@ function renderTasksTable(list){
       const cprog=ccmts.length?`<span class="prog-bar"><span class="pg-done">${cdone}</span><span class="pg-total">/${ccmts.length}</span></span>`:'-';
       const isAdmin2=USERS[c.created_by||'']?.role==='admin';
       const clinks=(c.links||[]);
-      const clinksCell=clinks.length?`<div style="display:flex;flex-direction:column;gap:2px"><button class="btn sm" style="font-size:9px;padding:1px 4px;width:100%" onclick="event.stopPropagation();window.open('${esc(clinks[0].url)}','_blank')">🔗 바로가기</button><button class="btn sm" style="font-size:9px;padding:1px 4px;width:100%" onclick="event.stopPropagation();openPreview('${esc(clinks[0].label||'')}','${esc(clinks[0].url)}')">👁 미리보기</button></div>`:'<span style="color:var(--muted2)">-</span>';
+      const clinksCell=clinks.length?`<div style="display:flex;flex-direction:column;gap:2px"><button class="btn sm" style="font-size:10px;padding:2px 6px;width:100%" onclick="event.stopPropagation();window.open('${esc(clinks[0].url)}','_blank')">🔗 바로가기</button></div>`:'<span style="color:var(--muted2)">-</span>';
       const ccls=[c.status==='완료'?'done':'',SEL===c.id?'sel':''].filter(Boolean).join(' ');
       allRows.push(`<tr class="subtask ${ccls}" onclick="selTask('${c.id}')">
         <td class="tid">${c.id}${isAdmin2?' 👑':''}</td>
@@ -968,7 +969,7 @@ function renderTasksTable(list){
     });
   });
   return `<table class="table"><thead><tr>
-    ${th('id','ID','width:55px')}<th style="width:24px"></th>${th('title','Title','width:140px')+th('assignee','Assignee','width:65px')}
+    ${th('id','ID','width:45px')}<th style="width:24px"></th>${th('title','Title','width:140px')+th('assignee','Assignee','width:65px')}
     <th class="hm" style="width:110px">Meeting</th>
     ${th('status','Status','width:80px')+th('due','Due','width:75px')}
     <th style="width:100px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase">Links</th>
@@ -1268,7 +1269,7 @@ function renderTD(t){
         +`<div id="histMore" style="display:none">${hidden.map(e=>`<div class="tl-i"><div class="tl-t">${e.t}</div><div>${e.a}</div>${e.n?`<div class="tl-n">${esc(e.n)}</div>`:''}</div>`).join('')}</div>`
         +`<div class="tl-i" style="cursor:pointer;color:var(--accent2);font-weight:600;text-align:center" onclick="const m=document.getElementById('histMore');const t=this;m.style.display=m.style.display==='none'?'block':'none';t.textContent=m.style.display==='none'?'\u25bc Show ${hidden.length} more':'\u25b2 Collapse'">\u25bc Show ${hidden.length} more</div>`;
     })()}</div>
-    <h5>Comments</h5><div class="tl">${cmts.length?cmts.map(c=>`<div class="tl-i${c.completed?' done':''}"><div class="tl-t">${c.timestamp||''}</div><div style="display:flex;align-items:flex-start;gap:6px"><span style="flex:1"><strong>@${esc(c.author||'unknown')}</strong>: ${hm(c.text||'')}</span><span class="cm-check" onclick="event.stopPropagation();toggleComment(${c.id})" title="${c.completed?'Mark incomplete':'Mark complete'}">${c.completed?'✅':'○'}</span></div>${c.mentions&&c.mentions.length?`<div class="tl-n" style="color:var(--accent)">👥 ${c.mentions.map(m=>'@'+m).join(', ')}</div>`:''}</div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0">No comments</div>'}</div>
+    <h5>Comments</h5><div class="tl">${cmts.length?cmts.map(c=>`<div class="tl-i${c.completed?' done':''}"><div class="tl-t">${c.timestamp||''}</div><div style="display:flex;align-items:flex-start;gap:6px"><span style="flex:1"><strong>@${esc(c.author||'unknown')}</strong>: ${hm(c.text||'')}</span><span class="cm-check${c.completed?' done':''}" onclick="event.stopPropagation();toggleComment(${c.id})">${c.completed?'☑ 완료':'☐ 완료'}</span></div>${c.mentions&&c.mentions.length?`<div class="tl-n" style="color:var(--accent)">👥 ${c.mentions.map(m=>'@'+m).join(', ')}</div>`:''}</div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0">No comments</div>'}</div>
     <div style="display:flex;gap:6px;margin-top:8px"><input id="ci" style="flex:1;font-family:var(--font);font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:6px 10px;outline:none;min-height:32px" placeholder="Comment... **bold** *italic* \`code\` @name"><button class="btn sm" style="background:var(--surface3)" onclick="addFilePath()" title="Add file path">📎</button><button class="btn sm primary" onclick="addComment()">Add</button></div>
     <h5>Attachments</h5>${(t._fa||[]).length?t._fa.map((f,i)=>`<div class="df"><span class="fl">📎</span><span class="fv" style="cursor:pointer;color:var(--accent2)" onclick="navigator.clipboard.writeText('${esc(f).replace(/'/g,"\\'")}');toast('Path copied')">${esc(f)}</span><span style="color:var(--muted2);font-size:12px;cursor:pointer;padding:0 4px" onclick="rmFile('${t.id}',${i})" title="Remove">✕</span></div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0\">No attachments</div>'}
     <button class="btn sm" style="margin-top:6px" onclick="attachFile()">📎 Attach</button>
@@ -1372,32 +1373,33 @@ function cyc(id,el){
 function sbdgSpan(t){const cl={대기중:'wait',진행중:'progress',완료:'done',보류:'hold'};
   const s=document.createElement('span');s.className=`sbdg ${cl[t.status]||'wait'}`;
   s.textContent=STL[t.status]||t.status;s.onclick=function(e){cyc(t.id,e)};return s;}
-function addNote(){
+async function addNote(){
   const n=document.getElementById('ni')?.value?.trim();if(!n)return;
-  // API mode: POST note as a task save with history update
+  const noteObj={t:now(),a:'Note',n};
+  // API mode: POST note with history update
   if(API_BASE){
     const t=all().find(t=>t.id===SEL);
     if(t){
-      apiPost('/api/task/save',{id:SEL,title:t.title,description:t.description||'',
-        assignee:t.assignee,due_date:t.due_date,priority:t.priority,status:t.status,
-        note:{t:now(),a:'Note',n}}).then(()=>{
-        document.getElementById('ni').value='';
-        _dirty=true;_lastLocal=Date.now();
-        // Add locally for immediate display
-        const e=ED[SEL]||{};e._ha=[...(e._ha||[]),{t:now(),a:'Note',n}];ED[SEL]=e;
-        render();updateDetail();toast('Note added');
-        setTimeout(()=>{_dirty=false;},2000);
-      }).catch(()=>{
-        // Fallback: save locally
-        const e=ED[SEL]||{};e._ha=[...(e._ha||[]),{t:now(),a:'Note',n}];ED[SEL]=e;
-        s();render();updateDetail();toast('Note added (local)');
-      });
-      return;
+      try{
+        const result=await apiPost('/api/task/save',{id:SEL,title:t.title,description:t.description||'',
+          assignee:t.assignee,due_date:t.due_date,priority:t.priority,status:t.status,
+          note:noteObj});
+        if(result&&result.ok){
+          document.getElementById('ni').value='';
+          _dirty=true;_lastLocal=Date.now();
+          // Refresh from API to get updated history
+          const data=await apiGet('/api/state');
+          if(data&&data.ok){T=data.tasks||[];COMMENTS=data.comments||[];}
+          render();updateDetail();toast('Note added');
+          setTimeout(()=>{_dirty=false;},2000);
+          return;
+        }
+      }catch(e){console.error('addNote API failed',e);}
     }
   }
-  // localStorage fallback
-  const e=ED[SEL]||{};e._ha=[...(e._ha||[]),{t:now(),a:'Note',n}];ED[SEL]=e;
-  s();render();updateDetail();toast('Note added');
+  // Fallback: save locally
+  const e=ED[SEL]||{};e._ha=[...(e._ha||[]),noteObj];ED[SEL]=e;
+  s();render();updateDetail();toast('Note added (local)');
 }
 async function delTask(){
   if(!SEL)return;
