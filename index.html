@@ -858,6 +858,17 @@ function renderTasks(){
       html+=`<div style="padding:4px 0"><h5 style="font-size:12px;font-weight:700;color:var(--text2);margin:0 20px 8px;display:flex;align-items:center;gap:6px">📋 개인 과제 <span style="font-size:10px;color:var(--muted);font-weight:400">${list.length}개</span></h5>`;
     }
     html+=renderTasksTable(list);
+    // Link bar: show links for selected task at bottom
+    if(SEL){
+      const st=all().find(t=>t.id===SEL);
+      const slinks=st?.links||[];
+      if(slinks.length){
+        html+=`<div style="margin:8px 0;padding:6px 12px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:600;color:var(--muted);flex-shrink:0">🔗</span>
+          ${slinks.map(lk=>`<a href="${esc(lk.url)}" target="_blank" style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:4px 10px;color:var(--accent2);text-decoration:none;font-weight:600;white-space:nowrap" onclick="event.stopPropagation()">${esc(lk.label||'Link')}${lk.sheet?' 📊'+esc(lk.sheet):''}</a>`).join('')}
+        </div>`;
+      }
+    }
     document.getElementById('listContent').innerHTML=html;
   }
 }
@@ -1269,8 +1280,7 @@ async function addLink(){
   // API mode: POST to /api/link
   if(API_BASE){
     try{
-      const finalUrl=sheet&&url.includes('docs.google.com/spreadsheets')?url.replace(/#.*$/,'')+'#gid='+sheet:url;
-      await apiPost('/api/link',{task_id:SEL,action:'add',label,url:finalUrl,sheet:sheet||''});
+      await apiPost('/api/link',{task_id:SEL,action:'add',label,url,sheet:sheet||''});
       // Refresh from API
       const data=await apiGet('/api/state');
       if(data&&data.ok){T=data.tasks||[];}
@@ -1282,8 +1292,7 @@ async function addLink(){
   }
   // localStorage fallback
   const e=ED[SEL]||{};
-  const finalUrl=sheet&&url.includes('docs.google.com/spreadsheets')?url.replace(/#.*$/,'')+'#gid='+sheet:url;
-  e.links=[...(e.links||[]),{label,url:finalUrl,sheet:sheet||''}];
+  e.links=[...(e.links||[]),{label,url,sheet:sheet||''}];
   ED[SEL]=e;s();mClose('linkModal');
   document.getElementById('lkLabel').value=document.getElementById('lkUrl').value=document.getElementById('lkSheet').value='';
   render();updateDetail();toast('Link added');
@@ -1308,7 +1317,7 @@ async function rmLink(tid,i){
 }
 function openPreview(label,url){
   document.getElementById('iframe-label').textContent=label;
-  document.getElementById('preview-iframe').src=url.includes('docs.google.com/spreadsheets')?url.replace(/\/edit.*$/,'/preview'):url;
+  document.getElementById('preview-iframe').src=url;
   document.getElementById('iframe-panel').classList.add('show');
   // Resize iframe panel
   const dp=document.getElementById('dp');
