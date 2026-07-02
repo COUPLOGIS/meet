@@ -332,7 +332,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 const API_BASE = (() => {
   const h = location.hostname;
   if (h === 'localhost' || h === '127.0.0.1' || h.includes('k12')) return 'http://localhost:8646';
-  return null; // no API available — use localStorage fallback
+  return 'https://teamlog.shares.zrok.io';
 })();
 
 const USER_ID = new URLSearchParams(location.search).get('user') || '';
