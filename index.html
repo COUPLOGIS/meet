@@ -26,8 +26,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
   display:flex;flex-direction:column;flex-shrink:0;z-index:10;transition:width .2s}
 /* Outlook-style collapsed sidebar */
 #sidebar.collapsed{width:48px;overflow:visible}
-#sidebar.collapsed .sb-header img,#sidebar.collapsed .menu-parent span,#sidebar.collapsed .menu-child span,#sidebar.collapsed .menu-children,#sidebar.collapsed .badge{display:none}
-#sidebar.collapsed .menu-parent{justify-content:center;padding:12px 0;border-radius:0}
+#sidebar.collapsed .sb-header img,#sidebar.collapsed .menu-parent span,#sidebar.collapsed .menu-parent .arrow,#sidebar.collapsed .menu-child,#sidebar.collapsed .menu-children,#sidebar.collapsed .badge{display:none}
+#sidebar.collapsed .menu-parent{justify-content:center;padding:12px 0;border-radius:0;font-size:0;color:transparent}
 #sidebar.collapsed .menu-parent .ic{font-size:20px;width:auto;margin:0}
 #sidebar.collapsed .menu-parent:hover{background:var(--surface2)}
 #sidebar.collapsed .sb-header{padding:12px 0;justify-content:center}
@@ -293,7 +293,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 <div class="ham-menu" id="hamMenu"></div>
 
 <nav id="sidebar" class="collapsed">
-  <div class="sb-header"><img src="logo_new.png" alt="TeamLog"><span class="sb-pin" onclick="event.stopPropagation();togglePin()" title="고정/해제">📌</span></div>
+  <div class="sb-header"><img src="logo_new.png" alt="TeamLog"><span class="sb-pin" onclick="event.stopPropagation();togglePin()" title="메뉴 확장/접기">▶</span></div>
   <div class="sb-nav" id="sbNav"></div>
   <div class="sb-footer"><span class="live"></span> Connected</div>
 </nav>
@@ -1703,18 +1703,17 @@ function togglePin(){
   const sb=document.getElementById('sidebar');
   const pin=document.querySelector('.sb-pin');
   if(sb.classList.contains('collapsed')){
-    // Expand and pin
+    // Expand
     sb.classList.remove('collapsed');
     pin.classList.add('pinned');
+    pin.textContent='◀';
     localStorage.setItem('tl_pin','1');
-  }else if(pin.classList.contains('pinned')){
-    // Unpin and collapse
+  }else{
+    // Collapse
     pin.classList.remove('pinned');
     sb.classList.add('collapsed');
+    pin.textContent='▶';
     localStorage.setItem('tl_pin','0');
-  }else{
-    // Collapsed but not pinned — just collapse
-    sb.classList.add('collapsed');
   }
 }
 // Restore sidebar state
@@ -1723,9 +1722,11 @@ function togglePin(){
   // Start collapsed
   sb.classList.add('collapsed');
   // If was pinned, expand
+  const pin=document.querySelector('.sb-pin');
   if(localStorage.getItem('tl_pin')==='1'){
     sb.classList.remove('collapsed');
-    document.querySelector('.sb-pin').classList.add('pinned');
+    pin.classList.add('pinned');
+    pin.textContent='◀';
   }
 })();
 boot();
