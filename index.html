@@ -25,7 +25,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 #sidebar{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);
   display:flex;flex-direction:column;flex-shrink:0;z-index:10;transition:width .2s}
 /* Outlook-style collapsed sidebar */
-#sidebar.collapsed{width:48px;overflow:visible}
+#sidebar.collapsed{width:48px;overflow:hidden}
 #sidebar.collapsed .sb-header img,#sidebar.collapsed .menu-parent span:not(.ic),#sidebar.collapsed .menu-parent .arrow,#sidebar.collapsed .menu-child,#sidebar.collapsed .menu-children,#sidebar.collapsed .badge{display:none}
 #sidebar.collapsed .menu-parent{justify-content:center;padding:12px 0;border-radius:0}
 #sidebar.collapsed .menu-parent .ic{font-size:20px;width:auto;margin:0}
@@ -1714,8 +1714,8 @@ function togglePin(){
 // Restore sidebar state
 (function(){
   const sb=document.getElementById('sidebar');
-  if(localStorage.getItem('tl_expand')!=='1'){
-    sb.classList.add('collapsed');
+  if(localStorage.getItem('tl_expand')==='1'){
+    sb.classList.remove('collapsed');
   }
 })();
 boot();
