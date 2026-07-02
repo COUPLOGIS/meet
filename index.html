@@ -64,6 +64,32 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .sb-footer .live{width:5px;height:5px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
+/* Bottom navigation bar — Outlook-style */
+#bottombar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);background:var(--surface);
+  border:1px solid var(--border);border-bottom:none;border-radius:14px 14px 0 0;
+  display:flex;align-items:center;gap:2px;padding:6px 10px;z-index:100;
+  transition:transform .25s ease,opacity .25s ease;
+  box-shadow:0 -2px 16px rgba(0,0,0,.06);user-select:none}
+#bottombar.autohide{transform:translateX(-50%) translateY(calc(100% - 5px))}
+#bottombar.autohide:hover,#bottombar.autohide:focus-within{transform:translateX(-50%) translateY(0)}
+.bb-pin{width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:12px;border-radius:50%;color:var(--muted2);transition:all .15s;flex-shrink:0}
+.bb-pin:hover{background:var(--surface2);color:var(--text)}
+.bb-pin.pinned{color:var(--accent);background:rgba(233,71,51,.08)}
+.bb-items{display:flex;align-items:center;gap:2px}
+.bb-item{width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:18px;border-radius:10px;transition:all .12s;color:var(--muted2);position:relative}
+.bb-item:hover{background:var(--surface2);color:var(--text2)}
+.bb-item.active{color:var(--accent);background:rgba(233,71,51,.08)}
+.bb-item .bb-dot{position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:var(--accent);display:none}
+.bb-item.active .bb-dot{display:block}
+.bb-item .bb-badge{position:absolute;top:-2px;right:-4px;font-size:9px;background:var(--accent);color:#fff;
+  border-radius:8px;padding:0 4px;line-height:14px;font-weight:700;min-width:14px;text-align:center}
+/* Push bottom bar away from detail panel */
+#dp:not(.closed)~#bottombar,.bb-offset #bottombar{right:var(--dw)}
+
+
+
 #main{flex:1;display:flex;overflow:hidden;min-width:0}
 #lp{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 #dp{width:var(--dw);border-left:1px solid var(--border);background:var(--surface);
@@ -304,6 +330,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
   </div>
 </div>
 
+<div id="bottombar">
+  <div class="bb-pin pinned" onclick="toggleBB()" title="고정/숨김">📌</div>
+  <div class="bb-items">
+    <span class="bb-item active" data-page="my-tasks" onclick="bbNav('my-tasks')" title="My Tasks">👤<span class="bb-dot"></span></span>
+    <span class="bb-item" data-page="team-tasks-all" onclick="bbNav('team-tasks-all')" title="Team Tasks">👥<span class="bb-dot"></span></span>
+    <span class="bb-item" data-page="meetings-all" onclick="bbNav('meetings-all')" title="Meetings">📝<span class="bb-dot"></span></span>
+    <span class="bb-item" data-page="calendar-month" onclick="bbNav('calendar-month')" title="Calendar">📅<span class="bb-dot"></span></span>
+    <span class="bb-item" data-page="board" onclick="bbNav('board')" title="Kanban Board">📌<span class="bb-dot"></span></span>
+  </div>
+</div>
 <div id="toast"></div>
 
 <div class="mo" id="addModal">
@@ -798,7 +834,11 @@ function updateCounts(){
 }
 
 // ── Render ──
-function render(){renderMenu();renderContent()}
+function render(){
+  // Update bottom bar active state
+  const bbItems=document.querySelectorAll('.bb-item');
+  bbItems.forEach(el=>el.classList.toggle('active',el.dataset.page===PAGE||PAGE.startsWith(el.dataset.page.replace('-all',''))));
+renderMenu();renderContent()}
 function renderContent(){if(PAGE.startsWith('my-tasks')||PAGE.startsWith('team-tasks')||PAGE.startsWith('tasks'))renderTasks();else if(PAGE.startsWith('board'))renderBoardPage();else if(PAGE.startsWith('meetings'))renderMeetings();else if(PAGE.startsWith('calendar'))renderCalendar();updateDetail()}
 
 function renderTasks(){
@@ -1693,6 +1733,24 @@ function toggleSidebar(){
 (function(){
   if(localStorage.getItem('tl_sidebar')==='1'){
     document.getElementById('sidebar').classList.add('collapsed');
+  }
+})();
+function toggleBB(){
+  const bb=document.getElementById('bottombar');
+  const pin=bb.querySelector('.bb-pin');
+  bb.classList.toggle('autohide');
+  pin.classList.toggle('pinned');
+  localStorage.setItem('tl_bb',bb.classList.contains('autohide')?'hide':'pin');
+}
+function bbNav(page){
+  PAGE=page;SEL=null;render();updateDetail();
+}
+// Restore bottom bar state
+(function(){
+  const bb=document.getElementById('bottombar');
+  if(localStorage.getItem('tl_bb')==='hide'){
+    bb.classList.add('autohide');
+    bb.querySelector('.bb-pin').classList.remove('pinned');
   }
 })();
 boot();
