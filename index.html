@@ -258,7 +258,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .tag-chip:hover{background:var(--accent);color:#fff}.tag-chip.active{background:var(--accent);color:#fff}
 
 /* Subtask table */
-.subtask td:first-child,.subtask td:nth-child(2){padding-left:32px}
+.subtask td:first-child,.subtask td:nth-child(3){padding-left:32px}
 .subtask .tid::before{content:'└ ';color:var(--muted2)}.subtask .tid{font-size:10px}
 
 /* Description */
@@ -902,7 +902,8 @@ function renderTasksTable(list){
     const hasParent=!t.parent_id||!list.some(p=>p.id===t.parent_id);
     allRows.push(`<tr class="${cls}" onclick="selTask('${t.id}')">
       <td class="tid">${t.id}${isAdmin?' 👑':''}${childCount?` <span style="font-size:9px;color:var(--muted)">+${childCount}</span>`:''}</td>
-      <td class="tt-c tt-main">${(t.collaborators||[]).length?'👥 ':''}${mid?'📋 ':''}${esc(t.title)}</td>
+      <td style="width:24px;text-align:center;font-size:12px">${(t.collaborators||[]).length?'👥':''}${mid?'📋':''}</td>
+      <td class="tt-c tt-main">${esc(t.title)}</td>
       <td><span class="editable" onclick="event.stopPropagation();ie('${t.id}','assignee')">${esc(t.assignee)}</span></td>
       <td class="hm">${meet?`<span class="mlink" onclick="event.stopPropagation();SEL=null;PAGE='meetings-all';selMeet('${meet.id}')">📋 ${(meet.date||meet.id).slice(0,16)}</span>`:'<span style="color:var(--muted2)">-</span>'}</td>
       <td>${sbdg(t)}</td>
@@ -920,6 +921,7 @@ function renderTasksTable(list){
       const ccls=[c.status==='완료'?'done':'',SEL===c.id?'sel':''].filter(Boolean).join(' ');
       allRows.push(`<tr class="subtask ${ccls}" onclick="selTask('${c.id}')">
         <td class="tid">${c.id}${isAdmin2?' 👑':''}</td>
+        <td style="width:24px;text-align:center;font-size:12px">${(c.collaborators||[]).length?'👥':''}${cmid?'📋':''}</td>
         <td class="tt-c">${esc(c.title)}</td>
         <td><span class="editable" onclick="event.stopPropagation();ie('${c.id}','assignee')">${esc(c.assignee)}</span></td>
         <td class="hm">${cmeet?`<span class="mlink" onclick="event.stopPropagation();SEL=null;PAGE='meetings-all';selMeet('${cmeet.id}')">📋 ${(cmeet.date||cmeet.id).slice(0,16)}</span>`:'<span style="color:var(--muted2)">-</span>'}</td>
@@ -931,12 +933,12 @@ function renderTasksTable(list){
     });
   });
   return `<table class="table"><thead><tr>
-    ${th('id','ID','width:55px')+th('title','Title','width:140px')+th('assignee','Assignee','width:65px')}
+    ${th('id','ID','width:55px')}<th style="width:24px"></th>${th('title','Title','width:140px')+th('assignee','Assignee','width:65px')}
     <th class="hm" style="width:110px">Meeting</th>
     ${th('status','Status','width:80px')+th('due','Due','width:75px')}
     <th style="width:80px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase">Tags</th>
     <th style="width:55px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase">Prog</th></tr></thead><tbody>
-    ${allRows.length===0?`<tr><td colspan="8"><div class="empty"><div class="ei">📭</div><p>No tasks</p></div></td></tr>`
+    ${allRows.length===0?`<tr><td colspan="9"><div class="empty"><div class="ei">📭</div><p>No tasks</p></div></td></tr>`
     :allRows.join('')}</tbody></table>`;
 }
 function renderTasksBoard(list){
