@@ -4,3 +4,7 @@ package.json
 __pycache__/
 target/
 desktop/src-tauri/target/
+
+*.db
+*.db-shm
+*.db-wal
