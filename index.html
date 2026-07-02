@@ -23,11 +23,19 @@ html,body{height:100%;overflow:hidden}
 body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;display:flex}
 
 #sidebar{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);
-  display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;z-index:10}
-.sb-header{padding:14px 18px 10px;flex-shrink:0;display:flex;align-items:center}
+  display:flex;flex-direction:column;flex-shrink:0;z-index:10;transition:width .2s}
+#sidebar.collapsed{width:48px;overflow:hidden}
+#sidebar.collapsed .sb-header img,#sidebar.collapsed .menu-parent span,#sidebar.collapsed .menu-child span,#sidebar.collapsed .sb-footer span,#sidebar.collapsed .menu-children,#sidebar.collapsed .badge{display:none}
+#sidebar.collapsed .menu-parent{justify-content:center;padding:10px 0}
+#sidebar.collapsed .menu-parent .ic{font-size:18px;width:auto;margin:0}
+#sidebar.collapsed .sb-header{padding:12px 0;justify-content:center}
+#sidebar.collapsed .sb-footer{justify-content:center;padding:10px 0}
+.sb-toggle{position:absolute;top:10px;right:-12px;width:24px;height:24px;background:var(--surface);border:1px solid var(--border);border-radius:50%;cursor:pointer;z-index:11;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted);transition:transform .2s}
+#sidebar.collapsed .sb-toggle{transform:rotate(180deg)}
+.sb-header{position:relative;padding:14px 18px 10px;flex-shrink:0;display:flex;align-items:center}
 .sb-header img{width:100%;max-width:220px;height:auto;border-radius:0;margin:0 auto;display:block;padding:4px 0}
 .sb-header h2{display:none}
-.sb-nav{flex:1;overflow-y:auto;padding:0 10px 12px}
+.sb-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 10px 12px}
 
 .menu-group{margin-bottom:2px}
 .menu-parent{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:var(--radius);
@@ -174,7 +182,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 /* Calendar */
 .cal-hdr{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cal-hdr h4{font-size:15px;font-weight:700;flex:1;text-align:center}
 .cal-nav{width:28px;height:28px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}.cal-nav:hover{background:var(--surface3);color:var(--text)}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:16px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:16px;max-width:500px}
 .dow{text-align:center;font-size:10px;font-weight:600;color:var(--muted);padding:6px 0;text-transform:uppercase}
 .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:600;color:var(--text2);transition:all .1s;position:relative}
 .cal-day:hover{background:var(--surface2)}.cal-day.other{color:var(--muted2);cursor:default}
@@ -182,7 +190,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .cal-day.has-task::after,.cal-day.has-event::after{content:'';position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%}
 .cal-day.has-task::after{background:var(--accent)}.cal-day.has-event::after{background:var(--green);left:calc(50% - 6px)}.cal-day.has-task.has-event::after{left:calc(50% - 2px)}.cal-day.has-task.has-event::before{content:'';position:absolute;bottom:3px;left:calc(50% - 6px);width:4px;height:4px;border-radius:50%;background:var(--green)}
 .cal-day.today::after,.cal-day.today::before{background:#fff!important}
-.ev-list{display:flex;flex-direction:column;gap:4px}.ev-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);cursor:pointer;transition:all .1s}
+.ev-list{display:flex;flex-direction:column;gap:4px;max-width:600px}.ev-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);cursor:pointer;transition:all .1s}
 .ev-item:hover{border-color:var(--border)}.ev-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.ev-dot.task{background:var(--accent)}.ev-dot.personal{background:var(--green)}
 .ev-body{flex:1;min-width:0}.ev-title{font-size:13px;font-weight:600;color:var(--text)}.ev-meta{font-size:10px;color:var(--muted);margin-top:1px}
 .ev-status{font-size:10px;padding:2px 8px;border-radius:99px;white-space:nowrap;flex-shrink:0}
@@ -274,6 +282,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 <div class="ham-menu" id="hamMenu"></div>
 
 <nav id="sidebar">
+  <div class="sb-toggle" onclick="toggleSidebar()" title="Toggle sidebar">◀</div>
   <div class="sb-header"><img src="logo_new.png" alt="TeamLog"></div>
   <div class="sb-nav" id="sbNav"></div>
   <div class="sb-footer"><span class="live"></span> Connected</div>
@@ -903,7 +912,9 @@ function renderTasksTable(list){
     const prog=cmts.length?`<span class="prog-bar"><span class="pg-done">${doneCount}</span><span class="pg-total">/${cmts.length}</span></span>`:'-';
     const isAdmin=USERS[t.created_by||'']?.role==='admin';
     const childCount=list.filter(c=>c.parent_id===t.id).length;
-    const tags=(t.tags||[]).map(tg=>`<span class="tag-chip" onclick="event.stopPropagation();FILTER_TAG='${tg}';render()">#${esc(tg)}</span>`).join('');
+    const tags=''; // removed — now using links below
+    const links=(t.links||[]);
+    const linksCell=links.length?`<div style="display:flex;flex-direction:column;gap:2px"><button class="btn sm" style="font-size:9px;padding:1px 4px;width:100%" onclick="event.stopPropagation();window.open('${esc(links[0].url)}','_blank')">🔗 바로가기</button><button class="btn sm" style="font-size:9px;padding:1px 4px;width:100%" onclick="event.stopPropagation();openPreview('${esc(links[0].label||'')}','${esc(links[0].url)}')">👁 미리보기</button></div>`:'<span style="color:var(--muted2)">-</span>';
     const cls=[t.status==='완료'?'done':'',SEL===t.id?'sel':''].filter(Boolean).join(' ');
     const hasParent=!t.parent_id||!list.some(p=>p.id===t.parent_id);
     allRows.push(`<tr class="${cls}" onclick="selTask('${t.id}')">
@@ -914,7 +925,7 @@ function renderTasksTable(list){
       <td class="hm">${meet?`<span class="mlink" onclick="event.stopPropagation();SEL=null;PAGE='meetings-all';selMeet('${meet.id}')">📋 ${(meet.date||meet.id).slice(0,16)}</span>`:'<span style="color:var(--muted2)">-</span>'}</td>
       <td>${sbdg(t)}</td>
       <td class="hm"><span class="editable" onclick="event.stopPropagation();ie('${t.id}','due_date')">${t.due_date||'-'}</span></td>
-      <td style="font-size:10px">${tags||'<span style="color:var(--muted2)">-</span>'}</td>
+      <td style="font-size:10px;padding:4px 8px">${linksCell}</td>
       <td style="font-size:11px">${prog}</td></tr>`);
     added.add(t.id);
     list.filter(c=>c.parent_id===t.id).forEach(c=>{
@@ -923,7 +934,8 @@ function renderTasksTable(list){
       const cdone=ccmts.filter(x=>/완료|✓/.test(x.text||'')).length;
       const cprog=ccmts.length?`<span class="prog-bar"><span class="pg-done">${cdone}</span><span class="pg-total">/${ccmts.length}</span></span>`:'-';
       const isAdmin2=USERS[c.created_by||'']?.role==='admin';
-      const ctags=(c.tags||[]).map(tg=>`<span class="tag-chip" onclick="event.stopPropagation();FILTER_TAG='${tg}';render()">#${esc(tg)}</span>`).join('');
+      const clinks=(c.links||[]);
+      const clinksCell=clinks.length?`<div style="display:flex;flex-direction:column;gap:2px"><button class="btn sm" style="font-size:9px;padding:1px 4px;width:100%" onclick="event.stopPropagation();window.open('${esc(clinks[0].url)}','_blank')">🔗 바로가기</button><button class="btn sm" style="font-size:9px;padding:1px 4px;width:100%" onclick="event.stopPropagation();openPreview('${esc(clinks[0].label||'')}','${esc(clinks[0].url)}')">👁 미리보기</button></div>`:'<span style="color:var(--muted2)">-</span>';
       const ccls=[c.status==='완료'?'done':'',SEL===c.id?'sel':''].filter(Boolean).join(' ');
       allRows.push(`<tr class="subtask ${ccls}" onclick="selTask('${c.id}')">
         <td class="tid">${c.id}${isAdmin2?' 👑':''}</td>
@@ -933,7 +945,7 @@ function renderTasksTable(list){
         <td class="hm">${cmeet?`<span class="mlink" onclick="event.stopPropagation();SEL=null;PAGE='meetings-all';selMeet('${cmeet.id}')">📋 ${(cmeet.date||cmeet.id).slice(0,16)}</span>`:'<span style="color:var(--muted2)">-</span>'}</td>
         <td>${sbdg(c)}</td>
         <td class="hm"><span class="editable" onclick="event.stopPropagation();ie('${c.id}','due_date')">${c.due_date||'-'}</span></td>
-        <td style="font-size:10px">${ctags||'<span style="color:var(--muted2)">-</span>'}</td>
+        <td style="font-size:10px;padding:4px 8px">${clinksCell}</td>
         <td style="font-size:11px">${cprog}</td></tr>`);
       added.add(c.id);
     });
@@ -942,7 +954,7 @@ function renderTasksTable(list){
     ${th('id','ID','width:55px')}<th style="width:24px"></th>${th('title','Title','width:140px')+th('assignee','Assignee','width:65px')}
     <th class="hm" style="width:110px">Meeting</th>
     ${th('status','Status','width:80px')+th('due','Due','width:75px')}
-    <th style="width:80px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase">Tags</th>
+    <th style="width:100px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase">Links</th>
     <th style="width:55px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase">Prog</th></tr></thead><tbody>
     ${allRows.length===0?`<tr><td colspan="9"><div class="empty"><div class="ei">📭</div><p>No tasks</p></div></td></tr>`
     :allRows.join('')}</tbody></table>`;
@@ -1193,7 +1205,7 @@ function renderTD(t){
   const doneCount=cmts.filter(c=>/완료|✓/.test(c.text||'')).length;
   const progHtml=cmts.length?`<div class="df"><span class="fl">Progress</span><span class="fv"><span class="prog-bar"><span class="pg-done">${doneCount}</span><span class="pg-total">/${cmts.length}</span></span></span></div>`:'';
   const tagsHtml=(t.tags||[]).length?`<div class="df"><span class="fl">Tags</span><span class="fv" style="display:flex;gap:4px;flex-wrap:wrap;cursor:default">${t.tags.map(tg=>`<span class="tag-chip" onclick="event.stopPropagation();FILTER_TAG='${tg}';render()">#${esc(tg)}</span>`).join('')}</span></div>`:'';
-  const descHtml=t.description?`<h5>Description</h5><div class="desc-md">${hm(t.description)}</div>`:'';
+  const descHtml=`<h5>Description <button class="btn sm" style="font-size:9px;padding:1px 5px;margin-left:6px" onclick="event.stopPropagation();editDesc()">✏️</button></h5><div class="desc-md" id="descDisplay" onclick="editDesc()" style="cursor:pointer" title="Click to edit">${t.description?hm(t.description):'<span style="color:var(--muted);font-style:italic">Click to add description...</span>'}</div><textarea id="descEdit" style="display:none;width:100%;font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--accent);border-radius:var(--radius-sm);color:var(--text);padding:8px 10px;outline:none;resize:vertical;min-height:80px" onblur="saveDesc()" onkeydown="if(event.key==='Escape')cancelDesc()"></textarea>`;
   // FIX: use all() instead of raw T for parent lookup
   const allTasks=all().filter(x=>x.id!==t.id&&(!x.parent_id||!all().some(p=>p.id===x.parent_id))).map(x=>`<option value="${x.id}" ${t.parent_id===x.id?'selected':''}>${x.id} — ${esc(x.title||'(no title)')}</option>`).join('');
   const parentHtml=`<div class="df"><span class="fl">Parent</span><span class="fv"><select onchange="uf('parent_id',this.value||'')" style="font-size:12px;padding:4px 6px;width:100%;font-family:var(--font);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);cursor:pointer"><option value="">(None — top level)</option>${allTasks}</select></span></div>`;
@@ -1210,7 +1222,6 @@ function renderTD(t){
         <span class="lk-url" title="${esc(lk.url||'')}">${esc((lk.url||'').replace(/^https?:\/\//,'').slice(0,40))}${lk.sheet?' · 📊 '+esc(lk.sheet):''}</span>
         <span class="lk-actions">
           <button class="btn-sm" onclick="event.stopPropagation();window.open('${esc(lk.url)}','_blank')" title="새 탭에서 열기">바로가기</button>
-          <button class="btn-sm accent preview-only" onclick="event.stopPropagation();openPreview('${esc(lk.label)}','${esc(lk.url)}')" title="미리보기">미리보기</button>
           <span class="link-del" onclick="event.stopPropagation();rmLink('${t.id}',${i})" title="삭제">✕</span>
         </span>
       </div>`).join('')}
@@ -1388,6 +1399,50 @@ async function delTask(){
   delete ED[SEL];
   s();SEL=null;document.getElementById('dp').classList.add('closed');
   render();toast('Task deleted');
+}
+function editDesc(){
+  const display=document.getElementById('descDisplay');
+  const edit=document.getElementById('descEdit');
+  if(!display||!edit)return;
+  const t=ap(T.find(t=>t.id===SEL));
+  edit.value=t.description||'';
+  display.style.display='none';
+  edit.style.display='block';
+  edit.focus();
+}
+async function saveDesc(){
+  const edit=document.getElementById('descEdit');
+  const display=document.getElementById('descDisplay');
+  if(!edit||!display||!SEL)return;
+  const newDesc=edit.value.trim();
+  edit.style.display='none';
+  display.style.display='block';
+  const t=ap(T.find(t=>t.id===SEL));
+  if(newDesc===t.description){display.innerHTML=t.description?hm(t.description):'<span style=\"color:var(--muted);font-style:italic\">Click to add description...</span>';return;}
+  if(API_BASE){
+    try{
+      await apiPost('/api/task/save',{id:SEL,title:t.title,description:newDesc,
+        assignee:t.assignee,due_date:t.due_date,priority:t.priority,status:t.status,
+        tags:t.tags||[],collaborators:t.collaborators||[],links:t.links||[],
+        meeting_id:t.meeting_id||'',source:t.source||'personal'});
+      const e=ED[SEL]||{};e.description=newDesc;
+      e._ha=[...(e._ha||[]),{t:now(),a:'Description updated',n:''}];ED[SEL]=e;
+      _dirty=true;_lastLocal=Date.now();
+      render();updateDetail();toast('Description saved');
+      setTimeout(()=>{_dirty=false;},2000);
+      return;
+    }catch(e){console.error('saveDesc failed',e);}
+  }
+  const e=ED[SEL]||{};e.description=newDesc;
+  e._ha=[...(e._ha||[]),{t:now(),a:'Description updated',n:''}];ED[SEL]=e;
+  s();render();updateDetail();toast('Description saved (local)');
+}
+function cancelDesc(){
+  const edit=document.getElementById('descEdit');
+  const display=document.getElementById('descDisplay');
+  if(!edit||!display)return;
+  edit.style.display='none';
+  display.style.display='block';
 }
 function uf(f,v){if(!SEL)return;ufx(SEL,f,v)}
 async function ufx(id,f,v){
@@ -1610,6 +1665,18 @@ function rmFile(tid,i){
   const e=ED[tid];if(!e||!e._fa)return;
   e._fa.splice(i,1);ED[tid]=e;s();render();updateDetail();toast('Attachment removed');
 }
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  sb.classList.toggle('collapsed');
+  // Save preference
+  localStorage.setItem('tl_sidebar',sb.classList.contains('collapsed')?'1':'0');
+}
+// Restore sidebar state
+(function(){
+  if(localStorage.getItem('tl_sidebar')==='1'){
+    document.getElementById('sidebar').classList.add('collapsed');
+  }
+})();
 boot();
 </script>
 </body>
