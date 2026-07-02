@@ -1126,7 +1126,7 @@ async function editEvent(id){
 }
 
 function sbdg(t){return sbdgSpan(t).outerHTML}
-function selTask(id){try{SEL=id;const t=T.find(t=>t.id===id);if(!t)return;const at=ap(t);PAGE=`tasks-${at?.status==='진행중'?'progress':at?.status==='대기중'?'wait':at?.status==='완료'?'done':'all'}`;render()}catch(e){console.error('selTask error',e)}}
+function selTask(id){try{SEL=id;render()}catch(e){console.error('selTask error',e)}}
 function selMeet(id){SEL=id;render()}
 function closeDetail(){SEL=null;closePreview();document.getElementById('dp').classList.add('closed');render()}
 
@@ -1194,7 +1194,7 @@ function renderTD(t){
     <h5>Attachments</h5>${(t._fa||[]).length?t._fa.map((f,i)=>`<div class="df"><span class="fl">📎</span><span class="fv" style="cursor:pointer;color:var(--accent2)" onclick="navigator.clipboard.writeText('${esc(f).replace(/'/g,"\\'")}');toast('Path copied')">${esc(f)}</span><span style="color:var(--muted2);font-size:12px;cursor:pointer;padding:0 4px" onclick="rmFile('${t.id}',${i})" title="Remove">✕</span></div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0\">No attachments</div>'}
     <button class="btn sm" style="margin-top:6px" onclick="attachFile()">📎 Attach</button>
     <textarea class="ni" id="ni" placeholder="Add a progress note..."></textarea>
-    <div style="margin-top:8px"><button class="btn sm primary" onclick="addNote()">Add Note</button></div>`;
+    <div style="margin-top:8px;display:flex;gap:6px"><button class="btn sm primary" onclick="addNote()">Add Note</button><button class="btn sm" style="background:var(--red);color:#fff;margin-left:auto" onclick="delTask()">🗑 삭제</button></div>`;
 }
 
 function renderMD(m){
@@ -1313,6 +1313,27 @@ function addNote(){
   // localStorage fallback
   const e=ED[SEL]||{};e._ha=[...(e._ha||[]),{t:now(),a:'Note',n}];ED[SEL]=e;
   s();render();updateDetail();toast('Note added');
+}
+async function delTask(){
+  if(!SEL)return;
+  if(!confirm('정말 이 과제를 삭제할까요?'))return;
+  if(API_BASE){
+    try{
+      await apiPost('/api/task/delete',{id:SEL});
+      // Fallback: use DELETE via fetch since apiPost uses POST
+      await fetch(API_BASE+'/api/task/delete?id='+encodeURIComponent(SEL),{method:'DELETE'});
+      T=T.filter(t=>t.id!==SEL);
+      delete ED[SEL];
+      s();SEL=null;document.getElementById('dp').classList.add('closed');
+      render();toast('Task deleted');
+      return;
+    }catch(e){console.error('API delete failed',e);}
+  }
+  // localStorage fallback
+  T=T.filter(t=>t.id!==SEL);
+  delete ED[SEL];
+  s();SEL=null;document.getElementById('dp').classList.add('closed');
+  render();toast('Task deleted');
 }
 function uf(f,v){if(!SEL)return;ufx(SEL,f,v)}
 async function ufx(id,f,v){
