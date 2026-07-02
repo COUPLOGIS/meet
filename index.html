@@ -442,6 +442,22 @@ function syncOriginChange(taskId){
   s();
 }
 
+function promoteToTeam(taskId){
+  const t=all().find(t=>t.id===taskId);
+  if(!t||t.meeting_id||t.meeting_date)return toast('Already a team task');
+  const date=new Date().toISOString().slice(0,10);
+  const meetId='mtg_'+date+'_promoted';
+  const e=ED[taskId]||{};
+  e.meeting_id=meetId;e.meeting_date=date;e.source='team';
+  // Remove personal-only fields
+  delete e.mirrored_from;delete e.mirror_parent;
+  ED[taskId]=e;
+  // Create meeting record
+  const mid={id:meetId,date:date,p:myName().replace(/^@/,'')||USER_ID,tp:'개인→팀 승격',sm:[],ts:[taskId]};
+  M.push(mid);
+  s();render();updateDetail();toast('팀 과제로 승격됨!');
+}
+
 function processCommentMentions(taskId, text){
   // Extract @mentions and create mirrors
   const mentions=[];
@@ -904,7 +920,7 @@ function renderTD(t){
     ${parentHtml}
     <div class="df"><span class="fl">Due</span><span class="fv" onclick="edf('due_date')">${t.due_date||'N/A'}</span></div>
     <div class="df"><span class="fl">Priority</span><span class="fv" onclick="edf('priority')">${pb(t.priority)}</span></div>
-    <div class="df"><span class="fl">Status</span><select onchange="uf('status',this.value)">${ST.map(s=>`<option value="${s}" ${t.status===s?'selected':''}>${STL[s]}</option>`).join('')}</select></div>
+    <div class="df"><span class="fl">Status</span><select onchange="uf('status',this.value)">${ST.map(s=>`<option value="${s}" ${t.status===s?'selected':''}>${STL[s]}</option>`).join('')}</select>${(!t.meeting_id&&!t.meeting_date&&!t.mirrored_from)?` <button class="btn sm outline" onclick="promoteToTeam('${t.id}')" title="팀 과제로 승격">📢 팀으로</button>`:''}</div>
     ${progHtml}
     ${subtaskHtml}
     ${linksHtml}
@@ -986,7 +1002,36 @@ function fl(f){return{title:'Title',assignee:'Assignee',due_date:'Due',priority:
 function edf(f){const t=ap(T.find(t=>t.id===SEL));if(!t)return;const d=prompt(`${fl(f)}:`,t[f]||'');if(d!==null&&d!==t[f])uf(f,d)}
 function ie(id,f){selTask(id);const t=ap(T.find(t=>t.id===id));const d=prompt(`${fl(f)}:`,t[f]||'');if(d!==null&&d!==t[f])ufx(id,f,d)}
 function addNote(){const n=document.getElementById('ni')?.value?.trim();if(!n)return;const e=ED[SEL]||{};e._ha=[...(e._ha||[]),{t:now(),a:'Note',n}];ED[SEL]=e;s();render();updateDetail();toast('Note added')}
-function addComment(){if(!SEL)return;const text=document.getElementById('ci')?.value?.trim();if(!text)return;const mentions=[];text.replace(/@([\w가-힣]+)/g,(_,m)=>{mentions.push(m);return''});const e=ED[SEL]||{};e._ca=[...(e._ca||[]),{author:myName().replace(/^@/,'')||USER_ID,text,timestamp:now(),mentions}];ED[SEL]=e;s();render();updateDetail();toast('Comment added');processCommentMentions(SEL,text);}
+function addComment(){if(!SEL)return;const text=document.getElementById('ci')?.value?.trim();if(!text)return;const mentions=[];text.replace(/@([\w가-힣]+)/g,(_,m)=>{mentions.push(m);return''});const e=ED[SEL]||{};e._ca=[...(e._ca||[]),{author:myName().replace(/^@/,'')||USER_ID,text,timestamp:now(),mentions}];ED[SEL]=e;s();render();updateDetail();toast('Comment added');processCommentMentions(SEL,text);notifyMentions(SEL,myName().replace(/^@/,'')||USER_ID,text,mentions);}
+
+// ── Notification bridge ──
+function notifyMentions(taskId, author, text, mentions){
+  if(!mentions||!mentions.length)return;
+  const t=all().find(t=>t.id===taskId);
+  try{
+    fetch('http://localhost:8645/notify',{
+      method:'POST',mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        task_id:taskId,task_title:t?.title||'',author,text,
+        mentions:mentions,action:'mention'
+      })
+    }).catch(()=>{});
+  }catch(e){}
+}
+function notifyStatusChange(taskId, oldStatus, newStatus){
+  const t=all().find(t=>t.id===taskId);
+  try{
+    fetch('http://localhost:8645/notify',{
+      method:'POST',mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        task_id:taskId,task_title:t?.title||'',author:myName().replace(/^@/,'')||USER_ID,
+        old_status:oldStatus,new_status:newStatus,action:'status_change',mentions:[]
+      })
+    }).catch(()=>{});
+  }catch(e){}
+}
 function hm(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/📎\s*(\S+)/g,'<span class="cm-file" onclick="event.stopPropagation();navigator.clipboard.writeText(\'$1\');toast(\'Path copied: $1\')" title="Click to copy path">📁 $1</span>').replace(/\*\*(.+?)\*\*/g,'<span class="cm-bold">$1</span>').replace(/\*(.+?)\*/g,'<span class="cm-italic">$1</span>').replace(/`(.+?)`/g,'<span class="cm-code">$1</span>').replace(/\n/g,'<br>').replace(/@([\w가-힣]+)/g,'<span style="color:var(--accent);font-weight:600">@$1</span>')}
 function addFilePath(){if(!SEL)return;const path=prompt('Enter file path:');if(!path||!path.trim())return;const ci=document.getElementById('ci');if(ci)ci.value=(ci.value?ci.value+' ':'')+'📎 '+path.trim()}
 function addTask(){
