@@ -553,7 +553,8 @@ async function promoteToTeam(taskId){
     try{
       await apiPost('/api/task/save',{id:taskId,title:t.title,description:t.description||'',
         assignee:t.assignee,due_date:t.due_date,priority:t.priority,status:t.status,
-        meeting_id:meetId,meeting_date:date,source:'team',parent_id:t.parent_id||''});
+        meeting_id:meetId,meeting_date:date,source:'team',parent_id:t.parent_id||'',
+        tags:t.tags||[],collaborators:t.collaborators||[],links:t.links||[]});
       const data=await apiGet('/api/state');
       if(data&&data.ok){T=data.tasks||[];M=data.meetings||[];}
       render();updateDetail();toast('팀 과제로 승격됨!');
@@ -1363,6 +1364,7 @@ async function ufx(id,f,v){
       status:f==='status'?v:(old.status||'대기중'),
       parent_id:f==='parent_id'?v:(old.parent_id||''),
       tags:old.tags||[],collaborators:old.collaborators||[],
+      links:old.links||[],
       meeting_id:old.meeting_id||'',source:old.source||'personal'};
     try{
       const result=await apiPost('/api/task/save',update);
