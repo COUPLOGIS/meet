@@ -329,7 +329,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 
 <script>
 // ── API Sync Server Detection ──
-const API_BASE = (() => {
+let API_BASE = (() => {
   const h = location.hostname;
   if (h === 'localhost' || h === '127.0.0.1' || h.includes('k12')) return 'http://localhost:8646';
   return 'https://teamlog.shares.zrok.io';
@@ -642,6 +642,20 @@ async function boot(){
         M.sort((a,b)=>b.id.localeCompare(a.id));
         // Load localStorage as fallback cache
         l();
+        // Merge localStorage ED tasks not yet synced to API
+        Object.keys(ED).forEach(id => {
+          if (!T.find(t => t.id === id)) {
+            const e = ED[id];
+            T.push({
+              id, title: e.title || '', description: e.description || '',
+              tags: e.tags || [], parent_id: e.parent_id || null,
+              assignee: e.assignee || '', collaborators: e.collaborators || [],
+              due_date: e.due_date || '', priority: e.priority || '보통',
+              status: e.status || '대기중', meeting_id: '', created_by: e.created_by || '',
+              _h: e._ha || [{t: e.created_at || '?', a: 'Created', n: ''}]
+            });
+          }
+        });
         render();
         startPolling();
         return;
