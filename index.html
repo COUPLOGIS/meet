@@ -553,7 +553,7 @@ async function promoteToTeam(taskId){
     try{
       await apiPost('/api/task/save',{id:taskId,title:t.title,description:t.description||'',
         assignee:t.assignee,due_date:t.due_date,priority:t.priority,status:t.status,
-        meeting_id:meetId,meeting_date:date,source:'team'});
+        meeting_id:meetId,meeting_date:date,source:'team',parent_id:t.parent_id||''});
       const data=await apiGet('/api/state');
       if(data&&data.ok){T=data.tasks||[];M=data.meetings||[];}
       render();updateDetail();toast('팀 과제로 승격됨!');
@@ -1153,8 +1153,8 @@ function renderTD(t){
   const tagsHtml=(t.tags||[]).length?`<div class="df"><span class="fl">Tags</span><span class="fv" style="display:flex;gap:4px;flex-wrap:wrap;cursor:default">${t.tags.map(tg=>`<span class="tag-chip" onclick="event.stopPropagation();FILTER_TAG='${tg}';render()">#${esc(tg)}</span>`).join('')}</span></div>`:'';
   const descHtml=t.description?`<h5>Description</h5><div class="desc-md">${hm(t.description)}</div>`:'';
   // FIX: use all() instead of raw T for parent lookup
-  const parent=(t.parent_id?all().find(x=>x.id===t.parent_id):null)||T.find(x=>x.id===t.parent_id);
-  const parentHtml=parent?`<div class="df"><span class="fl">Parent</span><span class="fv" style="color:var(--accent2);cursor:pointer" onclick="selTask('${parent.id}')">📌 ${esc(parent.title||parent.id)}</span></div>`:'';
+  const allTasks=all().filter(x=>x.id!==t.id).map(x=>`<option value="${x.id}" ${t.parent_id===x.id?'selected':''}>${x.id} — ${esc(x.title||'(no title)')}</option>`).join('');
+  const parentHtml=`<div class="df"><span class="fl">Parent</span><span class="fv"><select onchange="uf('parent_id',this.value||'')" style="font-size:12px;padding:4px 6px;width:100%;font-family:var(--font);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);cursor:pointer"><option value="">(None — top level)</option>${allTasks}</select></span></div>`;
   const childTasks=T.filter(x=>x.parent_id===t.id);
   const subtaskHtml=childTasks.length?`<h5>Sub-tasks (${childTasks.length})</h5>${childTasks.map(c=>`<div class="lmeet" onclick="selTask('${c.id}')"><span class="tid">${c.id}</span> ${esc(c.title||c.id)}<span style="margin-left:auto;font-size:10px">${STL[c.status]}</span></div>`).join('')}`:'';
 
@@ -1352,7 +1352,10 @@ async function ufx(id,f,v){
       assignee:f==='assignee'?v:(old.assignee||''),
       due_date:f==='due_date'?v:(old.due_date||''),
       priority:f==='priority'?v:(old.priority||'보통'),
-      status:f==='status'?v:(old.status||'대기중')};
+      status:f==='status'?v:(old.status||'대기중'),
+      parent_id:f==='parent_id'?v:(old.parent_id||''),
+      tags:old.tags||[],collaborators:old.collaborators||[],
+      meeting_id:old.meeting_id||'',source:old.source||'personal'};
     try{
       const result=await apiPost('/api/task/save',update);
       if(result&&result.ok){
@@ -1456,30 +1459,33 @@ async function addTask(){
   const due_date=document.getElementById('aDue').value||'N/A';
   const priority=document.getElementById('aPri').value;
   const ids=T.map(t=>parseInt(t.id.slice(1))).filter(n=>!isNaN(n));const nid=`T${String((Math.max(0,...ids)+1)).padStart(3,'0')}`;
-  const source=collaborators.length?'team':'personal';
+  const isTeamView=PAGE.startsWith('team-tasks')||collaborators.length>0;
+  const source=isTeamView?'team':'personal';
 
   // API mode: POST to /api/task/save
   if(API_BASE){
     try{
-      const result=await apiPost('/api/task/save',{
+      await apiPost('/api/task/save',{
         id:nid,title,description:desc,tags,parent_id:parentId,
         assignee,collaborators,due_date,priority,status:'대기중',
         created_by:USER_ID,source
       });
-      if(result&&result.ok){
-        // Refresh from API
-        const data=await apiGet('/api/state');
-        if(data&&data.ok){T=data.tasks||[];}
-        mClose('addModal');SEL=nid;PAGE='my-tasks';
-        render();updateDetail();toast('Task created'+(collaborators.length?' 👥':''));
-        return;
-      }
+      // Refresh from API
+      const data=await apiGet('/api/state');
+      if(data&&data.ok){T=data.tasks||[];}
+      mClose('addModal');SEL=nid;
+      // Auto-create personal mirror for creator on team tasks
+      if(isTeamView)await createMirror(nid);
+      render();updateDetail();toast('Task created'+(isTeamView?' 👥 팀':''));
+      return;
     }catch(e){console.error('API task create failed',e);}
   }
   // localStorage fallback
-  ED[nid]={title,description:desc,tags,parent_id:parentId,assignee,collaborators,due_date,priority,status:'대기중',created_by:USER_ID,source,_ha:[{t:now(),a:'Created (web)',n:collaborators.length?'👥 '+collaborators.join(', '):''}],_new:true};
+  ED[nid]={title,description:desc,tags,parent_id:parentId,assignee,collaborators,due_date,priority,status:'대기중',created_by:USER_ID,source,_ha:[{t:now(),a:'Created (web)',n:isTeamView?'👥 팀':''}],_new:true};
   T.push({id:nid,title,description:desc,tags,parent_id:parentId,assignee,collaborators,due_date,priority,status:'대기중',meeting_id:'',created_by:USER_ID,source,_h:[]});
-  s();mClose('addModal');SEL=nid;PAGE='my-tasks';render();updateDetail();toast('Task created'+(collaborators.length?' 👥':''));
+  s();mClose('addModal');SEL=nid;
+  if(isTeamView)createMirror(nid);
+  render();updateDetail();toast('Task created'+(isTeamView?' 👥 팀':''));
 }
 function pb(p){const m={높음:'pri-high',High:'pri-high',보통:'pri-mid',Medium:'pri-mid',낮음:'pri-low',Low:'pri-low'};return`<span class="pribdg ${m[p]||'pri-mid'}">${p||'Medium'}</span>`}
 
