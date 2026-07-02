@@ -30,8 +30,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 #sidebar.collapsed .menu-parent .ic{font-size:18px;width:auto;margin:0}
 #sidebar.collapsed .sb-header{padding:12px 0;justify-content:center}
 #sidebar.collapsed .sb-footer{justify-content:center;padding:10px 0}
-.sb-toggle{position:absolute;top:10px;right:-12px;width:24px;height:24px;background:var(--surface);border:1px solid var(--border);border-radius:50%;cursor:pointer;z-index:11;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted);transition:transform .2s}
-#sidebar.collapsed .sb-toggle{transform:rotate(180deg)}
+.sb-toggle{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:10px;color:var(--muted);background:var(--surface2);margin-right:8px;flex-shrink:0;transition:transform .2s;user-select:none}
+.sb-toggle:hover{background:var(--surface3);color:var(--text)}
+#sidebar.collapsed .sb-toggle{transform:rotate(180deg);margin-right:0;margin-bottom:4px}
 .sb-header{position:relative;padding:14px 18px 10px;flex-shrink:0;display:flex;align-items:center}
 .sb-header img{width:100%;max-width:220px;height:auto;border-radius:0;margin:0 auto;display:block;padding:4px 0}
 .sb-header h2{display:none}
@@ -283,8 +284,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 <div class="ham-menu" id="hamMenu"></div>
 
 <nav id="sidebar">
-  <div class="sb-toggle" onclick="toggleSidebar()" title="Toggle sidebar">◀</div>
-  <div class="sb-header"><img src="logo_new.png" alt="TeamLog"></div>
+  <div class="sb-header"><span class="sb-toggle" onclick="toggleSidebar()" title="Toggle sidebar">◀</span><img src="logo_new.png" alt="TeamLog"></div>
   <div class="sb-nav" id="sbNav"></div>
   <div class="sb-footer"><span class="live"></span> Connected</div>
 </nav>
