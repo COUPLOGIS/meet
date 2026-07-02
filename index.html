@@ -332,7 +332,9 @@ const USER_ID = new URLSearchParams(location.search).get('user') || '';
 let T=[],M=[],MH={},ED={},EV={},calY,calM,PAGE=USER_ID?'my-tasks':'team-tasks-all',SEL=null,USERS={},CP_ITEMS=[];
 var SORT_BY='id',SORT_DIR='asc',Q='',FILTER_STATUS='',FILTER_PRIORITY='',KANBAN=false;
 var FILTER_TAG='';
-const SKEY='t5',EKEY='ev1',ST=['대기중','진행중','완료','보류'];
+const SKEY='t5',EKEY='ev1',MIRKEY='ml1',ST=['대기중','진행중','완료','보류'];
+let MENTIONS={}; // {taskId: [{username, timestamp}]}
+let TEAM_MIRRORS={}; // {teamTaskId: [mirrorTaskIds...]} — loaded from localStorage
 const STL={대기중:'Waiting',진행중:'In Progress',완료:'Done',보류:'Hold'};
 const PRI={높음:'High',보통:'Medium',낮음:'Low'};
 var calWeekOffset=0;
@@ -352,12 +354,123 @@ const MENU=[
   {id:'board',icon:'📌',label:'Board',children:[{id:'board',label:'Kanban Board'}]},
 ];
 
-function l(){try{ED=JSON.parse(localStorage.getItem(SKEY)||'{}');EV=JSON.parse(localStorage.getItem(EKEY)||'{}');}catch(e){ED={};EV={}}}
-function s(){localStorage.setItem(SKEY,JSON.stringify(ED));localStorage.setItem(EKEY,JSON.stringify(EV))}
+function l(){try{ED=JSON.parse(localStorage.getItem(SKEY)||'{}');EV=JSON.parse(localStorage.getItem(EKEY)||'{}');MENTIONS=JSON.parse(localStorage.getItem(MIRKEY)||'{}');const m=JSON.parse(localStorage.getItem('ml2')||'{}');TEAM_MIRRORS=m.tm||{};}catch(e){ED={};EV={};MENTIONS={};TEAM_MIRRORS={}}}
+function s(){localStorage.setItem(SKEY,JSON.stringify(ED));localStorage.setItem(EKEY,JSON.stringify(EV));localStorage.setItem(MIRKEY,JSON.stringify(MENTIONS));localStorage.setItem('ml2',JSON.stringify({tm:TEAM_MIRRORS}))}
 function ap(t){const e=ED[t.id]||{};return{...t,...e,comments:[...(t.comments||[]),...(e._ca||[])],_h:[...(t._h||[]),...(e._ha||[])],_fa:[...(e._fa||[])],links:[...(e.links||[])],...e.links!==undefined?{links:e.links}:{}}}
 function allTags(){const s=new Set();T.forEach(t=>{(t.tags||[]).forEach(tg=>s.add(tg));const e=ED[t.id];if(e&&e.tags)e.tags.forEach(tg=>s.add(tg))});return[...s].sort()}
 // Helper: get all tasks with ED applied
 function all(){return T.map(ap)}
+
+// ── Team ↔ Personal Mirror System ──
+// isPersonal is true when user is on their personal view
+function isMyView(){return PAGE==='my-tasks'}
+function myTaskIds(){return all().filter(t=>t.assignee===myName()||String(t.created_by||'')===USER_ID||(t.collaborators||[]).some(c=>c===myName().replace(/^@/,''))).map(t=>t.id)}
+
+function userByDisplay(disp){
+  if(!disp)return null;
+  const name=disp.replace(/^@/,'');
+  for(const [uid,u] of Object.entries(USERS)){
+    if(u.username===name||u.display_name===name)return uid;
+  }
+  return null;
+}
+
+function createMirror(teamTaskId, subTaskId){
+  // subTaskId: if set, mirror this sub-task (with its parent context)
+  // otherwise mirror the teamTaskId directly
+  const origId=subTaskId||teamTaskId;
+  const teamTask=all().find(t=>t.id===origId);
+  if(!teamTask)return null;
+  const e=ED[origId]||{};
+  const source=e.source||(teamTask.meeting_id||teamTask.meeting_date?'team':'personal');
+  if(source!=='team'&&!teamTask.meeting_id&&!teamTask.meeting_date)return null;
+
+  const mirrorId='P'+(+new Date()).toString(36).toUpperCase();
+  const parentId=subTaskId?teamTaskId:null;
+
+  ED[mirrorId]={
+    title:teamTask.title,description:'',tags:[...teamTask.tags||[]],parent_id:parentId,
+    assignee:myName().replace(/^@/,''),collaborators:[],due_date:teamTask.due_date||'N/A',
+    priority:teamTask.priority||'보통',status:teamTask.status||'대기중',
+    created_by:USER_ID,
+    source:'personal',mirrored_from:origId,mirror_parent:subTaskId?teamTaskId:null,
+    _ha:[{t:now(),a:'Created (team mirror)',n:`Mirrored from ${origId}`}],
+    _new:true
+  };
+  T.push({id:mirrorId,title:'',description:'',tags:[],parent_id:null,assignee:'',collaborators:[],due_date:'',priority:'보통',status:'대기중',meeting_id:'',created_by:USER_ID,_h:[],source:'personal',mirrored_from:origId});
+
+  // Track in TEAM_MIRRORS
+  if(!TEAM_MIRRORS[origId])TEAM_MIRRORS[origId]=[];
+  TEAM_MIRRORS[origId].push(mirrorId);
+
+  s();return mirrorId;
+}
+
+function getMirrors(taskId){
+  // Return all mirror task objects
+  const mirrorIds=TEAM_MIRRORS[taskId]||[];
+  return mirrorIds.map(id=>all().find(t=>t.id===id)).filter(Boolean);
+}
+
+function syncMirrorChange(mirrorTask){
+  // When a mirror task is edited, propagate to the original
+  if(!mirrorTask||!mirrorTask.mirrored_from)return;
+  const orig=all().find(t=>t.id===mirrorTask.mirrored_from);
+  if(!orig)return;
+  // Update original's ED with status/comment changes from mirror
+  const oe=ED[orig.id]||{};
+  if(mirrorTask.status!==orig.status){oe.status=mirrorTask.status;oe._ha=[...(oe._ha||[]),{t:now(),a:'Status (from mirror)',n:`→ ${STL[mirrorTask.status]}`}]}
+  ED[orig.id]=oe;
+  // Also sync to other mirrors
+  syncOriginChange(orig.id);
+  s();
+}
+
+function syncOriginChange(taskId){
+  // Propagate original changes to all mirrors
+  const orig=all().find(t=>t.id===taskId);
+  if(!orig)return;
+  const mirrorIds=TEAM_MIRRORS[taskId]||[];
+  mirrorIds.forEach(mid=>{
+    const me=ED[mid]||{};
+    me.status=orig.status;
+    me.title=orig.title;
+    me.due_date=orig.due_date;
+    me.priority=orig.priority;
+    ED[mid]=me;
+  });
+  s();
+}
+
+function processCommentMentions(taskId, text){
+  // Extract @mentions and create mirrors
+  const mentions=[];
+  text.replace(/@([\w가-힣]+)/g,(_,m)=>{mentions.push(m);return''});
+  if(!mentions.length)return;
+  const uniqueM=[...new Set(mentions)];
+  uniqueM.forEach(username=>{
+    const uid=userByDisplay(username);
+    if(!uid)return;
+    // Store mention record
+    if(!MENTIONS[taskId])MENTIONS[taskId]=[];
+    MENTIONS[taskId].push({username,timestamp:now(),uid});
+    // Check if mentioned user already has a mirror
+    const hasMirror=(TEAM_MIRRORS[taskId]||[]).some(mid=>{
+      const m=all().find(t=>t.id===mid);
+      return m&&String(m.created_by||'')===uid;
+    });
+    if(!hasMirror){
+      // Check if this task has a parent (sub-task mention)
+      const t=all().find(t=>t.id===taskId);
+      if(t&&t.parent_id){
+        // Mentioned in sub-task — create mirror for sub-task with parent context
+        createMirror(t.parent_id,taskId);
+      }else{
+        createMirror(taskId);
+      }
+    }
+  });
+}
 
 async function boot(){
   l();
@@ -421,9 +534,14 @@ function renderContent(){if(PAGE.startsWith('my-tasks')||PAGE.startsWith('team-t
 
 function renderTasks(){
   const al=all();let list;
+  let teamLinked=[]; // tasks mirrored from team (for personal view)
+
   if(PAGE==='my-tasks'){
     const myN=myName();
     list=al.filter(t=>t.assignee===myN||String(t.created_by||'')===USER_ID||(t.collaborators||[]).some(c=>c===myN.replace(/^@/,'')));
+    // Split: team-linked mirrors go to top section
+    teamLinked=list.filter(t=>t.mirrored_from||t.source==='personal'&&t.mirrored_from);
+    list=list.filter(t=>!teamLinked.includes(t));
   }else if(PAGE==='team-tasks-progress')list=al.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='진행중');
   else if(PAGE==='team-tasks-wait')list=al.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='대기중');
   else if(PAGE==='team-tasks-done')list=al.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='완료');
@@ -448,7 +566,38 @@ function renderTasks(){
     if(SORT_BY==='due')return (a.due_date||'').localeCompare(b.due_date||'')*sd;
     return 0;
   });
-  if(KANBAN)renderTasksBoard(list);else renderTasksTable(list);
+  if(KANBAN)renderTasksBoard(list);else{
+    let html='';
+    // Team-linked section for personal view
+    if(PAGE==='my-tasks'&&teamLinked.length){
+      html+=`<div style="padding:12px 0"><h5 style="font-size:12px;font-weight:700;color:var(--accent);margin:0 20px 8px;display:flex;align-items:center;gap:6px">📌 팀 연결 과제 <span style="font-size:10px;color:var(--muted);font-weight:400">${teamLinked.length}개</span></h5>`;
+      html+=renderMiniTable(teamLinked);
+      html+=`</div><div style="margin:8px 20px;border-top:2px solid var(--border2)"></div>`;
+      html+=`<div style="padding:4px 0"><h5 style="font-size:12px;font-weight:700;color:var(--text2);margin:0 20px 8px;display:flex;align-items:center;gap:6px">📋 개인 과제 <span style="font-size:10px;color:var(--muted);font-weight:400">${list.length}개</span></h5>`;
+    }
+    html+=renderTasksTable(list);
+    document.getElementById('listContent').innerHTML=html;
+  }
+}
+
+function renderMiniTable(list){
+  // Compact table for team-linked tasks
+  const th=(col,label,w)=>`<th style="${w||''}">${label}</th>`;
+  const allRows=list.map(t=>{
+    const cls=[t.status==='완료'?'done':'',SEL===t.id?'sel':''].filter(Boolean).join(' ');
+    const tags=(t.tags||[]).map(tg=>`<span class="tag-chip" onclick="event.stopPropagation();FILTER_TAG='${tg}';render()">#${esc(tg)}</span>`).join('');
+    return `<tr class="${cls}" onclick="selTask('${t.id}')">
+      <td class="tid" style="font-size:10px">${t.id}${t.mirrored_from?` <span style="color:var(--accent)" title="Mirrored from ${t.mirrored_from}">🔄</span>`:''}</td>
+      <td class="tt-c">${esc(t.title)}${t.mirror_parent?` <span style="font-size:9px;color:var(--muted)">(${t.mirror_parent} 하위)</span>`:''}</td>
+      <td>${sbdg(t)}</td>
+      <td class="hm">${t.due_date||'-'}</td>
+      <td style="font-size:10px">${tags||'-'}</td>
+    </tr>`;
+  });
+  return `<table class="table"><thead><tr>
+    ${th('id','ID','width:55px')+th('title','Title','width:auto')+th('status','Status','width:80px')+th('due','Due','width:70px')}
+    <th style="width:60px;font-size:10px;font-weight:600;color:var(--muted)">Tags</th></tr></thead><tbody>
+    ${allRows.length===0?`<tr><td colspan="5"><div class="empty"><p>No tasks</p></div></td></tr>`:allRows.join('')}</tbody></table>`;
 }
 
 function renderTasksTable(list){
@@ -713,7 +862,7 @@ function updateDetail(){
 }
 
 function renderTD(t){
-  document.getElementById('dTitle').textContent=t.id+(USERS[t.created_by||'']?.role==='admin'?' 👑':'');
+  document.getElementById('dTitle').innerHTML=`${t.id}${USERS[t.created_by||'']?.role==='admin'?' 👑':''} ${mirrorBadge}`;
   const mid=t.meeting_id||t.meeting_date,meet=mid?M.find(m=>m.id===mid):null,h=t._h||[];
   const cmts=t.comments||[];
   const doneCount=cmts.filter(c=>/완료|✓/.test(c.text||'')).length;
@@ -728,6 +877,9 @@ function renderTD(t){
 
   // External links
   const links=t.links||[];
+  const isMirror=!!t.mirrored_from;
+  const hasMirrors=(TEAM_MIRRORS[t.id]||[]).length>0;
+  const mirrorBadge=isMirror?`<span style="font-size:10px;background:rgba(233,71,51,.1);color:var(--accent);padding:2px 8px;border-radius:99px;font-weight:600">🔄 팀 미러</span>`:hasMirrors?`<span style="font-size:10px;background:rgba(238,117,30,.1);color:var(--accent2);padding:2px 8px;border-radius:99px;font-weight:600">📡 ${TEAM_MIRRORS[t.id].length}개 미러</span>`:'';
   const linksHtml=`
     <h5>🔗 Links</h5>
     ${links.length===0?'<div style="color:var(--muted);font-size:11px;padding:4px 0">No links</div>':links.map((lk,i)=>`
@@ -829,12 +981,12 @@ function sbdgSpan(t){const cl={대기중:'wait',진행중:'progress',완료:'don
   s.textContent=STL[t.status]||t.status;s.onclick=function(e){cyc(t.id,e)};return s;
 }
 function uf(f,v){if(!SEL)return;ufx(SEL,f,v)}
-function ufx(id,f,v){const old=ap(T.find(t=>t.id===id));if(old[f]===v)return;const e=ED[id]||{};e[f]=v;e._ha=[...(e._ha||[]),{t:now(),a:`${fl(f)} → ${v}`,n:''}];ED[id]=e;s();render();updateDetail();toast('Saved')}
+function ufx(id,f,v){const old=ap(T.find(t=>t.id===id));if(old[f]===v)return;const e=ED[id]||{};e[f]=v;e._ha=[...(e._ha||[]),{t:now(),a:`${fl(f)} → ${v}`,n:''}];ED[id]=e;s();render();updateDetail();toast('Saved');if(old.mirrored_from){syncMirrorChange({...old,[f]:v})}else{syncOriginChange(id)}}
 function fl(f){return{title:'Title',assignee:'Assignee',due_date:'Due',priority:'Priority',status:'Status'}[f]||f}
 function edf(f){const t=ap(T.find(t=>t.id===SEL));if(!t)return;const d=prompt(`${fl(f)}:`,t[f]||'');if(d!==null&&d!==t[f])uf(f,d)}
 function ie(id,f){selTask(id);const t=ap(T.find(t=>t.id===id));const d=prompt(`${fl(f)}:`,t[f]||'');if(d!==null&&d!==t[f])ufx(id,f,d)}
 function addNote(){const n=document.getElementById('ni')?.value?.trim();if(!n)return;const e=ED[SEL]||{};e._ha=[...(e._ha||[]),{t:now(),a:'Note',n}];ED[SEL]=e;s();render();updateDetail();toast('Note added')}
-function addComment(){if(!SEL)return;const text=document.getElementById('ci')?.value?.trim();if(!text)return;const mentions=[];text.replace(/@([\w가-힣]+)/g,(_,m)=>{mentions.push(m);return''});const e=ED[SEL]||{};e._ca=[...(e._ca||[]),{author:myName().replace(/^@/,'')||USER_ID,text,timestamp:now(),mentions}];ED[SEL]=e;s();render();updateDetail();toast('Comment added')}
+function addComment(){if(!SEL)return;const text=document.getElementById('ci')?.value?.trim();if(!text)return;const mentions=[];text.replace(/@([\w가-힣]+)/g,(_,m)=>{mentions.push(m);return''});const e=ED[SEL]||{};e._ca=[...(e._ca||[]),{author:myName().replace(/^@/,'')||USER_ID,text,timestamp:now(),mentions}];ED[SEL]=e;s();render();updateDetail();toast('Comment added');processCommentMentions(SEL,text);}
 function hm(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/📎\s*(\S+)/g,'<span class="cm-file" onclick="event.stopPropagation();navigator.clipboard.writeText(\'$1\');toast(\'Path copied: $1\')" title="Click to copy path">📁 $1</span>').replace(/\*\*(.+?)\*\*/g,'<span class="cm-bold">$1</span>').replace(/\*(.+?)\*/g,'<span class="cm-italic">$1</span>').replace(/`(.+?)`/g,'<span class="cm-code">$1</span>').replace(/\n/g,'<br>').replace(/@([\w가-힣]+)/g,'<span style="color:var(--accent);font-weight:600">@$1</span>')}
 function addFilePath(){if(!SEL)return;const path=prompt('Enter file path:');if(!path||!path.trim())return;const ci=document.getElementById('ci');if(ci)ci.value=(ci.value?ci.value+' ':'')+'📎 '+path.trim()}
 function addTask(){
