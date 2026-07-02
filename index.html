@@ -1127,6 +1127,9 @@ function updateDetail(){
 }
 
 function renderTD(t){
+  const isMirror=!!t.mirrored_from;
+  const hasMirrors=(TEAM_MIRRORS[t.id]||[]).length>0;
+  const mirrorBadge=isMirror?`<span style="font-size:10px;background:rgba(233,71,51,.1);color:var(--accent);padding:2px 8px;border-radius:99px;font-weight:600">🔄 팀 미러</span>`:hasMirrors?`<span style="font-size:10px;background:rgba(238,117,30,.1);color:var(--accent2);padding:2px 8px;border-radius:99px;font-weight:600">📡 ${TEAM_MIRRORS[t.id].length}개 미러</span>`:'';
   document.getElementById('dTitle').innerHTML=`${t.id}${USERS[t.created_by||'']?.role==='admin'?' 👑':''} ${mirrorBadge}`;
   const mid=t.meeting_id||t.meeting_date,meet=mid?M.find(m=>m.id===mid):null,h=t._h||[];
   const cmts=t.comments||[];
@@ -1142,9 +1145,6 @@ function renderTD(t){
 
   // External links
   const links=t.links||[];
-  const isMirror=!!t.mirrored_from;
-  const hasMirrors=(TEAM_MIRRORS[t.id]||[]).length>0;
-  const mirrorBadge=isMirror?`<span style="font-size:10px;background:rgba(233,71,51,.1);color:var(--accent);padding:2px 8px;border-radius:99px;font-weight:600">🔄 팀 미러</span>`:hasMirrors?`<span style="font-size:10px;background:rgba(238,117,30,.1);color:var(--accent2);padding:2px 8px;border-radius:99px;font-weight:600">📡 ${TEAM_MIRRORS[t.id].length}개 미러</span>`:'';
   const linksHtml=`
     <h5>🔗 Links</h5>
     ${links.length===0?'<div style="color:var(--muted);font-size:11px;padding:4px 0">No links</div>':links.map((lk,i)=>`
