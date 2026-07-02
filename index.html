@@ -1084,7 +1084,7 @@ async function editEvent(id){
 }
 
 function sbdg(t){return sbdgSpan(t).outerHTML}
-function selTask(id){const at=ap(T.find(t=>t.id===id));PAGE=`tasks-${at?.status==='진행중'?'progress':at?.status==='대기중'?'wait':at?.status==='완료'?'done':'all'}`;render()}
+function selTask(id){SEL=id;const at=ap(T.find(t=>t.id===id));PAGE=`tasks-${at?.status==='진행중'?'progress':at?.status==='대기중'?'wait':at?.status==='완료'?'done':'all'}`;render()}
 function selMeet(id){SEL=id;render()}
 function closeDetail(){SEL=null;closePreview();document.getElementById('dp').classList.add('closed');render()}
 
