@@ -378,6 +378,17 @@ function l(){
     TEAM_MIRRORS=m.tm||{};
   }catch(e){ED={};EV={};MENTIONS={};TEAM_MIRRORS={}}
 }
+// apiGet(): helper to GET from API endpoint
+async function apiGet(endpoint){
+  if(!API_BASE)return null;
+  try{
+    const res=await fetch(API_BASE+endpoint);
+    const ct=res.headers.get('content-type')||'';
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    if(!ct.includes('json'))throw new Error('Not JSON: '+ct);
+    return await res.json();
+  }catch(e){console.error('API GET failed:',endpoint,e.message);API_BASE=null;return null;}
+}
 // s(): save to localStorage (fallback) or mark dirty for API
 function s(){
   if(API_BASE){_dirty=true;_lastLocal=Date.now();}
@@ -394,16 +405,11 @@ async function apiPost(endpoint, body){
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify(body)
     });
+    const ct=res.headers.get('content-type')||'';
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    if(!ct.includes('json'))throw new Error('Not JSON: '+ct);
     return await res.json();
-  }catch(e){console.error('API POST failed:',endpoint,e);return null;}
-}
-// apiGet(): helper to GET from API endpoint
-async function apiGet(endpoint){
-  if(!API_BASE)return null;
-  try{
-    const res=await fetch(API_BASE+endpoint);
-    return await res.json();
-  }catch(e){console.error('API GET failed:',endpoint,e);return null;}
+  }catch(e){console.error('API POST failed:',endpoint,e.message);API_BASE=null;return null;}
 }
 // ap(): apply ED overrides to base task. In API mode, comments come from COMMENTS array.
 function ap(t){
