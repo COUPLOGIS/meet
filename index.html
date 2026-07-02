@@ -656,7 +656,9 @@ async function boot(){
               tags: e.tags || [], parent_id: e.parent_id || null,
               assignee: e.assignee || '', collaborators: e.collaborators || [],
               due_date: e.due_date || '', priority: e.priority || '보통',
-              status: e.status || '대기중', meeting_id: '', created_by: e.created_by || '',
+              status: e.status || '대기중', meeting_id: e.meeting_id || e._meeting_id || '',
+              source: e.source || 'personal', created_by: e.created_by || '',
+              links: e.links || [],
               _h: e._ha || [{t: e.created_at || '?', a: 'Created', n: ''}]
             });
           }
@@ -718,7 +720,9 @@ function startPolling(){
               tags: e.tags || [], parent_id: e.parent_id || null,
               assignee: e.assignee || '', collaborators: e.collaborators || [],
               due_date: e.due_date || '', priority: e.priority || '보통',
-              status: e.status || '대기중', meeting_id: '', created_by: e.created_by || '',
+              status: e.status || '대기중', meeting_id: e.meeting_id || e._meeting_id || '',
+              source: e.source || 'personal', created_by: e.created_by || '',
+              links: e.links || [],
               _h: e._ha || [{t: e.created_at || '?', a: 'Created', n: ''}]
             });
           }
