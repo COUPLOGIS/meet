@@ -731,7 +731,15 @@ function startPolling(){
           M=[...localOnly,...apiMeetings];
           M.sort((a,b)=>b.id.localeCompare(a.id));
         }
+        // Save comment input before re-render
+        const ciEl=document.getElementById('ci');
+        const savedCi=ciEl?ciEl.value:'';
         render();
+        // Restore comment input
+        if(savedCi){
+          const ciAfter=document.getElementById('ci');
+          if(ciAfter){ciAfter.value=savedCi;try{ciAfter.setSelectionRange(savedCi.length,savedCi.length)}catch(e){}}
+        }
       }
     }catch(e){/* silent — poll failures are expected on flaky networks */}
   },5000);
