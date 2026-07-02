@@ -356,7 +356,7 @@ const MENU=[
 
 function l(){try{ED=JSON.parse(localStorage.getItem(SKEY)||'{}');EV=JSON.parse(localStorage.getItem(EKEY)||'{}');MENTIONS=JSON.parse(localStorage.getItem(MIRKEY)||'{}');const m=JSON.parse(localStorage.getItem('ml2')||'{}');TEAM_MIRRORS=m.tm||{};}catch(e){ED={};EV={};MENTIONS={};TEAM_MIRRORS={}}}
 function s(){localStorage.setItem(SKEY,JSON.stringify(ED));localStorage.setItem(EKEY,JSON.stringify(EV));localStorage.setItem(MIRKEY,JSON.stringify(MENTIONS));localStorage.setItem('ml2',JSON.stringify({tm:TEAM_MIRRORS}))}
-function ap(t){const e=ED[t.id]||{};return{...t,...e,comments:[...(t.comments||[]),...(e._ca||[])],_h:[...(t._h||[]),...(e._ha||[])],_fa:[...(e._fa||[])],links:[...(e.links||[])],...e.links!==undefined?{links:e.links}:{}}}
+function ap(t){const e=ED[t.id]||{};return{...t,...e,title:t.title||e.title||'(no title)',comments:[...(t.comments||[]),...(e._ca||[])],_h:[...(t._h||[]),...(e._ha||[])],_fa:[...(e._fa||[])],links:[...(e.links||[])],...e.links!==undefined?{links:e.links}:{}}}
 function allTags(){const s=new Set();T.forEach(t=>{(t.tags||[]).forEach(tg=>s.add(tg));const e=ED[t.id];if(e&&e.tags)e.tags.forEach(tg=>s.add(tg))});return[...s].sort()}
 // Helper: get all tasks with ED applied
 function all(){return T.map(ap)}
