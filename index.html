@@ -1212,10 +1212,15 @@ function renderMD(m){
 // ── External Links ──
 async function addLink(){
   if(!SEL)return;
-  const label=document.getElementById('lkLabel').value.trim();
+  let label=document.getElementById('lkLabel').value.trim();
   const url=document.getElementById('lkUrl').value.trim();
   const sheet=document.getElementById('lkSheet').value.trim();
-  if(!label||!url)return toast('Label and URL required');
+  if(!url)return toast('URL required');
+  if(!label){
+    // Auto-generate label from URL
+    try{const u=new URL(url);label=u.hostname.replace('www.','').split('.')[0];}catch(e){label=url.replace(/^https?:\/\//,'').split('/')[0];}
+    document.getElementById('lkLabel').value=label;
+  }
 
   // API mode: POST to /api/link
   if(API_BASE){
