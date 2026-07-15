@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TeamLog — 팀록</title>
+<link rel="icon" type="image/png" href="favicon_new.png">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -22,11 +23,24 @@ html,body{height:100%;overflow:hidden}
 body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;display:flex}
 
 #sidebar{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);
-  display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;z-index:10}
-.sb-header{padding:14px 18px 10px;flex-shrink:0;display:flex;align-items:center;gap:10px}
-.sb-header img{width:32px;height:32px;border-radius:8px;flex-shrink:0}
-.sb-header h2{font-size:14px;font-weight:700;letter-spacing:-.2px;color:var(--accent)}
-.sb-nav{flex:1;overflow-y:auto;padding:0 10px 12px}
+  display:flex;flex-direction:column;flex-shrink:0;z-index:10;transition:width .2s}
+/* Outlook-style collapsed sidebar */
+#sidebar.collapsed{width:48px;overflow:hidden}
+#sidebar.collapsed .sb-header img,#sidebar.collapsed .menu-parent span:not(.ic),#sidebar.collapsed .menu-parent .arrow,#sidebar.collapsed .menu-child,#sidebar.collapsed .menu-children,#sidebar.collapsed .badge{display:none}
+#sidebar.collapsed .menu-parent{justify-content:center;padding:12px 0;border-radius:0}
+#sidebar.collapsed .menu-parent .ic{font-size:20px;width:auto;margin:0}
+#sidebar.collapsed .menu-parent:hover{background:var(--surface2)}
+#sidebar.collapsed .sb-header{padding:8px 0;justify-content:center;min-height:0}
+
+#sidebar.collapsed .sb-footer{justify-content:center;padding:10px 0}
+#sidebar.collapsed .sb-footer span{display:none}
+#sidebar.collapsed .sb-nav{padding:0}
+.sb-header{position:relative;padding:14px 18px 10px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+/* Sidebar overlay when expanded but not pinned */
+
+.sb-header img{width:100%;max-width:220px;height:auto;border-radius:0;margin:0 auto;display:block;padding:4px 0}
+.sb-header h2{display:none}
+.sb-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 10px 12px}
 
 .menu-group{margin-bottom:2px}
 .menu-parent{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:var(--radius);
@@ -49,10 +63,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .menu-child.active{color:var(--accent);font-weight:600}
 .menu-child .cc{font-size:10px;margin-left:auto;color:var(--muted2)}
 
+.sb-expand{display:flex;align-items:center;justify-content:center;padding:8px 0;cursor:pointer;flex-shrink:0;transition:background .12s}
+.sb-expand:hover{background:var(--surface2)}
+.sb-arrow{font-size:12px;color:var(--muted);transition:transform .2s;line-height:1}
+#sidebar:not(.collapsed) .sb-arrow{transform:rotate(180deg)}
+
 .sb-footer{padding:10px 16px;border-top:1px solid var(--border2);flex-shrink:0;font-size:10px;
   color:var(--muted);display:flex;align-items:center;gap:6px}
 .sb-footer .live{width:5px;height:5px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
 
 #main{flex:1;display:flex;overflow:hidden;min-width:0}
 #lp{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
@@ -78,7 +97,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .table tr.sel td{background:var(--surface2)}.table tr.done td{opacity:.5}.table tr.done .tt-c{text-decoration:line-through}
 .tt-c{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
 /* main task (not subtask) */ .tt-main{font-size:var(--main-size);font-weight:700}
-.tid{font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:600}
+.tid{font-family:var(--mono);font-size:10px;color:var(--text);font-weight:600}
 .mlink{font-size:10px;color:var(--accent2);cursor:pointer;text-decoration:underline}.mlink:hover{color:var(--accent)}
 .editable{cursor:pointer;padding:1px 4px;margin:-1px -4px;border-radius:3px}.editable:hover{background:var(--surface3)}
 
@@ -119,7 +138,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .lmeet{display:flex;align-items:center;gap:8px;padding:8px 12px;margin:2px 0;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;background:var(--surface2);border:1px solid var(--border2);transition:all .1s}
 .lmeet:hover{border-color:var(--accent2)}
 .tl{margin-top:4px;border-left:2px solid var(--border2)}
-.tl-i{padding:6px 0 6px 14px;font-size:12px}.tl-t{font-size:10px;color:var(--muted);margin-bottom:1px}.tl-n{font-size:11px;color:var(--accent2);margin-top:2px}
+.tl-i{padding:6px 0 6px 14px;font-size:12px}.tl-i.done{opacity:.5}.tl-t{font-size:10px;color:var(--muted);margin-bottom:1px}.tl-n{font-size:11px;color:var(--accent2);margin-top:2px}
+.cm-check{cursor:pointer;font-size:10px;flex-shrink:0;padding:1px 6px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--muted);transition:all .12s;user-select:none;white-space:nowrap}.cm-check:hover{border-color:var(--accent);color:var(--accent)}.cm-check.done{background:rgba(46,125,50,.08);border-color:rgba(46,125,50,.2);color:var(--green)}.cm-check.done:hover{background:rgba(46,125,50,.15)}
 
 /* Toast */
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:8px 20px;border-radius:99px;font-size:12px;font-weight:600;z-index:999;opacity:0;transition:opacity .2s}#toast.show{opacity:1}
@@ -173,7 +193,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 /* Calendar */
 .cal-hdr{display:flex;align-items:center;gap:10px;margin-bottom:16px}.cal-hdr h4{font-size:15px;font-weight:700;flex:1;text-align:center}
 .cal-nav{width:28px;height:28px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}.cal-nav:hover{background:var(--surface3);color:var(--text)}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:16px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:16px;max-width:500px}
 .dow{text-align:center;font-size:10px;font-weight:600;color:var(--muted);padding:6px 0;text-transform:uppercase}
 .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:600;color:var(--text2);transition:all .1s;position:relative}
 .cal-day:hover{background:var(--surface2)}.cal-day.other{color:var(--muted2);cursor:default}
@@ -181,7 +201,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .cal-day.has-task::after,.cal-day.has-event::after{content:'';position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%}
 .cal-day.has-task::after{background:var(--accent)}.cal-day.has-event::after{background:var(--green);left:calc(50% - 6px)}.cal-day.has-task.has-event::after{left:calc(50% - 2px)}.cal-day.has-task.has-event::before{content:'';position:absolute;bottom:3px;left:calc(50% - 6px);width:4px;height:4px;border-radius:50%;background:var(--green)}
 .cal-day.today::after,.cal-day.today::before{background:#fff!important}
-.ev-list{display:flex;flex-direction:column;gap:4px}.ev-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);cursor:pointer;transition:all .1s}
+.ev-list{display:flex;flex-direction:column;gap:4px;max-width:600px}.ev-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);cursor:pointer;transition:all .1s}
 .ev-item:hover{border-color:var(--border)}.ev-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.ev-dot.task{background:var(--accent)}.ev-dot.personal{background:var(--green)}
 .ev-body{flex:1;min-width:0}.ev-title{font-size:13px;font-weight:600;color:var(--text)}.ev-meta{font-size:10px;color:var(--muted);margin-top:1px}
 .ev-status{font-size:10px;padding:2px 8px;border-radius:99px;white-space:nowrap;flex-shrink:0}
@@ -257,7 +277,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 .tag-chip:hover{background:var(--accent);color:#fff}.tag-chip.active{background:var(--accent);color:#fff}
 
 /* Subtask table */
-.subtask td:first-child{padding-left:32px}
+.subtask td:first-child,.subtask td:nth-child(3){padding-left:32px}
 .subtask .tid::before{content:'└ ';color:var(--muted2)}.subtask .tid{font-size:10px}
 
 /* Description */
@@ -272,8 +292,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 <div class="hambtn" id="ham" onclick="toggleHam()"><span></span><span></span><span></span></div>
 <div class="ham-menu" id="hamMenu"></div>
 
-<nav id="sidebar">
-  <div class="sb-header"><img src="logo.png" alt="TeamLog"><h2>TeamLog</h2></div>
+<nav id="sidebar" class="collapsed">
+  <div class="sb-header"><img src="logo_new.png" alt="TeamLog"></div>
+  <div class="sb-expand" onclick="togglePin()" title="메뉴 확장"><span class="sb-arrow">▶</span></div>
   <div class="sb-nav" id="sbNav"></div>
   <div class="sb-footer"><span class="live"></span> Connected</div>
 </nav>
@@ -282,14 +303,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
   <div id="lp">
     <div class="lh" id="listHeader"></div>
     <div class="tw" id="listContent"></div>
-  </div>
-  <div id="dp" class="closed">
-    <div class="dh"><h4 id="dTitle">Detail</h4><button class="dclose" onclick="closeDetail()">✕</button></div>
-    <div class="db" id="dBody"></div>
     <div id="iframe-panel">
       <div id="iframe-bar"><span id="iframe-label">Preview</span><span class="ifr-close" onclick="closePreview()" title="Close">✕</span></div>
       <div id="iframe-wrap"><iframe id="preview-iframe" src="" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe></div>
     </div>
+  </div>
+  <div id="dp" class="closed">
+    <div class="dh"><h4 id="dTitle">Detail</h4><button class="dclose" onclick="closeDetail()">✕</button></div>
+    <div class="db" id="dBody"></div>
   </div>
 </div>
 
@@ -329,7 +350,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13
 
 <script>
 // ── API Sync Server Detection ──
-const API_BASE = (() => {
+let API_BASE = (() => {
   const h = location.hostname;
   if (h === 'localhost' || h === '127.0.0.1' || h.includes('k12')) return 'http://localhost:8646';
   return 'https://teamlog.shares.zrok.io';
@@ -402,7 +423,8 @@ async function apiPost(endpoint, body){
   if(!API_BASE)return null;
   try{
     const res=await fetch(API_BASE+endpoint,{
-      method:'POST',headers:{'Content-Type':'application/json'},
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify(body)
     });
     const ct=res.headers.get('content-type')||'';
@@ -415,14 +437,17 @@ async function apiPost(endpoint, body){
 function ap(t){
   const e=ED[t.id]||{};
   if(API_BASE){
-    // API mode: comments from COMMENTS, not from ED._ca
+    // API mode: base t from API, only apply local-only ED fields (not API-managed fields)
     const taskComments=COMMENTS.filter(c=>c.task_id===t.id);
-    return {...t,...e,title:t.title||e.title||'(no title)',
+    return {...t,
+      title:t.title||e.title||'(no title)',
+      description:t.description||e.description||'',
       comments:taskComments,
       _h:[...(t._h||[]),...(e._ha||[])],
       _fa:[...(e._fa||[])],
-      links:[...(e.links||[])],
-      ...e.links!==undefined?{links:e.links}:{}};
+      links:e.links!==undefined?e.links:(t.links||[]),
+      tags:t.tags||e.tags||[],
+      collaborators:t.collaborators||e.collaborators||[]};
   }
   // localStorage fallback: original behavior
   return {...t,...e,title:t.title||e.title||'(no title)',
@@ -551,7 +576,8 @@ async function promoteToTeam(taskId){
     try{
       await apiPost('/api/task/save',{id:taskId,title:t.title,description:t.description||'',
         assignee:t.assignee,due_date:t.due_date,priority:t.priority,status:t.status,
-        meeting_id:meetId,meeting_date:date,source:'team'});
+        meeting_id:meetId,meeting_date:date,source:'team',parent_id:t.parent_id||'',
+        tags:t.tags||[],collaborators:t.collaborators||[],links:t.links||[]});
       const data=await apiGet('/api/state');
       if(data&&data.ok){T=data.tasks||[];M=data.meetings||[];}
       render();updateDetail();toast('팀 과제로 승격됨!');
@@ -641,6 +667,22 @@ async function boot(){
         M.sort((a,b)=>b.id.localeCompare(a.id));
         // Load localStorage as fallback cache
         l();
+        // Merge localStorage ED tasks not yet synced to API
+        Object.keys(ED).forEach(id => {
+          if (!T.find(t => t.id === id)) {
+            const e = ED[id];
+            T.push({
+              id, title: e.title || '', description: e.description || '',
+              tags: e.tags || [], parent_id: e.parent_id || null,
+              assignee: e.assignee || '', collaborators: e.collaborators || [],
+              due_date: e.due_date || '', priority: e.priority || '보통',
+              status: e.status || '대기중', meeting_id: e.meeting_id || e._meeting_id || '',
+              source: e.source || 'personal', created_by: e.created_by || '',
+              links: e.links || [],
+              _h: e._ha || [{t: e.created_at || '?', a: 'Created', n: ''}]
+            });
+          }
+        });
         render();
         startPolling();
         return;
@@ -650,6 +692,20 @@ async function boot(){
   // ── localStorage fallback (original behavior) ──
   l();
   try{const w=await(await fetch('wbs.json?'+Date.now())).json();T=(w.tasks||[]).map(t=>({...t,_h:[{t:t.meeting_date||t.meeting_id||'?',a:'Created',n:''}]}));USERS=w.users||{};}catch(e){T=[]}
+  // Merge localStorage ED tasks not yet synced to API/wbs
+  Object.keys(ED).forEach(id => {
+    if (!T.find(t => t.id === id)) {
+      const e = ED[id];
+      T.push({
+        id, title: e.title || '', description: e.description || '',
+        tags: e.tags || [], parent_id: e.parent_id || null,
+        assignee: e.assignee || '', collaborators: e.collaborators || [],
+        due_date: e.due_date || '', priority: e.priority || '보통',
+        status: e.status || '대기중', meeting_id: '', created_by: e.created_by || '',
+        _h: e._ha || [{t: e.created_at || '?', a: 'Created', n: ''}]
+      });
+    }
+  });
   const mids=new Set();T.forEach(t=>{if(t.meeting_id)mids.add(t.meeting_id);if(t.meeting_date)mids.add(t.meeting_date)});
   for(const id of mids){try{MH[id]=await(await fetch(id+'.html?'+Date.now())).text()}catch(e){}}
   M=[...mids].map(id=>{
@@ -675,6 +731,22 @@ function startPolling(){
       if(data&&data.ok){
         // Merge updates: replace T, EV, USERS, COMMENTS while preserving local ED
         T=(data.tasks||[]).map(t=>({...t,_h:t._h||[{t:t.meeting_date||t.meeting_id||'?',a:'Created',n:''}]}));
+        // Merge localStorage ED tasks not yet synced to API
+        Object.keys(ED).forEach(id => {
+          if (!T.find(t => t.id === id)) {
+            const e = ED[id];
+            T.push({
+              id, title: e.title || '', description: e.description || '',
+              tags: e.tags || [], parent_id: e.parent_id || null,
+              assignee: e.assignee || '', collaborators: e.collaborators || [],
+              due_date: e.due_date || '', priority: e.priority || '보통',
+              status: e.status || '대기중', meeting_id: e.meeting_id || e._meeting_id || '',
+              source: e.source || 'personal', created_by: e.created_by || '',
+              links: e.links || [],
+              _h: e._ha || [{t: e.created_at || '?', a: 'Created', n: ''}]
+            });
+          }
+        });
         USERS=data.users||{};
         EV=data.events||{};
         COMMENTS=data.comments||[];
@@ -687,6 +759,9 @@ function startPolling(){
           M=[...localOnly,...apiMeetings];
           M.sort((a,b)=>b.id.localeCompare(a.id));
         }
+        // Skip re-render if user is typing (comment input, note, search, or modal open)
+        const activeEl=document.activeElement;
+        if(activeEl&&(activeEl.id==='ci'||activeEl.id==='ni'||activeEl.id==='sq'||activeEl.closest('.mo.show')))return;
         render();
       }
     }catch(e){/* silent — poll failures are expected on flaky networks */}
@@ -698,7 +773,7 @@ function renderMenu(){
   document.getElementById('sbNav').innerHTML=MENU.map(g=>{
     const open=PAGE.startsWith(g.id);
     return`<div class="menu-group">
-      <div class="menu-parent has-sub${open?' open':''}" onclick="toggleMenu('${g.id}')">
+      <div class="menu-parent has-sub${open?' open':''}" onclick="if(document.getElementById('sidebar').classList.contains('collapsed'))navTo('${(g.children||[])[0]?.id||''}');else toggleMenu('${g.id}')">
         <span class="ic">${g.icon}</span>${g.label}<span class="arrow">▸</span>
       </div>
       <div class="menu-children${open?' open':''}">
@@ -719,7 +794,13 @@ function toggleMenu(id){
   else PAGE=g.children[0].id;
   render();
 }
-function navTo(page){PAGE=page;SEL=null;document.getElementById('dp').classList.add('closed');document.getElementById('hamMenu').classList.remove('show');render()}
+function navTo(page){PAGE=page;SEL=null;document.getElementById('dp').classList.add('closed');document.getElementById('hamMenu').classList.remove('show');
+  // Collapse sidebar if not pinned
+  const sb=document.getElementById('sidebar');
+  if(!sb.classList.contains('collapsed')){
+    sb.classList.add('collapsed');
+  }
+  render()}
 function updateCounts(){
   const al=all(),team=al.filter(t=>!!(t.meeting_date||t.meeting_id)),mine=al.filter(t=>!(t.meeting_date||t.meeting_id));
   const el=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v||''};
@@ -733,7 +814,8 @@ function updateCounts(){
 }
 
 // ── Render ──
-function render(){renderMenu();renderContent()}
+function render(){
+renderMenu();renderContent()}
 function renderContent(){if(PAGE.startsWith('my-tasks')||PAGE.startsWith('team-tasks')||PAGE.startsWith('tasks'))renderTasks();else if(PAGE.startsWith('board'))renderBoardPage();else if(PAGE.startsWith('meetings'))renderMeetings();else if(PAGE.startsWith('calendar'))renderCalendar();updateDetail()}
 
 function renderTasks(){
@@ -746,10 +828,10 @@ function renderTasks(){
     // Split: team-linked mirrors go to top section
     teamLinked=list.filter(t=>t.mirrored_from||t.source==='personal'&&t.mirrored_from);
     list=list.filter(t=>!teamLinked.includes(t));
-  }else if(PAGE==='team-tasks-progress')list=al.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='진행중');
-  else if(PAGE==='team-tasks-wait')list=al.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='대기중');
-  else if(PAGE==='team-tasks-done')list=al.filter(t=>!!(t.meeting_date||t.meeting_id)&&t.status==='완료');
-  else if(PAGE==='team-tasks-all')list=al.filter(t=>!!(t.meeting_date||t.meeting_id));
+  }else if(PAGE==='team-tasks-progress')list=al.filter(t=>t.status==='진행중');
+  else if(PAGE==='team-tasks-wait')list=al.filter(t=>t.status==='대기중');
+  else if(PAGE==='team-tasks-done')list=al.filter(t=>t.status==='완료');
+  else if(PAGE==='team-tasks-all')list=al.filter(t=>!!(t.meeting_date||t.meeting_id||t.source==='team'||(t.collaborators||[]).length));
   else if(PAGE==='tasks-progress')list=al.filter(t=>t.status==='진행중');
   else if(PAGE==='tasks-wait')list=al.filter(t=>t.status==='대기중');
   else if(PAGE==='tasks-done')list=al.filter(t=>t.status==='완료');
@@ -762,8 +844,26 @@ function renderTasks(){
   if(FILTER_PRIORITY)list=list.filter(t=>t.priority===FILTER_PRIORITY);
   if(FILTER_TAG)list=list.filter(t=>(t.tags||[]).includes(FILTER_TAG));
   const sd=SORT_DIR==='asc'?1:-1;
+  // Hierarchical sort: parents first (by sort key), then children in order under parent
+  const allTasks=al;
   list.sort((a,b)=>{
-    if(SORT_BY==='id')return (a.id||'').localeCompare(b.id)*sd;
+    // Resolve full parent chain: get root ancestor for each
+    const rootA=(function getRoot(t){const p=allTasks.find(x=>x.id===t.parent_id);return p?getRoot(p):t})(a);
+    const rootB=(function getRoot(t){const p=allTasks.find(x=>x.id===t.parent_id);return p?getRoot(p):t})(b);
+    // Sort by root ancestor first
+    if(rootA.id!==rootB.id){
+      if(SORT_BY==='id')return (rootA.id||'').localeCompare(rootB.id||'')*sd;
+      if(SORT_BY==='title')return (rootA.title||'').localeCompare(rootB.title||'')*sd;
+      if(SORT_BY==='assignee')return (rootA.assignee||'').localeCompare(rootB.assignee||'')*sd;
+      if(SORT_BY==='status')return (rootA.status||'').localeCompare(rootB.status||'')*sd;
+      if(SORT_BY==='due')return (rootA.due_date||'').localeCompare(rootB.due_date||'')*sd;
+    }
+    // Same root: sort by depth (parent first), then by sort key
+    const depthA=(function getDepth(t,d){const p=allTasks.find(x=>x.id===t.parent_id);return p?getDepth(p,d+1):d})(a,0);
+    const depthB=(function getDepth(t,d){const p=allTasks.find(x=>x.id===t.parent_id);return p?getDepth(p,d+1):d})(b,0);
+    if(depthA!==depthB)return depthA-depthB;
+    // Same depth: sort by chosen key
+    if(SORT_BY==='id')return (a.id||'').localeCompare(b.id||'')*sd;
     if(SORT_BY==='title')return (a.title||'').localeCompare(b.title||'')*sd;
     if(SORT_BY==='assignee')return (a.assignee||'').localeCompare(b.assignee||'')*sd;
     if(SORT_BY==='status')return (a.status||'').localeCompare(b.status||'')*sd;
@@ -780,6 +880,17 @@ function renderTasks(){
       html+=`<div style="padding:4px 0"><h5 style="font-size:12px;font-weight:700;color:var(--text2);margin:0 20px 8px;display:flex;align-items:center;gap:6px">📋 개인 과제 <span style="font-size:10px;color:var(--muted);font-weight:400">${list.length}개</span></h5>`;
     }
     html+=renderTasksTable(list);
+    // Link bar: show links for selected task at bottom
+    if(SEL){
+      const st=all().find(t=>t.id===SEL);
+      const slinks=st?.links||[];
+      if(slinks.length){
+        html+=`<div style="margin:8px 0;padding:6px 12px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:600;color:var(--muted);flex-shrink:0">🔗</span>
+          ${slinks.map(lk=>`<a href="${esc(lk.url)}" target="_blank" style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:4px 10px;color:var(--accent2);text-decoration:none;font-weight:600;white-space:nowrap" onclick="event.stopPropagation()">${esc(lk.label||'Link')}${lk.sheet?' 📊'+esc(lk.sheet):''}</a>`).join('')}
+        </div>`;
+      }
+    }
     document.getElementById('listContent').innerHTML=html;
   }
 }
@@ -799,7 +910,7 @@ function renderMiniTable(list){
     </tr>`;
   });
   return `<table class="table"><thead><tr>
-    ${th('id','ID','width:55px')+th('title','Title','width:auto')+th('status','Status','width:80px')+th('due','Due','width:70px')}
+    ${th('id','ID','width:45px')+th('title','Title','width:auto')+th('status','Status','width:80px')+th('due','Due','width:70px')}
     <th style="width:60px;font-size:10px;font-weight:600;color:var(--muted)">Tags</th></tr></thead><tbody>
     ${allRows.length===0?`<tr><td colspan="5"><div class="empty"><p>No tasks</p></div></td></tr>`:allRows.join('')}</tbody></table>`;
 }
@@ -815,50 +926,55 @@ function renderTasksTable(list){
   topList.forEach(t=>{
     const mid=t.meeting_id||t.meeting_date,meet=mid?M.find(m=>m.id===mid):null;
     const cmts=t.comments||[];
-    const doneCount=cmts.filter(c=>/완료|✓/.test(c.text||'')).length;
+    const doneCount=cmts.filter(c=>c.completed).length;
     const prog=cmts.length?`<span class="prog-bar"><span class="pg-done">${doneCount}</span><span class="pg-total">/${cmts.length}</span></span>`:'-';
     const isAdmin=USERS[t.created_by||'']?.role==='admin';
     const childCount=list.filter(c=>c.parent_id===t.id).length;
-    const tags=(t.tags||[]).map(tg=>`<span class="tag-chip" onclick="event.stopPropagation();FILTER_TAG='${tg}';render()">#${esc(tg)}</span>`).join('');
+    const tags=''; // removed — now using links below
+    const links=(t.links||[]);
+    const linksCell=links.length?`<div style="display:flex;flex-direction:column;gap:2px"><button class="btn sm" style="font-size:10px;padding:2px 6px;width:100%" onclick="event.stopPropagation();window.open('${esc(links[0].url)}','_blank')">🔗 바로가기</button></div>`:'<span style="color:var(--muted2)">-</span>';
     const cls=[t.status==='완료'?'done':'',SEL===t.id?'sel':''].filter(Boolean).join(' ');
     const hasParent=!t.parent_id||!list.some(p=>p.id===t.parent_id);
     allRows.push(`<tr class="${cls}" onclick="selTask('${t.id}')">
       <td class="tid">${t.id}${isAdmin?' 👑':''}${childCount?` <span style="font-size:9px;color:var(--muted)">+${childCount}</span>`:''}</td>
-      <td class="tt-c tt-main">${(t.collaborators||[]).length?'👥 ':''}${mid?'📋 ':''}${esc(t.title)}</td>
+      <td style="width:24px;text-align:center;font-size:12px">${(t.collaborators||[]).length?'👥':''}${mid?'📋':''}</td>
+      <td class="tt-c tt-main">${esc(t.title)}</td>
       <td><span class="editable" onclick="event.stopPropagation();ie('${t.id}','assignee')">${esc(t.assignee)}</span></td>
       <td class="hm">${meet?`<span class="mlink" onclick="event.stopPropagation();SEL=null;PAGE='meetings-all';selMeet('${meet.id}')">📋 ${(meet.date||meet.id).slice(0,16)}</span>`:'<span style="color:var(--muted2)">-</span>'}</td>
       <td>${sbdg(t)}</td>
       <td class="hm"><span class="editable" onclick="event.stopPropagation();ie('${t.id}','due_date')">${t.due_date||'-'}</span></td>
-      <td style="font-size:10px">${tags||'<span style="color:var(--muted2)">-</span>'}</td>
+      <td style="font-size:10px;padding:4px 8px">${linksCell}</td>
       <td style="font-size:11px">${prog}</td></tr>`);
     added.add(t.id);
     list.filter(c=>c.parent_id===t.id).forEach(c=>{
       const cmid=c.meeting_id||c.meeting_date,cmeet=cmid?M.find(m=>m.id===cmid):null;
       const ccmts=c.comments||[];
-      const cdone=ccmts.filter(x=>/완료|✓/.test(x.text||'')).length;
+      const cdone=ccmts.filter(x=>x.completed).length;
       const cprog=ccmts.length?`<span class="prog-bar"><span class="pg-done">${cdone}</span><span class="pg-total">/${ccmts.length}</span></span>`:'-';
       const isAdmin2=USERS[c.created_by||'']?.role==='admin';
-      const ctags=(c.tags||[]).map(tg=>`<span class="tag-chip" onclick="event.stopPropagation();FILTER_TAG='${tg}';render()">#${esc(tg)}</span>`).join('');
+      const clinks=(c.links||[]);
+      const clinksCell=clinks.length?`<div style="display:flex;flex-direction:column;gap:2px"><button class="btn sm" style="font-size:10px;padding:2px 6px;width:100%" onclick="event.stopPropagation();window.open('${esc(clinks[0].url)}','_blank')">🔗 바로가기</button></div>`:'<span style="color:var(--muted2)">-</span>';
       const ccls=[c.status==='완료'?'done':'',SEL===c.id?'sel':''].filter(Boolean).join(' ');
       allRows.push(`<tr class="subtask ${ccls}" onclick="selTask('${c.id}')">
         <td class="tid">${c.id}${isAdmin2?' 👑':''}</td>
+        <td style="width:24px;text-align:center;font-size:12px">${(c.collaborators||[]).length?'👥':''}${cmid?'📋':''}</td>
         <td class="tt-c">${esc(c.title)}</td>
         <td><span class="editable" onclick="event.stopPropagation();ie('${c.id}','assignee')">${esc(c.assignee)}</span></td>
         <td class="hm">${cmeet?`<span class="mlink" onclick="event.stopPropagation();SEL=null;PAGE='meetings-all';selMeet('${cmeet.id}')">📋 ${(cmeet.date||cmeet.id).slice(0,16)}</span>`:'<span style="color:var(--muted2)">-</span>'}</td>
         <td>${sbdg(c)}</td>
         <td class="hm"><span class="editable" onclick="event.stopPropagation();ie('${c.id}','due_date')">${c.due_date||'-'}</span></td>
-        <td style="font-size:10px">${ctags||'<span style="color:var(--muted2)">-</span>'}</td>
+        <td style="font-size:10px;padding:4px 8px">${clinksCell}</td>
         <td style="font-size:11px">${cprog}</td></tr>`);
       added.add(c.id);
     });
   });
   return `<table class="table"><thead><tr>
-    ${th('id','ID','width:55px')+th('title','Title','width:140px')+th('assignee','Assignee','width:65px')}
+    ${th('id','ID','width:45px')}<th style="width:24px"></th>${th('title','Title','width:140px')+th('assignee','Assignee','width:65px')}
     <th class="hm" style="width:110px">Meeting</th>
     ${th('status','Status','width:80px')+th('due','Due','width:75px')}
-    <th style="width:80px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase">Tags</th>
+    <th style="width:100px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase">Links</th>
     <th style="width:55px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase">Prog</th></tr></thead><tbody>
-    ${allRows.length===0?`<tr><td colspan="8"><div class="empty"><div class="ei">📭</div><p>No tasks</p></div></td></tr>`
+    ${allRows.length===0?`<tr><td colspan="9"><div class="empty"><div class="ei">📭</div><p>No tasks</p></div></td></tr>`
     :allRows.join('')}</tbody></table>`;
 }
 function renderTasksBoard(list){
@@ -1083,37 +1199,39 @@ async function editEvent(id){
 }
 
 function sbdg(t){return sbdgSpan(t).outerHTML}
-function selTask(id){const at=ap(T.find(t=>t.id===id));PAGE=`tasks-${at?.status==='진행중'?'progress':at?.status==='대기중'?'wait':at?.status==='완료'?'done':'all'}`;render()}
+function selTask(id){try{SEL=id;render()}catch(e){console.error('selTask error',e)}}
 function selMeet(id){SEL=id;render()}
 function closeDetail(){SEL=null;closePreview();document.getElementById('dp').classList.add('closed');render()}
 
 function updateDetail(){
-  if(!SEL||PAGE.startsWith('calendar')){document.getElementById('dp').classList.add('closed');return}
-  document.getElementById('dp').classList.remove('closed');
-  const tm=T.find(t=>t.id===SEL);if(tm){renderTD(ap(tm));return}
-  const mm=M.find(m=>m.id===SEL);if(mm){renderMD(mm);return}
-  document.getElementById('dp').classList.add('closed');
+  try{
+    if(!SEL||PAGE.startsWith('calendar')){document.getElementById('dp').classList.add('closed');return}
+    document.getElementById('dp').classList.remove('closed');
+    const tm=T.find(t=>t.id===SEL);if(tm){renderTD(ap(tm));return}
+    const mm=M.find(m=>m.id===SEL);if(mm){renderMD(mm);return}
+    document.getElementById('dp').classList.add('closed');
+  }catch(e){console.error('updateDetail error',e)}
 }
 
 function renderTD(t){
+  const isMirror=!!t.mirrored_from;
+  const hasMirrors=(TEAM_MIRRORS[t.id]||[]).length>0;
+  const mirrorBadge=isMirror?`<span style="font-size:10px;background:rgba(233,71,51,.1);color:var(--accent);padding:2px 8px;border-radius:99px;font-weight:600">🔄 팀 미러</span>`:hasMirrors?`<span style="font-size:10px;background:rgba(238,117,30,.1);color:var(--accent2);padding:2px 8px;border-radius:99px;font-weight:600">📡 ${TEAM_MIRRORS[t.id].length}개 미러</span>`:'';
   document.getElementById('dTitle').innerHTML=`${t.id}${USERS[t.created_by||'']?.role==='admin'?' 👑':''} ${mirrorBadge}`;
   const mid=t.meeting_id||t.meeting_date,meet=mid?M.find(m=>m.id===mid):null,h=t._h||[];
   const cmts=t.comments||[];
-  const doneCount=cmts.filter(c=>/완료|✓/.test(c.text||'')).length;
+  const doneCount=cmts.filter(c=>c.completed).length;
   const progHtml=cmts.length?`<div class="df"><span class="fl">Progress</span><span class="fv"><span class="prog-bar"><span class="pg-done">${doneCount}</span><span class="pg-total">/${cmts.length}</span></span></span></div>`:'';
   const tagsHtml=(t.tags||[]).length?`<div class="df"><span class="fl">Tags</span><span class="fv" style="display:flex;gap:4px;flex-wrap:wrap;cursor:default">${t.tags.map(tg=>`<span class="tag-chip" onclick="event.stopPropagation();FILTER_TAG='${tg}';render()">#${esc(tg)}</span>`).join('')}</span></div>`:'';
-  const descHtml=t.description?`<h5>Description</h5><div class="desc-md">${hm(t.description)}</div>`:'';
+  const descHtml=`<h5>Description <button class="btn sm" style="font-size:9px;padding:1px 5px;margin-left:6px" onclick="event.stopPropagation();editDesc()">✏️</button></h5><div class="desc-md" id="descDisplay" onclick="editDesc()" style="cursor:pointer" title="Click to edit">${t.description?hm(t.description):'<span style="color:var(--muted);font-style:italic">Click to add description...</span>'}</div><textarea id="descEdit" style="display:none;width:100%;font-family:var(--font);font-size:12px;background:var(--surface2);border:1px solid var(--accent);border-radius:var(--radius-sm);color:var(--text);padding:8px 10px;outline:none;resize:vertical;min-height:80px" onblur="saveDesc()" onkeydown="if(event.key==='Escape')cancelDesc()"></textarea>`;
   // FIX: use all() instead of raw T for parent lookup
-  const parent=(t.parent_id?all().find(x=>x.id===t.parent_id):null)||T.find(x=>x.id===t.parent_id);
-  const parentHtml=parent?`<div class="df"><span class="fl">Parent</span><span class="fv" style="color:var(--accent2);cursor:pointer" onclick="selTask('${parent.id}')">📌 ${esc(parent.title||parent.id)}</span></div>`:'';
+  const allTasks=all().filter(x=>x.id!==t.id&&(!x.parent_id||!all().some(p=>p.id===x.parent_id))).map(x=>`<option value="${x.id}" ${t.parent_id===x.id?'selected':''}>${x.id} — ${esc(x.title||'(no title)')}</option>`).join('');
+  const parentHtml=`<div class="df"><span class="fl">Parent</span><span class="fv"><select onchange="uf('parent_id',this.value||'')" style="font-size:12px;padding:4px 6px;width:100%;font-family:var(--font);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);cursor:pointer"><option value="">(None — top level)</option>${allTasks}</select></span></div>`;
   const childTasks=T.filter(x=>x.parent_id===t.id);
   const subtaskHtml=childTasks.length?`<h5>Sub-tasks (${childTasks.length})</h5>${childTasks.map(c=>`<div class="lmeet" onclick="selTask('${c.id}')"><span class="tid">${c.id}</span> ${esc(c.title||c.id)}<span style="margin-left:auto;font-size:10px">${STL[c.status]}</span></div>`).join('')}`:'';
 
   // External links
   const links=t.links||[];
-  const isMirror=!!t.mirrored_from;
-  const hasMirrors=(TEAM_MIRRORS[t.id]||[]).length>0;
-  const mirrorBadge=isMirror?`<span style="font-size:10px;background:rgba(233,71,51,.1);color:var(--accent);padding:2px 8px;border-radius:99px;font-weight:600">🔄 팀 미러</span>`:hasMirrors?`<span style="font-size:10px;background:rgba(238,117,30,.1);color:var(--accent2);padding:2px 8px;border-radius:99px;font-weight:600">📡 ${TEAM_MIRRORS[t.id].length}개 미러</span>`:'';
   const linksHtml=`
     <h5>🔗 Links</h5>
     ${links.length===0?'<div style="color:var(--muted);font-size:11px;padding:4px 0">No links</div>':links.map((lk,i)=>`
@@ -1122,7 +1240,6 @@ function renderTD(t){
         <span class="lk-url" title="${esc(lk.url||'')}">${esc((lk.url||'').replace(/^https?:\/\//,'').slice(0,40))}${lk.sheet?' · 📊 '+esc(lk.sheet):''}</span>
         <span class="lk-actions">
           <button class="btn-sm" onclick="event.stopPropagation();window.open('${esc(lk.url)}','_blank')" title="새 탭에서 열기">바로가기</button>
-          <button class="btn-sm accent preview-only" onclick="event.stopPropagation();openPreview('${esc(lk.label)}','${esc(lk.url)}')" title="미리보기">미리보기</button>
           <span class="link-del" onclick="event.stopPropagation();rmLink('${t.id}',${i})" title="삭제">✕</span>
         </span>
       </div>`).join('')}
@@ -1143,13 +1260,21 @@ function renderTD(t){
     ${subtaskHtml}
     ${linksHtml}
     ${meet?`<h5>Source Meeting</h5><div class="lmeet" onclick="SEL=null;PAGE='meetings-all';selMeet('${meet.id}')">📋 <strong>${esc(meet.date||meet.id.replace(/_/g,' '))}</strong><span style="color:var(--muted);font-size:11px">${esc(meet.tp||'')}</span><span style="margin-left:auto;font-size:10px;color:var(--accent)">→ Meeting</span></div>`:''}
-    <h5>History</h5><div class="tl">${h.map(e=>`<div class="tl-i"><div class="tl-t">${e.t}</div><div>${e.a}</div>${e.n?`<div class="tl-n">${esc(e.n)}</div>`:''}</div>`).join('')}</div>
-    <h5>Comments</h5><div class="tl">${cmts.length?cmts.map(c=>`<div class="tl-i"><div class="tl-t">${c.timestamp||''}</div><div><strong>@${esc(c.author||'unknown')}</strong>: ${hm(c.text||'')}</div>${c.mentions&&c.mentions.length?`<div class="tl-n" style="color:var(--accent)">👥 ${c.mentions.map(m=>'@'+m).join(', ')}</div>`:''}</div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0">No comments</div>'}</div>
+    <h5>History</h5><div class="tl">${(()=>{
+      const MAX=3;
+      if(h.length<=MAX)return h.map(e=>`<div class="tl-i"><div class="tl-t">${e.t}</div><div>${e.a}</div>${e.n?`<div class="tl-n">${esc(e.n)}</div>`:''}</div>`).join('');
+      const shown=h.slice(-MAX);
+      const hidden=h.slice(0,-MAX);
+      return shown.map(e=>`<div class="tl-i"><div class="tl-t">${e.t}</div><div>${e.a}</div>${e.n?`<div class="tl-n">${esc(e.n)}</div>`:''}</div>`).join('')
+        +`<div id="histMore" style="display:none">${hidden.map(e=>`<div class="tl-i"><div class="tl-t">${e.t}</div><div>${e.a}</div>${e.n?`<div class="tl-n">${esc(e.n)}</div>`:''}</div>`).join('')}</div>`
+        +`<div class="tl-i" style="cursor:pointer;color:var(--accent2);font-weight:600;text-align:center" onclick="const m=document.getElementById('histMore');const t=this;m.style.display=m.style.display==='none'?'block':'none';t.textContent=m.style.display==='none'?'\u25bc Show ${hidden.length} more':'\u25b2 Collapse'">\u25bc Show ${hidden.length} more</div>`;
+    })()}</div>
+    <h5>Comments</h5><div class="tl">${cmts.length?cmts.map(c=>`<div class="tl-i${c.completed?' done':''}"><div class="tl-t">${c.timestamp||''}</div><div style="display:flex;align-items:flex-start;gap:6px"><span style="flex:1"><strong>@${esc(c.author||'unknown')}</strong>: ${hm(c.text||'')}</span><span class="cm-check${c.completed?' done':''}" onclick="event.stopPropagation();toggleComment(${c.id})">${c.completed?'☑ 완료':'☐ 완료'}</span></div>${c.mentions&&c.mentions.length?`<div class="tl-n" style="color:var(--accent)">👥 ${c.mentions.map(m=>'@'+m).join(', ')}</div>`:''}</div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0">No comments</div>'}</div>
     <div style="display:flex;gap:6px;margin-top:8px"><input id="ci" style="flex:1;font-family:var(--font);font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:6px 10px;outline:none;min-height:32px" placeholder="Comment... **bold** *italic* \`code\` @name"><button class="btn sm" style="background:var(--surface3)" onclick="addFilePath()" title="Add file path">📎</button><button class="btn sm primary" onclick="addComment()">Add</button></div>
     <h5>Attachments</h5>${(t._fa||[]).length?t._fa.map((f,i)=>`<div class="df"><span class="fl">📎</span><span class="fv" style="cursor:pointer;color:var(--accent2)" onclick="navigator.clipboard.writeText('${esc(f).replace(/'/g,"\\'")}');toast('Path copied')">${esc(f)}</span><span style="color:var(--muted2);font-size:12px;cursor:pointer;padding:0 4px" onclick="rmFile('${t.id}',${i})" title="Remove">✕</span></div>`).join(''):'<div style="color:var(--muted);font-size:11px;padding:4px 0\">No attachments</div>'}
     <button class="btn sm" style="margin-top:6px" onclick="attachFile()">📎 Attach</button>
     <textarea class="ni" id="ni" placeholder="Add a progress note..."></textarea>
-    <div style="margin-top:8px"><button class="btn sm primary" onclick="addNote()">Add Note</button></div>`;
+    <div style="margin-top:8px;display:flex;gap:6px"><button class="btn sm primary" onclick="addNote()">Add Note</button><button class="btn sm" style="background:var(--red);color:#fff;margin-left:auto" onclick="delTask()">🗑 삭제</button></div>`;
 }
 
 function renderMD(m){
@@ -1166,16 +1291,20 @@ function renderMD(m){
 // ── External Links ──
 async function addLink(){
   if(!SEL)return;
-  const label=document.getElementById('lkLabel').value.trim();
+  let label=document.getElementById('lkLabel').value.trim();
   const url=document.getElementById('lkUrl').value.trim();
   const sheet=document.getElementById('lkSheet').value.trim();
-  if(!label||!url)return toast('Label and URL required');
+  if(!url)return toast('URL required');
+  if(!label){
+    // Auto-generate label from URL
+    try{const u=new URL(url);label=u.hostname.replace('www.','').split('.')[0];}catch(e){label=url.replace(/^https?:\/\//,'').split('/')[0];}
+    document.getElementById('lkLabel').value=label;
+  }
 
   // API mode: POST to /api/link
   if(API_BASE){
     try{
-      const finalUrl=sheet&&url.includes('docs.google.com/spreadsheets')?url.replace(/#.*$/,'')+'#gid='+sheet:url;
-      await apiPost('/api/link',{task_id:SEL,action:'add',label,url:finalUrl,sheet:sheet||''});
+      await apiPost('/api/link',{task_id:SEL,action:'add',label,url,sheet:sheet||''});
       // Refresh from API
       const data=await apiGet('/api/state');
       if(data&&data.ok){T=data.tasks||[];}
@@ -1187,8 +1316,7 @@ async function addLink(){
   }
   // localStorage fallback
   const e=ED[SEL]||{};
-  const finalUrl=sheet&&url.includes('docs.google.com/spreadsheets')?url.replace(/#.*$/,'')+'#gid='+sheet:url;
-  e.links=[...(e.links||[]),{label,url:finalUrl,sheet:sheet||''}];
+  e.links=[...(e.links||[]),{label,url,sheet:sheet||''}];
   ED[SEL]=e;s();mClose('linkModal');
   document.getElementById('lkLabel').value=document.getElementById('lkUrl').value=document.getElementById('lkSheet').value='';
   render();updateDetail();toast('Link added');
@@ -1212,20 +1340,23 @@ async function rmLink(tid,i){
   ED[tid]=e;s();render();updateDetail();toast('Link removed');
 }
 function openPreview(label,url){
-  document.getElementById('iframe-label').textContent=label;
-  document.getElementById('preview-iframe').src=url.includes('docs.google.com/spreadsheets')?url.replace(/\/edit.*$/,'/preview'):url;
-  document.getElementById('iframe-panel').classList.add('show');
-  // Resize iframe panel
-  const dp=document.getElementById('dp');
-  const db=document.getElementById('dBody');
+  document.getElementById('iframe-label').textContent=label||'Preview';
+  // Convert Google URLs to embed-friendly format (Google blocks /edit in iframes)
+  let embedUrl=url;
+  if(url.includes('docs.google.com/spreadsheets')) embedUrl=url.replace(/\/edit.*/,'/preview');
+  else if(url.includes('docs.google.com/document')) embedUrl=url.replace(/\/edit.*/,'/preview');
+  else if(url.includes('docs.google.com/presentation')) embedUrl=url.replace(/\/edit.*/,'/embed');
+  document.getElementById('preview-iframe').src=embedUrl;
   const ip=document.getElementById('iframe-panel');
-  ip.style.height='300px';
-  db.style.maxHeight='calc(100% - 300px)';
+  const lc=document.getElementById('listContent');
+  ip.classList.add('show');
+  ip.style.height='320px';
+  lc.style.maxHeight='calc(100% - 320px)';
 }
 function closePreview(){
   document.getElementById('iframe-panel').classList.remove('show');
   document.getElementById('preview-iframe').src='';
-  document.getElementById('dBody').style.maxHeight='';
+  document.getElementById('listContent').style.maxHeight='';
 }
 
 // ── Edit ──
@@ -1242,32 +1373,98 @@ function cyc(id,el){
 function sbdgSpan(t){const cl={대기중:'wait',진행중:'progress',완료:'done',보류:'hold'};
   const s=document.createElement('span');s.className=`sbdg ${cl[t.status]||'wait'}`;
   s.textContent=STL[t.status]||t.status;s.onclick=function(e){cyc(t.id,e)};return s;}
-function addNote(){
+async function addNote(){
   const n=document.getElementById('ni')?.value?.trim();if(!n)return;
-  // API mode: POST note as a task save with history update
+  const noteObj={t:now(),a:'Note',n};
+  // API mode: POST note with history update
   if(API_BASE){
     const t=all().find(t=>t.id===SEL);
     if(t){
-      apiPost('/api/task/save',{id:SEL,title:t.title,description:t.description||'',
-        assignee:t.assignee,due_date:t.due_date,priority:t.priority,status:t.status,
-        note:{t:now(),a:'Note',n}}).then(()=>{
-        document.getElementById('ni').value='';
-        _dirty=true;_lastLocal=Date.now();
-        // Add locally for immediate display
-        const e=ED[SEL]||{};e._ha=[...(e._ha||[]),{t:now(),a:'Note',n}];ED[SEL]=e;
-        render();updateDetail();toast('Note added');
-        setTimeout(()=>{_dirty=false;},2000);
-      }).catch(()=>{
-        // Fallback: save locally
-        const e=ED[SEL]||{};e._ha=[...(e._ha||[]),{t:now(),a:'Note',n}];ED[SEL]=e;
-        s();render();updateDetail();toast('Note added (local)');
-      });
-      return;
+      try{
+        const result=await apiPost('/api/task/save',{id:SEL,title:t.title,description:t.description||'',
+          assignee:t.assignee,due_date:t.due_date,priority:t.priority,status:t.status,
+          note:noteObj});
+        if(result&&result.ok){
+          document.getElementById('ni').value='';
+          _dirty=true;_lastLocal=Date.now();
+          // Refresh from API to get updated history
+          const data=await apiGet('/api/state');
+          if(data&&data.ok){T=data.tasks||[];COMMENTS=data.comments||[];}
+          render();updateDetail();toast('Note added');
+          setTimeout(()=>{_dirty=false;},2000);
+          return;
+        }
+      }catch(e){console.error('addNote API failed',e);}
     }
   }
+  // Fallback: save locally
+  const e=ED[SEL]||{};e._ha=[...(e._ha||[]),noteObj];ED[SEL]=e;
+  s();render();updateDetail();toast('Note added (local)');
+}
+async function delTask(){
+  if(!SEL)return;
+  if(!confirm('정말 이 과제를 삭제할까요?'))return;
+  if(API_BASE){
+    try{
+      // Use raw fetch to avoid apiPost setting API_BASE=null on failure
+      const res=await fetch(API_BASE+'/api/task/delete?id='+encodeURIComponent(SEL),{method:'DELETE'});
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      T=T.filter(t=>t.id!==SEL);
+      delete ED[SEL];
+      s();SEL=null;document.getElementById('dp').classList.add('closed');
+      render();toast('Task deleted');
+      return;
+    }catch(e){console.error('API delete failed',e);}
+  }
   // localStorage fallback
-  const e=ED[SEL]||{};e._ha=[...(e._ha||[]),{t:now(),a:'Note',n}];ED[SEL]=e;
-  s();render();updateDetail();toast('Note added');
+  T=T.filter(t=>t.id!==SEL);
+  delete ED[SEL];
+  s();SEL=null;document.getElementById('dp').classList.add('closed');
+  render();toast('Task deleted');
+}
+function editDesc(){
+  const display=document.getElementById('descDisplay');
+  const edit=document.getElementById('descEdit');
+  if(!display||!edit)return;
+  const t=ap(T.find(t=>t.id===SEL));
+  edit.value=t.description||'';
+  display.style.display='none';
+  edit.style.display='block';
+  edit.focus();
+}
+async function saveDesc(){
+  const edit=document.getElementById('descEdit');
+  const display=document.getElementById('descDisplay');
+  if(!edit||!display||!SEL)return;
+  const newDesc=edit.value.trim();
+  edit.style.display='none';
+  display.style.display='block';
+  const t=ap(T.find(t=>t.id===SEL));
+  if(newDesc===t.description){display.innerHTML=t.description?hm(t.description):'<span style=\"color:var(--muted);font-style:italic\">Click to add description...</span>';return;}
+  if(API_BASE){
+    try{
+      await apiPost('/api/task/save',{id:SEL,title:t.title,description:newDesc,
+        assignee:t.assignee,due_date:t.due_date,priority:t.priority,status:t.status,
+        tags:t.tags||[],collaborators:t.collaborators||[],links:t.links||[],
+        meeting_id:t.meeting_id||'',source:t.source||'personal'});
+      const e=ED[SEL]||{};e.description=newDesc;
+      e._ha=[...(e._ha||[]),{t:now(),a:'Description updated',n:''}];ED[SEL]=e;
+      _dirty=true;_lastLocal=Date.now();
+      render();updateDetail();toast('Description saved');
+      setTimeout(()=>{_dirty=false;},2000);
+      return;
+    }catch(e){console.error('saveDesc failed',e);}
+  }
+  const e=ED[SEL]||{};e.description=newDesc;
+  e._ha=[...(e._ha||[]),{t:now(),a:'Description updated',n:''}];ED[SEL]=e;
+  s();render();updateDetail();toast('Description saved (local)');
+}
+function cancelDesc(){
+  const edit=document.getElementById('descEdit');
+  const display=document.getElementById('descDisplay');
+  if(!edit||!display)return;
+  edit.style.display='none';
+  display.style.display='block';
 }
 function uf(f,v){if(!SEL)return;ufx(SEL,f,v)}
 async function ufx(id,f,v){
@@ -1276,11 +1473,15 @@ async function ufx(id,f,v){
   // API mode: POST to /api/task/save with the changed field
   if(API_BASE){
     const update={id,
-      title:old.title||'',description:old.description||'',
+      title:f==='title'?v:(old.title||''),description:old.description||'',
       assignee:f==='assignee'?v:(old.assignee||''),
       due_date:f==='due_date'?v:(old.due_date||''),
       priority:f==='priority'?v:(old.priority||'보통'),
-      status:f==='status'?v:(old.status||'대기중')};
+      status:f==='status'?v:(old.status||'대기중'),
+      parent_id:f==='parent_id'?v:(old.parent_id||''),
+      tags:old.tags||[],collaborators:old.collaborators||[],
+      links:old.links||[],
+      meeting_id:old.meeting_id||'',source:old.source||'personal'};
     try{
       const result=await apiPost('/api/task/save',update);
       if(result&&result.ok){
@@ -1309,6 +1510,20 @@ async function ufx(id,f,v){
 function fl(f){return{title:'Title',assignee:'Assignee',due_date:'Due',priority:'Priority',status:'Status'}[f]||f}
 function edf(f){const t=ap(T.find(t=>t.id===SEL));if(!t)return;const d=prompt(`${fl(f)}:`,t[f]||'');if(d!==null&&d!==t[f])uf(f,d)}
 function ie(id,f){selTask(id);const t=ap(T.find(t=>t.id===id));const d=prompt(`${fl(f)}:`,t[f]||'');if(d!==null&&d!==t[f])ufx(id,f,d)}
+async function toggleComment(cid){
+  if(!API_BASE)return;
+  try{
+    const result=await apiPost('/api/comment/toggle',{comment_id:cid});
+    if(result&&result.ok){
+      // Update local COMMENTS array
+      const cmt=COMMENTS.find(c=>c.id===cid);
+      if(cmt)cmt.completed=result.completed;
+      _dirty=true;_lastLocal=Date.now();
+      render();updateDetail();
+      setTimeout(()=>{_dirty=false;},2000);
+    }
+  }catch(e){console.error('toggleComment failed',e);}
+}
 async function addComment(){
   if(!SEL)return;
   const text=document.getElementById('ci')?.value?.trim();if(!text)return;
@@ -1384,29 +1599,33 @@ async function addTask(){
   const due_date=document.getElementById('aDue').value||'N/A';
   const priority=document.getElementById('aPri').value;
   const ids=T.map(t=>parseInt(t.id.slice(1))).filter(n=>!isNaN(n));const nid=`T${String((Math.max(0,...ids)+1)).padStart(3,'0')}`;
+  const isTeamView=PAGE.startsWith('team-tasks')||collaborators.length>0;
+  const source=isTeamView?'team':'personal';
 
   // API mode: POST to /api/task/save
   if(API_BASE){
     try{
-      const result=await apiPost('/api/task/save',{
+      await apiPost('/api/task/save',{
         id:nid,title,description:desc,tags,parent_id:parentId,
         assignee,collaborators,due_date,priority,status:'대기중',
-        created_by:USER_ID
+        created_by:USER_ID,source
       });
-      if(result&&result.ok){
-        // Refresh from API
-        const data=await apiGet('/api/state');
-        if(data&&data.ok){T=data.tasks||[];}
-        mClose('addModal');SEL=nid;PAGE='my-tasks';
-        render();updateDetail();toast('Task created'+(collaborators.length?' 👥':''));
-        return;
-      }
+      // Refresh from API
+      const data=await apiGet('/api/state');
+      if(data&&data.ok){T=data.tasks||[];}
+      mClose('addModal');SEL=nid;
+      // Auto-create personal mirror for creator on team tasks
+      if(isTeamView)await createMirror(nid);
+      render();updateDetail();toast('Task created'+(isTeamView?' 👥 팀':''));
+      return;
     }catch(e){console.error('API task create failed',e);}
   }
   // localStorage fallback
-  ED[nid]={title,description:desc,tags,parent_id:parentId,assignee,collaborators,due_date,priority,status:'대기중',created_by:USER_ID,_ha:[{t:now(),a:'Created (web)',n:collaborators.length?'👥 '+collaborators.join(', '):''}],_new:true};
-  T.push({id:nid,title:'',description:'',tags:[],parent_id:null,assignee:'',collaborators:[],due_date:'',priority:'보통',status:'대기중',meeting_id:'',created_by:USER_ID,_h:[]});
-  s();mClose('addModal');SEL=nid;PAGE='my-tasks';render();updateDetail();toast('Task created'+(collaborators.length?' 👥':''));
+  ED[nid]={title,description:desc,tags,parent_id:parentId,assignee,collaborators,due_date,priority,status:'대기중',created_by:USER_ID,source,_ha:[{t:now(),a:'Created (web)',n:isTeamView?'👥 팀':''}],_new:true};
+  T.push({id:nid,title,description:desc,tags,parent_id:parentId,assignee,collaborators,due_date,priority,status:'대기중',meeting_id:'',created_by:USER_ID,source,_h:[]});
+  s();mClose('addModal');SEL=nid;
+  if(isTeamView)createMirror(nid);
+  render();updateDetail();toast('Task created'+(isTeamView?' 👥 팀':''));
 }
 function pb(p){const m={높음:'pri-high',High:'pri-high',보통:'pri-mid',Medium:'pri-mid',낮음:'pri-low',Low:'pri-low'};return`<span class="pribdg ${m[p]||'pri-mid'}">${p||'Medium'}</span>`}
 
@@ -1417,7 +1636,8 @@ function toast(m){const e=document.getElementById('toast');e.textContent=m;e.cla
 function mShow(id){
   if(id==='addModal'){
     const sel=document.getElementById('aParent');
-    sel.innerHTML='<option value="">(None — top level)</option>'+all().map(t=>`<option value="${t.id}">${t.id} — ${esc(t.title||'(no title)')}</option>`).join('');
+    const topOnly=all().filter(t=>!t.parent_id||!all().some(p=>p.id===t.parent_id));
+    sel.innerHTML='<option value="">(None — top level)</option>'+topOnly.map(t=>`<option value="${t.id}">${t.id} — ${esc(t.title||'(no title)')}</option>`).join('');
   }
   document.getElementById(id).classList.add('show');
 }
@@ -1481,6 +1701,23 @@ function rmFile(tid,i){
   const e=ED[tid];if(!e||!e._fa)return;
   e._fa.splice(i,1);ED[tid]=e;s();render();updateDetail();toast('Attachment removed');
 }
+function togglePin(){
+  const sb=document.getElementById('sidebar');
+  if(sb.classList.contains('collapsed')){
+    sb.classList.remove('collapsed');
+    localStorage.setItem('tl_expand','1');
+  }else{
+    sb.classList.add('collapsed');
+    localStorage.setItem('tl_expand','0');
+  }
+}
+// Restore sidebar state
+(function(){
+  const sb=document.getElementById('sidebar');
+  if(localStorage.getItem('tl_expand')==='1'){
+    sb.classList.remove('collapsed');
+  }
+})();
 boot();
 </script>
 </body>
