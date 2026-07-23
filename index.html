@@ -55,7 +55,9 @@ a{color:var(--accent2)}
 .navitem.on .cnt{background:var(--surface);color:var(--accent2)}
 .dot{width:8px;height:8px;border-radius:3px;flex:none}
 .keep{font-size:10px;color:var(--ink3);border:1px solid var(--border);border-radius:4px;padding:0 4px;margin-left:auto}
-.botrow{display:flex;gap:6px;flex-wrap:wrap;padding:6px 8px}
+.botrow{display:flex;flex-direction:column;gap:8px;padding:6px 8px}
+.botitem{display:flex;align-items:center;gap:9px}
+.botlbl{font-size:12.5px;color:var(--ink2)}
 
 .av{width:24px;height:24px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;
   font-size:10.5px;font-weight:700;color:#fff;letter-spacing:-.02em;background:#31415E}
@@ -1094,8 +1096,8 @@ function renderProjNav(){
   const me=document.getElementById('meAv');
   if(me){const n=myName().replace(/^@/,'')||'게스트';me.textContent=n.slice(0,2);me.title=n}
   const br=document.getElementById('botRow');
-  if(br)br.innerHTML=[['2호기','시장조사 2호봇'],['3호기','푸드레인봇 3호기']]
-    .map(([b,label])=>`<span title="${label}">${avh(b)}</span>`).join('');
+  if(br)br.innerHTML=[['2호기','2호 : 리서치'],['3호기','3호 : 몰DB']]
+    .map(([b,label])=>`<span class="botitem">${avh(b)}<span class="botlbl">${esc(label)}</span></span>`).join('');
 }
 
 async function addProjectFromModal(){
