@@ -1830,9 +1830,9 @@ async function addComment(){
         const data=await apiGet('/api/state');
         if(data&&data.ok){COMMENTS=data.comments||[]}
         _dirty=true;_lastLocal=Date.now();
-        updateDetail();toast('댓글 등록');
+        updateDetail();toast('댓글 등록'+(mentions.length?' — 멘션 알림 발송':''));
         processCommentMentions(SEL,text);
-        notifyMentions(SEL,author,text,mentions);
+        // 텔레그램 푸시는 서버(comment/add)가 발송 — 브라우저 위치 무관
         setTimeout(()=>{_dirty=false},2000);
         return;
       }
