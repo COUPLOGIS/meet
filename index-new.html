@@ -273,6 +273,13 @@ a{color:var(--accent2)}
 .cm-bold{font-weight:700}.cm-italic{font-style:italic}
 .cm-code{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:0 4px;font-size:11.5px}
 .cm-file{color:var(--accent2);cursor:pointer;text-decoration:underline}
+/* #23 멘션 자동완성·감지 배지 */
+.mac{display:none;position:absolute;bottom:100%;left:0;margin-bottom:6px;background:var(--surface);
+  border:1px solid var(--border2);border-radius:9px;box-shadow:var(--shadow);min-width:190px;z-index:6;overflow:hidden}
+.maci{display:flex;align-items:center;gap:8px;padding:7px 11px;font-size:12.5px;cursor:pointer}
+.maci.on,.maci:hover{background:var(--accent-tint)}
+.mhint{font-size:11px;color:var(--accent2);margin-top:5px;font-weight:600}
+.mhint:empty{display:none}
 .cinput{display:flex;gap:8px;margin-top:6px}
 .cinput input{flex:1;border:1px solid var(--border2);border-radius:8px;padding:8px 12px;font-size:12.5px;background:var(--surface)}
 .cinput input::placeholder,.ckadd input::placeholder{color:var(--ink3)}
@@ -1574,7 +1581,9 @@ function updateDetail(){
   let cmtHtml=`<div class="sect">댓글 <span class="n">${cmts.length}</span> · @멘션 → 텔레그램</div>`;
   for(const c of cmts)cmtHtml+=`<div class="cmt ${c.completed?'cdone':''}">${avh(c.author)}
     <div class="bubble" onclick="toggleComment(${c.id})" title="클릭: 처리완료 토글"><div class="meta"><span class="who">${esc(c.author)}</span><span class="tm">${(c.timestamp||'').slice(5,16).replace('T',' ')}</span></div>${hm(c.text)}</div></div>`;
-  cmtHtml+=`<div class="cinput"><input id="ci" placeholder="댓글 — @멘션하면 텔레그램 알림" onkeydown="if(event.key==='Enter')addComment()"><button class="bsm pri" onclick="addComment()">등록</button></div>`;
+  cmtHtml+=`<div style="position:relative"><div class="mac" id="mac"></div>
+    <div class="cinput"><input id="ci" placeholder="댓글 — @ 입력하면 멘션 목록이 뜹니다" autocomplete="off" oninput="ciInput()" onkeydown="ciKey(event)"><button class="bsm pri" onclick="addComment()">등록</button></div>
+    <div class="mhint" id="mhint"></div></div>`;
   const mir=(TEAM_MIRRORS[t.id]||[]).length;
   dp.innerHTML=`
     <div class="phead">
@@ -1668,6 +1677,79 @@ function ckDel(i){const t=tById(SEL);if(!t)return;const ck=[...(t.checklist||[])
 function ckAdd(){const t=tById(SEL);if(!t)return;const inp=document.getElementById('ckNew');
   const v=inp.value.trim();if(!v)return;inp.value='';saveChecklist(t,[...(t.checklist||[]),{t:v,done:false}])}
 
+/* ── #21 세부 일정이 상위 기간을 벗어나면 상위 기간 자동 연장 (확장만, 축소 없음) ── */
+async function expandParentRange(subId){
+  const sT=tById(subId);if(!sT||!sT.parent_id)return;
+  const p=tById(sT.parent_id);if(!p)return;
+  const val=d=>(d&&d!=='N/A')?d:null;  // YYYY-MM-DD 문자열 비교
+  const sS=val(sT.start_date),sD=val(sT.due_date);
+  const pS=val(p.start_date),pD=val(p.due_date);
+  const upd={};
+  if(sS&&(!pS||sS<pS))upd.start_date=sS;
+  if(sD&&(!pD||sD>pD))upd.due_date=sD;
+  if(!Object.keys(upd).length)return;
+  if(API_BASE){
+    const r=await apiPost('/api/task/save',{id:p.id,...upd});
+    if(r&&r.ok){
+      const bp=T.find(x=>x.id===p.id);if(bp)Object.assign(bp,upd);
+      _dirty=true;_lastLocal=Date.now();setTimeout(()=>{_dirty=false},2000);
+      render();toast(`상위 「${p.title}」 기간 자동 연장됨`);
+    }
+    return;
+  }
+  const e=ED[p.id]||{};Object.assign(e,upd);ED[p.id]=e;
+  const bp=T.find(x=>x.id===p.id);if(bp)Object.assign(bp,upd);
+  s();render();toast(`상위 「${p.title}」 기간 자동 연장됨`);
+}
+
+/* ── #23 멘션 자동완성 + 감지 배지 ── */
+let MAC=[],MACI=0;
+function mentionCands(){
+  const names=Object.values(USERS).map(u=>(u.display_name||u.username||'').replace(/^@/,''));
+  return [...new Set([...names,'2호기','3호기'])].filter(Boolean);
+}
+function ciInput(){
+  const inp=document.getElementById('ci');if(!inp)return;
+  const v=inp.value,pos=inp.selectionStart??v.length;
+  const m=v.slice(0,pos).match(/@([\w가-힣]*)$/);
+  const box=document.getElementById('mac');
+  if(m&&box){
+    const q=m[1];
+    MAC=mentionCands().filter(n=>n.toLowerCase().includes(q.toLowerCase()));
+    MACI=0;
+    box.innerHTML=MAC.map((n,i)=>`<div class="maci ${i===0?'on':''}" onmousedown="event.preventDefault();macPick(${i})">${avh(n,1)} ${esc(n)}</div>`).join('');
+    box.style.display=MAC.length?'block':'none';
+  }else if(box){MAC=[];box.style.display='none'}
+  const names=mentionCands();const hints=[];
+  v.replace(/@([\w가-힣]+)/g,(_,x)=>{
+    hints.push(names.includes(x)
+      ?(isBotName(x)?`☑ @${x} <span style="color:var(--ink3)">(봇 — 연동 예정)</span>`:`☑ @${x} → 텔레그램 알림`)
+      :`<span style="color:var(--today)">⚠ @${x} 미등록 — 알림 안 감</span>`);return''});
+  const mh=document.getElementById('mhint');
+  if(mh)mh.innerHTML=hints.join(' &nbsp;·&nbsp; ');
+}
+function macPick(i){
+  const inp=document.getElementById('ci');if(!inp||!MAC[i])return;
+  const v=inp.value,pos=inp.selectionStart??v.length;
+  const before=v.slice(0,pos).replace(/@([\w가-힣]*)$/,'@'+MAC[i]+' ');
+  inp.value=before+v.slice(pos);
+  MAC=[];const box=document.getElementById('mac');if(box)box.style.display='none';
+  inp.focus();inp.selectionStart=inp.selectionEnd=before.length;
+  ciInput();
+}
+function macHi(){document.querySelectorAll('.maci').forEach((e,i)=>e.classList.toggle('on',i===MACI))}
+function ciKey(ev){
+  const box=document.getElementById('mac');
+  const open=box&&box.style.display==='block'&&MAC.length;
+  if(open){
+    if(ev.key==='ArrowDown'){ev.preventDefault();MACI=(MACI+1)%MAC.length;macHi();return}
+    if(ev.key==='ArrowUp'){ev.preventDefault();MACI=(MACI-1+MAC.length)%MAC.length;macHi();return}
+    if(ev.key==='Enter'||ev.key==='Tab'){ev.preventDefault();macPick(MACI);return}
+    if(ev.key==='Escape'){box.style.display='none';MAC=[];return}
+  }
+  if(ev.key==='Enter')addComment();
+}
+
 /* ── 필드 저장 (기존 ufx 이식 + start_date·project·description 확장) ── */
 function fl(f){return{title:'제목',assignee:'담당자',due_date:'마감일',start_date:'시작일',status:'상태',project:'프로젝트',description:'설명'}[f]||f}
 function uf(f,v){if(!SEL)return;ufx(SEL,f,v)}
@@ -1685,6 +1767,7 @@ async function ufx(id,f,v){
         if(old.mirrored_from){syncMirrorChange({...old,[f]:v})}else{syncOriginChange(id)}
         setTimeout(()=>{_dirty=false},2000);
         if(f==='status')notifyStatusChange(id,old.status,v);
+        if(f==='start_date'||f==='due_date')expandParentRange(id);  // #21
         return;
       }
     }catch(e){console.error('API task save failed',e)}
@@ -1694,6 +1777,7 @@ async function ufx(id,f,v){
   s();render();toast('저장됨');
   if(old.mirrored_from){syncMirrorChange({...old,[f]:v})}else{syncOriginChange(id)}
   if(f==='status')notifyStatusChange(id,old.status,v);
+  if(f==='start_date'||f==='due_date')expandParentRange(id);  // #21
 }
 
 /* ── 댓글 (기존 이식) ── */
@@ -1788,7 +1872,9 @@ async function addTask(){
       if(data&&data.ok){T=data.tasks||[];PROJECTS_DB=data.projects||PROJECTS_DB;FEED=data.feed||FEED}
       mClose('addModal');['aTitle','aDesc','aAssignee','aStart','aDue'].forEach(i=>document.getElementById(i).value='');
       if(parentId)openSubs.add(parentId);
-      SEL=nid;render();selTask(nid);toast('업무 생성됨');return;
+      SEL=nid;render();selTask(nid);toast('업무 생성됨');
+      if(parentId)expandParentRange(nid);  // #21
+      return;
     }catch(e){console.error('API task create failed',e)}
   }
   ED[nid]={...payload,_ha:[{t:now(),a:'Created (web)',n:''}],_new:true};
