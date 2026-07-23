@@ -949,10 +949,17 @@ async function uploadImg(f,ta){
       body:JSON.stringify({data:dataUrl})});
     const j=await r.json();
     if(j&&j.ok){
+      const ta2=document.getElementById('ni')||ta;  // 업로드 중 재렌더로 교체됐을 수 있음
+      const p=ta2.selectionStart??ta2.value.length;
       const ins=`\n![이미지](${j.name})\n`;
-      const p=ta.selectionStart??ta.value.length;
-      ta.value=ta.value.slice(0,p)+ins+ta.value.slice(p);
-      toast('이미지 첨부됨 — [저장]을 눌러야 반영됩니다');
+      ta2.value=ta2.value.slice(0,p)+ins+ta2.value.slice(p);
+      const pos=p+ins.length;
+      if(SEL){
+        await ufx(SEL,'description',ta2.value);  // 붙여넣기 즉시 자동 저장
+        const ta3=document.getElementById('ni');
+        if(ta3){ta3.focus();ta3.selectionStart=ta3.selectionEnd=Math.min(pos,ta3.value.length)}
+      }
+      toast('이미지 첨부 + 자동 저장됨');
     }else toast('이미지 업로드 실패');
   }catch(e){toast('이미지 업로드 실패 — 네트워크 확인')}
 }
