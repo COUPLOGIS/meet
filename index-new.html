@@ -275,6 +275,11 @@ a{color:var(--accent2)}
 .cm-bold{font-weight:700}.cm-italic{font-style:italic}
 .cm-code{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:0 4px;font-size:11.5px}
 .cm-file{color:var(--accent2);cursor:pointer;text-decoration:underline}
+/* 복수 담당자 칩 */
+.asgchip{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:14px;padding:3px 9px 3px 4px}
+.asgchip .ckdel{opacity:0;font-size:11px;color:var(--ink3);cursor:pointer}
+.asgchip:hover .ckdel{opacity:.8}
 /* #23 멘션 자동완성·감지 배지 */
 .mac{display:none;position:absolute;bottom:100%;left:0;margin-bottom:6px;background:var(--surface);
   border:1px solid var(--border2);border-radius:9px;box-shadow:var(--shadow);min-width:190px;z-index:6;overflow:hidden}
@@ -1385,7 +1390,8 @@ function rowL2(t){
         <span class="ract grip" title="끌어서 순서 변경 · 다른 프로젝트로 이동" draggable="true" onclick="event.stopPropagation()" ondragstart="tDragStart(event,'${t.id}')" ondragend="dragEnd()">⠿</span>
       </span></div>
     <div>${stPill(t)}</div>
-    <div class="asg">${avh(t.assignee,1)}<span>${esc(t.assignee||'—')}</span></div>
+    <div class="asg">${(()=>{const al=asgList(t);
+      return al.slice(0,3).map(n=>avh(n,1)).join('')+`<span>${esc(al[0]||'—')}${al.length>1?` 외 ${al.length-1}`:''}</span>`})()}</div>
     <div class="dt">${dshort(t.start_date)}</div>
     <div class="dt${isSoon(t.due_date)?' soon':''}">${dshort(t.due_date)}</div>
     <div class="prog" title="${p.tip}"><div class="pbar"><div class="pfill" style="width:${p.v}%"></div></div><span class="pnum">${p.v}%</span><span class="auto">자동</span></div>
@@ -1397,7 +1403,8 @@ function rowL3(s){
   return `<div class="srow${s.id===SEL?' sel':''}" tabindex="0" role="button" onclick="selTask('${s.id}')" onkeydown="if(event.key==='Enter')selTask('${s.id}')">
     <div class="tname" style="--pjc:${projColor(s.project||'')}"><span class="tt">${esc(s.title)}</span>${ckCount(s)}${(s.links||[]).length?'<span class="scount">🔗</span>':''}</div>
     <div>${stPill(s)}</div>
-    <div class="asg">${avh(s.assignee,1)}<span>${esc(s.assignee||'—')}</span></div>
+    <div class="asg">${(()=>{const al=asgList(s);
+      return al.slice(0,3).map(n=>avh(n,1)).join('')+`<span>${esc(al[0]||'—')}${al.length>1?` 외 ${al.length-1}`:''}</span>`})()}</div>
     <div class="dt">${dshort(s.start_date)}</div>
     <div class="dt${isSoon(s.due_date)?' soon':''}">${dshort(s.due_date)}</div>
     <div class="memo" style="grid-column:span 3">${descFirstLine(s)||''}</div></div>`;
@@ -1599,9 +1606,13 @@ function updateDetail(){
     <div class="pbody">
       <div class="fields">
         <span class="fk">상태</span><span class="fv">${stPill(t)}</span>
-        <span class="fk">담당자</span><span class="fv">${_aEdit
-          ?`<input id="ai" list="ulist" value="${esc(t.assignee||'')}" style="border:1.5px solid var(--accent);border-radius:6px;padding:3px 8px;font-size:12px;width:130px;background:var(--surface)" onkeydown="aiKey(event)" onblur="aiSave()"><datalist id="ulist">${Object.values(USERS).map(u=>`<option value="${esc((u.display_name||u.username||'').replace(/^@/,''))}">`).join('')}</datalist>`
-          :`${avh(t.assignee,1)} ${esc(t.assignee||'—')}<span class="lnk" onclick="editAssignee()">변경</span>`}</span>
+        <span class="fk">담당자</span><span class="fv" style="flex-wrap:wrap">${(()=>{
+          const cur=asgList(t);
+          const members=[...new Set([...Object.values(USERS).map(u=>(u.display_name||u.username||'').replace(/^@/,'')),'2호기','3호기',...cur])].filter(Boolean);
+          const avail=members.filter(n=>!cur.includes(n));
+          return cur.map(n=>`<span class="asgchip">${avh(n,1)}${esc(n)}<span class="ckdel" onclick="asgDel('${esc(n)}')" title="담당 해제">✕</span></span>`).join('')
+            +`<select onchange="if(this.value)asgAdd(this.value);this.value=''" style="border:1px dashed var(--border2);border-radius:6px;padding:3px 6px;font-size:12px;background:var(--surface);color:var(--ink3)">
+              <option value="">＋ 담당자 추가</option>${avail.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')}</select>`})()}</span>
         <span class="fk">프로젝트</span><span class="fv"><select onchange="ufx(SEL,'project',this.value)">${projOpts}</select></span>
         <span class="fk">시작일</span><span class="fv"><input type="date" value="${t.start_date||''}" onchange="ufx(SEL,'start_date',this.value)" style="border:1px solid var(--border2);border-radius:6px;padding:3px 6px;font-size:12px"></span>
         <span class="fk">마감일</span><span class="fv"><input type="date" value="${(t.due_date&&t.due_date!=='N/A')?t.due_date:''}" onchange="ufx(SEL,'due_date',this.value)" style="border:1px solid var(--border2);border-radius:6px;padding:3px 6px;font-size:12px"></span>
@@ -1656,14 +1667,28 @@ async function tiSave(){
   const v=i.value.trim();const t=tById(SEL);_tEdit=false;
   if(t&&v&&v!==t.title)await ufx(SEL,'title',v);else updateDetail();
 }
-function editAssignee(){_aEdit=true;updateDetail();
-  setTimeout(()=>{const i=document.getElementById('ai');if(i){i.focus();i.select()}},40)}
-function aiKey(ev){if(ev.key==='Enter')ev.target.blur();
-  else if(ev.key==='Escape'){_aEdit=false;updateDetail()}}
-async function aiSave(){
-  const i=document.getElementById('ai');if(!i){_aEdit=false;return}
-  const v=i.value.trim();const t=tById(SEL);_aEdit=false;
-  if(t&&v!==t.assignee)await ufx(SEL,'assignee',v);else updateDetail();
+/* ── 복수 담당자: assignee(주담당) + collaborators(공동) ── */
+function asgList(t){return [t.assignee,...(t.collaborators||[])].filter(Boolean)}
+async function saveAsg(t,assignee,collabs){
+  if(API_BASE){
+    const r=await apiPost('/api/task/save',{id:t.id,assignee,collaborators:collabs});
+    if(r&&r.ok){const bt=T.find(x=>x.id===t.id);
+      if(bt){bt.assignee=assignee;bt.collaborators=collabs}
+      _dirty=true;_lastLocal=Date.now();setTimeout(()=>{_dirty=false},2000);
+      render();toast('담당자 변경됨');return}
+    toast('저장 실패 — 네트워크/서버 확인');return}
+  const e=ED[t.id]||{};e.assignee=assignee;e.collaborators=collabs;ED[t.id]=e;
+  const bt=T.find(x=>x.id===t.id);if(bt){bt.assignee=assignee;bt.collaborators=collabs}
+  s();render();toast('담당자 변경됨');
+}
+function asgAdd(name){const t=tById(SEL);if(!t||!name)return;
+  const cur=asgList(t);if(cur.includes(name))return;
+  if(!t.assignee)saveAsg(t,name,t.collaborators||[]);
+  else saveAsg(t,t.assignee,[...(t.collaborators||[]),name]);
+}
+function asgDel(name){const t=tById(SEL);if(!t)return;
+  if(t.assignee===name){const c=[...(t.collaborators||[])];const next=c.shift()||'';saveAsg(t,next,c)}
+  else saveAsg(t,t.assignee,(t.collaborators||[]).filter(x=>x!==name));
 }
 async function saveDescNew(){const v=document.getElementById('ni').value;_descEditing=false;await ufx(SEL,'description',v)}
 
