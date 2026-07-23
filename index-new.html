@@ -1087,7 +1087,8 @@ function renderProjNav(){
   const me=document.getElementById('meAv');
   if(me){const n=myName().replace(/^@/,'')||'게스트';me.textContent=n.slice(0,2);me.title=n}
   const br=document.getElementById('botRow');
-  if(br)br.innerHTML=['1호기','2호기','3호기','4호기','8호기','Claude'].map(b=>avh(b)).join('');
+  if(br)br.innerHTML=[['2호기','시장조사 2호봇'],['3호기','푸드레인봇 3호기']]
+    .map(([b,label])=>`<span title="${label}">${avh(b)}</span>`).join('');
 }
 
 async function addProjectFromModal(){
