@@ -371,6 +371,17 @@ a{color:var(--accent2)}
     <div class="mbtns"><button class="bsm" onclick="mClose('addModal')">취소</button><button class="bsm pri" onclick="addTask()">만들기</button></div>
   </div>
 </div>
+<!-- 회의록 작성 모달 -->
+<div class="mo" id="mtgModal" onclick="if(event.target===this)mClose('mtgModal')">
+  <div class="mbox">
+    <h3>회의록 작성</h3>
+    <label>날짜</label><input id="mDate" type="date">
+    <label>주제</label><input id="mTopic">
+    <label>참여자</label><input id="mParts" placeholder="조한표, 권용훈">
+    <label>요약 (한 줄에 하나씩 bullet이 됩니다)</label><textarea id="mSum" rows="6"></textarea>
+    <div class="mbtns"><button class="bsm" onclick="mClose('mtgModal')">취소</button><button class="bsm pri" onclick="addMeeting()">저장</button></div>
+  </div>
+</div>
 <div id="toast"></div>
 <script>
 // ── API Sync Server Detection ──
@@ -675,7 +686,7 @@ async function boot(){
         const apiMids=new Set(apiMeetings.map(m=>m.id||m.date));
         // Merge with tasks that reference meetings not in API
         const extraMids=[...mids].filter(id=>!apiMids.has(id));
-        M=[...apiMeetings.map(m=>({id:m.id||m.date,date:m.date||m.id,p:m.p||'',tp:m.tp||'',sm:m.sm||[],ts:m.ts||[]}))];
+        M=[...apiMeetings.map(m=>({id:m.id||m.date,date:m.date||m.id,p:m.p||m.participants||'',tp:m.tp||m.topic||'',sm:m.sm||m.summary||[],ts:m.ts||m.task_ids||[]}))];
         extraMids.forEach(id=>{
           const ts=T.filter(t=>(t.meeting_id||t.meeting_date)===id);
           let date='',p='',tp='',sm=[];
@@ -776,7 +787,7 @@ function startPolling(){
         COMMENTS=data.comments||[];PROJECTS_DB=data.projects||[];FEED=data.feed||[];
         // Update meetings if changed
         if(data.meetings&&data.meetings.length){
-          const apiMeetings=data.meetings.map(m=>({id:m.id||m.date,date:m.date||m.id,p:m.p||'',tp:m.tp||'',sm:m.sm||[],ts:m.ts||[]}));
+          const apiMeetings=data.meetings.map(m=>({id:m.id||m.date,date:m.date||m.id,p:m.p||m.participants||'',tp:m.tp||m.topic||'',sm:m.sm||m.summary||[],ts:m.ts||m.task_ids||[]}));
           const apiMids=new Set(apiMeetings.map(m=>m.id));
           // Keep local meetings not in API
           const localOnly=M.filter(m=>!apiMids.has(m.id));
@@ -964,8 +975,7 @@ function renderListView(){
   let shown=0;
   for(const pid of groups){
     const list=topTasks().filter(t=>(t.project||'')===pid&&matchesFilters(t));
-    if(!list.length&&pid!=='')continue;
-    if(!list.length)continue;
+    if(!list.length&&pid==='')continue;
     shown+=list.length;
     const open=openProj[pid]!==false, pp=projProgOf(pid);
     h+=`<div class="projbox ${open?'':'closed'}">
@@ -973,9 +983,12 @@ function renderListView(){
         <span class="caret">▼</span><span class="dot" style="background:${projColor(pid)}"></span>${esc(projName(pid))}
         <span class="gcnt">${list.length}</span>
         <span class="pprog"><span class="pbar" style="width:64px"><span class="pfill" style="width:${pp}%;display:block;height:100%"></span></span><span class="pnum">${pp}%</span></span></div>`;
-    if(open)for(const t of list){
-      h+=rowL2(t);
-      if(openSubs.has(t.id))for(const s of subsOf(t.id))h+=rowL3(s);
+    if(open){
+      if(!list.length)h+='<div class="empty" style="padding:14px;font-size:12px">아직 업무가 없습니다 — ＋ 새 업무에서 이 프로젝트를 선택하세요</div>';
+      for(const t of list){
+        h+=rowL2(t);
+        if(openSubs.has(t.id))for(const s of subsOf(t.id))h+=rowL3(s);
+      }
     }
     h+='</div>';
   }
@@ -1008,16 +1021,19 @@ function rowL3(s){
     <div class="memo">${descFirstLine(s)||''}</div></div>`;
 }
 
-/* ── 간트 뷰 (일/주/월 줌) ── */
+/* ── 간트 뷰 (일/주/월 줌 · 대-중-소) ── */
 let GZOOM='day';
 function renderGanttView(){
   const stc={대기중:'var(--st-wait)',진행중:'var(--st-run)',완료:'var(--st-done)',보류:'var(--st-hold)'};
-  const dated=topTasks().filter(t=>t.start_date&&t.due_date&&t.due_date!=='N/A'&&matchesFilters(t));
+  const hasD=t=>t.start_date&&t.due_date&&t.due_date!=='N/A';
+  const dsubs=t=>subsOf(t.id).filter(hasD);
+  const parents=topTasks().filter(t=>matchesFilters(t)&&(hasD(t)||dsubs(t).length));
   const today=new Date();today.setHours(0,0,0,0);
   let min=new Date(today.getTime()-3*864e5),max=new Date(today.getTime()+11*864e5);
-  for(const t of dated){const a=new Date(t.start_date),b=new Date(t.due_date);
-    if(!isNaN(a)&&a<min)min=a;if(!isNaN(b)&&b>max)max=b}
-  /* 단위 배열 구성 */
+  const feed=t=>{if(hasD(t)){const a=new Date(t.start_date),b=new Date(t.due_date);
+    if(!isNaN(a)&&a<min)min=a;if(!isNaN(b)&&b>max)max=b}};
+  for(const t of parents){feed(t);for(const s of dsubs(t))feed(s)}
+  /* 단위 배열 */
   let units=[];
   if(GZOOM==='day'){
     const span=Math.min(42,Math.round((max-min)/864e5)+1);
@@ -1040,28 +1056,34 @@ function renderGanttView(){
   const todayIdx=ui(today);
   const tl=()=>{const p=((todayIdx+0.5)/span*100).toFixed(2);
     return `<div class="todayline" style="left:${p}%"></div><div class="todaytag" style="left:${p}%">오늘</div>`};
+  const bar=(t,indent)=>{
+    if(!hasD(t))return `<div class="gdays" style="${cols}">${cells()}${tl()}</div>`;
+    const p=progOf(t),a=ui(t.start_date),b=Math.max(ui(t.due_date),a);
+    const L=(a/span*100).toFixed(2),W=((b-a+1)/span*100).toFixed(2);
+    return `<div class="gdays" style="${cols}">${cells()}
+      <div class="gbar" style="left:${L}%;width:${W}%" onclick="selTask('${t.id}')" title="${esc(t.title)} (${t.start_date}~${t.due_date}) ${p.v}%">
+        <span class="baseb" style="background:${stc[t.status]||stc.대기중}"></span>
+        <span class="fillb" style="background:${stc[t.status]||stc.대기중};width:${p.v}%"></span>
+        <span class="lbl">${p.v>0?p.v+'%':''}</span></div>${tl()}</div>`;
+  };
   const zoomChips=['day','week','month'].map(z=>
     `<span class="chip ${GZOOM===z?'onf':''}" onclick="GZOOM='${z}';render()">${{day:'일',week:'주',month:'월'}[z]}</span>`).join('');
-  let head=`<div class="grow head"><div class="gname">업무 (WBS)</div><div class="gdays" style="${cols}">`;
+  let head=`<div class="grow head"><div class="gname">업무 (WBS · 대-중-소)</div><div class="gdays" style="${cols}">`;
   head+=units.map(u=>`<div class="gday${u.wk?' wkend':''}">${u.label}</div>`).join('');
   head+='</div></div>';
   let rows='';
-  const groups=[...new Set(dated.map(t=>t.project||''))];
+  const groups=[...new Set(parents.map(t=>t.project||''))];
   for(const pid of groups){
-    const list=dated.filter(t=>(t.project||'')===pid);
+    const list=parents.filter(t=>(t.project||'')===pid);
     rows+=`<div class="grow gproj"><div class="gname"><span class="dot" style="background:${projColor(pid)}"></span>${esc(projName(pid))}</div><div class="gdays" style="${cols}">${cells()}</div></div>`;
     for(const t of list){
-      const p=progOf(t),a=ui(t.start_date),b=Math.max(ui(t.due_date),a);
-      const L=(a/span*100).toFixed(2),W=((b-a+1)/span*100).toFixed(2);
-      rows+=`<div class="grow"><div class="gname" onclick="selTask('${t.id}')" title="${esc(t.title)}">${avh(t.assignee,1)}${esc(t.title)}</div>
-        <div class="gdays" style="${cols}">${cells()}
-          <div class="gbar" style="left:${L}%;width:${W}%" onclick="selTask('${t.id}')" title="${esc(t.title)} (${t.start_date}~${t.due_date}) ${p.v}%">
-            <span class="baseb" style="background:${stc[t.status]||stc.대기중}"></span>
-            <span class="fillb" style="background:${stc[t.status]||stc.대기중};width:${p.v}%"></span>
-            <span class="lbl">${p.v>0?p.v+'%':''}</span></div>${tl()}</div></div>`;
+      rows+=`<div class="grow"><div class="gname" onclick="selTask('${t.id}')" title="${esc(t.title)}">${avh(t.assignee,1)}${esc(t.title)}</div>${bar(t)}</div>`;
+      for(const s of dsubs(t)){
+        rows+=`<div class="grow"><div class="gname" style="padding-left:34px;font-size:11.5px;color:var(--ink2)" onclick="selTask('${s.id}')" title="${esc(s.title)}">└ ${esc(s.title)}</div>${bar(s)}</div>`;
+      }
     }
   }
-  if(!dated.length)rows+='<div class="empty">시작일·마감일이 모두 입력된 업무가 없습니다. 업무 상세에서 기간을 넣으면 여기 나타납니다.</div>';
+  if(!parents.length)rows+='<div class="empty">시작일·마감일이 입력된 업무가 없습니다. 업무 상세에서 기간을 넣으면 여기 나타납니다.</div>';
   const gw=GZOOM==='day'?'':'min-width:0;max-width:'+(240+span*(GZOOM==='week'?54:70))+'px';
   document.getElementById('content').innerHTML=
     `<div class="chips" style="padding:0 0 10px">${zoomChips}</div>
@@ -1193,7 +1215,7 @@ function updateDetail(){
         <span class="fk">시작일</span><span class="fv"><input type="date" value="${t.start_date||''}" onchange="ufx(SEL,'start_date',this.value)" style="border:1px solid var(--border2);border-radius:6px;padding:3px 6px;font-size:12px"></span>
         <span class="fk">마감일</span><span class="fv"><input type="date" value="${(t.due_date&&t.due_date!=='N/A')?t.due_date:''}" onchange="ufx(SEL,'due_date',this.value)" style="border:1px solid var(--border2);border-radius:6px;padding:3px 6px;font-size:12px"></span>
         <span class="fk">진척도</span><span class="fv"><span class="pbar" style="width:100px;display:inline-block"><span class="pfill" style="width:${p.v}%;display:block;height:100%"></span></span> <span class="pnum">${p.v}%</span> <span class="auto" title="${p.tip}">자동</span></span>
-        ${t.meeting_id?`<span class="fk">회의록</span><span class="fv"><span class="meetlink" onclick="location.href='index.html'+location.search">▤ ${esc(t.meeting_id)} → 기존 앱에서 열기</span></span>`:''}
+        <span class="fk">회의록</span><span class="fv"><select onchange="ufx(SEL,'meeting_id',this.value)"><option value="">— 없음 —</option>${M.map(m=>`<option value="${esc(m.id)}" ${t.meeting_id===m.id?'selected':''}>${esc(m.date||m.id)} ${esc(m.tp||'')}</option>`).join('')}</select>${t.meeting_id?`<span class="lnk" onclick="VIEW='meetings';SEL='${esc(t.meeting_id)}';render()">열기</span>`:''}</span>
         ${mir?`<span class="fk">미러</span><span class="fv"><span class="mirrorb">⇄ 미러 ${mir}개 · 양방향 동기화</span></span>`:''}
       </div>
       ${descHtml}
@@ -1358,7 +1380,7 @@ async function delTaskNew(){
 /* ── 회의록 뷰 (고도화 대비 틀 유지) ── */
 function renderMeetingsView(){
   let h='<div class="calbox">';
-  h+=`<div class="calhead2"><h3>회의록<span class="c">${M.length}</span></h3><span class="deschint">회의봇(음성→AI요약→과제 자동추출) 연동 시 자동 적재</span></div>`;
+  h+=`<div class="calhead2"><h3>회의록<span class="c">${M.length}</span></h3><button class="btn primary" onclick="mShow('mtgModal')">＋ 회의록 작성</button></div>`;
   if(!M.length)h+='<div class="empty">아직 회의록이 없습니다.<br>회의봇 연동 고도화 시 여기에 쌓이고, 추출된 과제가 업무와 자동 연결됩니다.</div>';
   for(const m of M){
     const on=SEL===m.id;
@@ -1379,6 +1401,20 @@ function renderMeetingsView(){
   document.getElementById('content').innerHTML=h;
   document.getElementById('vtitle').innerHTML=`회의록<span class="n">${M.length}</span>`;
 }
+
+async function addMeeting(){
+  const date=document.getElementById('mDate').value||new Date().toISOString().slice(0,10);
+  const topic=document.getElementById('mTopic').value.trim();if(!topic)return toast('주제를 입력하세요');
+  const parts=document.getElementById('mParts').value.trim();
+  const summary=document.getElementById('mSum').value.split('\n').map(x=>x.trim()).filter(x=>x);
+  const mid='mtg_'+date+'_'+Date.now().toString(36);
+  const r=await apiPost('/api/meeting/save',{id:mid,date,topic,participants:parts,summary,task_ids:[]});
+  if(r&&r.ok){M.unshift({id:mid,date,p:parts,tp:topic,sm:summary,ts:[]});
+    mClose('mtgModal');['mTopic','mParts','mSum'].forEach(i=>document.getElementById(i).value='');
+    VIEW='meetings';SEL=mid;render();toast('회의록 저장됨')}
+  else toast('저장 실패 — 서버 확인 필요');
+}
+
 function selMeet(id){SEL=SEL===id?null:id;render()}
 
 /* ── 초기화 ── */
