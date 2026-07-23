@@ -261,6 +261,47 @@ a{color:var(--accent2)}
 @media (max-width:960px){ .side{position:fixed;z-index:45;height:100vh;box-shadow:var(--shadow)} .shell.side-hidden .side{display:none}
   .shell:not(.side-hidden) .side{display:flex} .shell.pinned .main{margin-right:0} }
 @media (max-width:520px){ .panel{width:100vw} }
+
+/* ── 캘린더 (기존 기능 이식) ── */
+:root{--muted:#8CA0AF}
+.calbox{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.calhead2{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.calhead2 h3{font-size:14px}
+.calhead2 h3 .c{color:var(--ink3);font-weight:500;font-size:12px;margin-left:6px}
+.btn{border:1px solid var(--border2);border-radius:6px;padding:5px 12px;font-size:12px;color:var(--ink2);background:var(--surface);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.sm{font-size:11.5px;padding:4px 10px}
+.cal-hdr{display:flex;align-items:center;gap:10px;margin:6px 0 10px}
+.cal-hdr h4{font-size:14px}
+.cal-nav{border:1px solid var(--border2);border-radius:6px;width:26px;height:26px;font-size:11px;color:var(--ink2)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.dow{text-align:center;font-size:11px;color:var(--ink3);padding:4px 0;font-weight:600}
+.cal-day{aspect-ratio:1.2;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:12.5px;cursor:pointer;border:1px solid transparent;position:relative}
+.cal-day:hover{background:var(--hover)}
+.cal-day.other{cursor:default}
+.cal-day.today{background:var(--accent-tint);color:var(--accent2);font-weight:700;border-color:var(--accent)}
+.cal-day.has-task::after{content:"";position:absolute;bottom:4px;left:calc(50% - 3px);width:5px;height:5px;border-radius:50%;background:var(--st-wait)}
+.cal-day.has-event::before{content:"";position:absolute;bottom:4px;left:calc(50% + 4px);width:5px;height:5px;border-radius:50%;background:var(--st-hold)}
+.week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.week-day{background:var(--surface2);border-radius:8px;padding:8px;min-height:110px;cursor:pointer;border:1px solid transparent}
+.week-day.today{border-color:var(--accent);background:var(--accent-tint)}
+.wd-date{font-weight:700;font-size:13px}
+.wd-dow{font-size:10.5px;color:var(--ink3);margin-bottom:6px}
+.wd-item{font-size:11px;padding:2px 4px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.wd-item:hover{background:var(--hover)}
+.wd-item .wi-dot{font-size:8px;margin-right:3px;color:var(--accent)}
+.wd-empty{font-size:11px;color:var(--ink3)}
+.ev-list{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.ev-item{display:flex;align-items:center;gap:9px;background:var(--surface2);border-radius:7px;padding:8px 10px;font-size:12.5px;cursor:pointer}
+.ev-item:hover{background:var(--hover)}
+.ev-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--st-hold)}
+.ev-dot.task{background:var(--st-wait)}
+.ev-body{flex:1;min-width:0}
+.ev-title{font-weight:600}
+.ev-meta{font-size:11px;color:var(--ink3)}
+.ev-status{font-size:10.5px;border-radius:4px;padding:2px 6px;background:var(--surface2)}
+.calbox h5{font-size:12.5px;color:var(--ink2)}
+.ei{font-size:22px}
 </style>
 </head>
 <body>
@@ -273,7 +314,7 @@ a{color:var(--accent2)}
       <button class="navitem on" data-nav="tasks" onclick="navTo('tasks')"><span class="ic">☰</span>전체 업무<span class="cnt" id="cntAll"></span></button>
       <button class="navitem" data-nav="gantt" onclick="navTo('gantt')"><span class="ic">▤</span>간트차트 <span class="keep">WBS</span></button>
       <button class="navitem" data-nav="feed" onclick="navTo('feed')"><span class="ic">◎</span>피드 <span class="keep">봇+사람</span></button>
-      <button class="navitem" onclick="location.href='index.html'+location.search"><span class="ic">▦</span>캘린더 <span class="keep">기존</span></button>
+      <button class="navitem" data-nav="calendar" onclick="navTo('calendar')"><span class="ic">▦</span>캘린더</button>
       <button class="navitem" data-nav="mentions" onclick="navTo('mentions')"><span class="ic">@</span>나를 언급<span class="cnt" id="cntMention"></span></button>
       <button class="navitem" data-nav="myposts" onclick="navTo('myposts')"><span class="ic">▣</span>내 게시물<span class="cnt" id="cntMine"></span></button>
     </div>
@@ -879,10 +920,11 @@ function render(){
   else if(VIEW==='feed')renderFeedView();
   else if(VIEW==='mentions')renderMentionsView();
   else if(VIEW==='myposts')renderMyPostsView();
+  else if(VIEW==='calendar')renderCalendarView();
   updateDetail();
 }
 function renderContent(){render()}
-function navTo(v){VIEW=v;PAGE=v==='myposts'?'my-tasks':'team-tasks-all';
+function navTo(v){VIEW=v;PAGE=v==='myposts'?'my-tasks':(v==='calendar'?'calendar-month':'team-tasks-all');
   if(!PIN)closeDetail(true);render()}
 function toggleSide(){document.getElementById('shell').classList.toggle('side-hidden')}
 
@@ -939,24 +981,42 @@ function rowL3(s){
     <div class="memo">${descFirstLine(s)||''}</div></div>`;
 }
 
-/* ── 간트 뷰 ── */
+/* ── 간트 뷰 (일/주/월 줌) ── */
+let GZOOM='day';
 function renderGanttView(){
   const stc={대기중:'var(--st-wait)',진행중:'var(--st-run)',완료:'var(--st-done)',보류:'var(--st-hold)'};
   const dated=topTasks().filter(t=>t.start_date&&t.due_date&&t.due_date!=='N/A'&&matchesFilters(t));
   const today=new Date();today.setHours(0,0,0,0);
-  let g0=new Date(today.getTime()-3*864e5),g1=new Date(today.getTime()+11*864e5);
+  let min=new Date(today.getTime()-3*864e5),max=new Date(today.getTime()+11*864e5);
   for(const t of dated){const a=new Date(t.start_date),b=new Date(t.due_date);
-    if(a<g0)g0=a;if(b>g1)g1=b}
-  const span=Math.min(31,Math.round((g1-g0)/864e5)+1);
-  const di=d=>Math.round((new Date(d)-g0)/864e5);
+    if(!isNaN(a)&&a<min)min=a;if(!isNaN(b)&&b>max)max=b}
+  /* 단위 배열 구성 */
+  let units=[];
+  if(GZOOM==='day'){
+    const span=Math.min(42,Math.round((max-min)/864e5)+1);
+    for(let i=0;i<span;i++){const d=new Date(min.getTime()+i*864e5);
+      units.push({s:d,e:new Date(d.getTime()+864e5-1),label:`${d.getMonth()+1}/${d.getDate()}`,wk:d.getDay()===0||d.getDay()===6})}
+  }else if(GZOOM==='week'){
+    const s0=new Date(min);s0.setDate(s0.getDate()-s0.getDay());
+    for(let i=0;i<40;i++){const s=new Date(s0.getTime()+i*7*864e5);if(s>max&&units.length)break;
+      units.push({s,e:new Date(s.getTime()+7*864e5-1),label:`${s.getMonth()+1}/${s.getDate()}주`})}
+  }else{
+    const s0=new Date(min.getFullYear(),min.getMonth(),1);
+    for(let i=0;i<18;i++){const s=new Date(s0.getFullYear(),s0.getMonth()+i,1);if(s>max&&units.length)break;
+      units.push({s,e:new Date(s.getFullYear(),s.getMonth()+1,0,23,59,59),
+        label:`${s.getFullYear()!==today.getFullYear()?String(s.getFullYear()).slice(2)+'.':''}${s.getMonth()+1}월`})}
+  }
+  const span=units.length||1;
+  const ui=d=>{const x=new Date(d);for(let i=0;i<span;i++){if(x<=units[i].e)return i}return span-1};
   const cols=`grid-template-columns:repeat(${span},1fr)`;
-  const cells=()=>{let c='';for(let i=0;i<span;i++){const wd=new Date(g0.getTime()+i*864e5).getDay();
-    c+=`<div class="gcell${wd===0||wd===6?' wkend':''}"></div>`}return c};
-  const tl=()=>{const p=((di(today)+0.5)/span*100).toFixed(2);
+  const cells=()=>units.map(u=>`<div class="gcell${u.wk?' wkend':''}"></div>`).join('');
+  const todayIdx=ui(today);
+  const tl=()=>{const p=((todayIdx+0.5)/span*100).toFixed(2);
     return `<div class="todayline" style="left:${p}%"></div><div class="todaytag" style="left:${p}%">오늘</div>`};
+  const zoomChips=['day','week','month'].map(z=>
+    `<span class="chip ${GZOOM===z?'onf':''}" onclick="GZOOM='${z}';render()">${{day:'일',week:'주',month:'월'}[z]}</span>`).join('');
   let head=`<div class="grow head"><div class="gname">업무 (WBS)</div><div class="gdays" style="${cols}">`;
-  for(let i=0;i<span;i++){const dt=new Date(g0.getTime()+i*864e5),wd=dt.getDay();
-    head+=`<div class="gday${wd===0||wd===6?' wkend':''}">${dt.getMonth()+1}/${dt.getDate()}</div>`}
+  head+=units.map(u=>`<div class="gday${u.wk?' wkend':''}">${u.label}</div>`).join('');
   head+='</div></div>';
   let rows='';
   const groups=[...new Set(dated.map(t=>t.project||''))];
@@ -964,8 +1024,8 @@ function renderGanttView(){
     const list=dated.filter(t=>(t.project||'')===pid);
     rows+=`<div class="grow gproj"><div class="gname"><span class="dot" style="background:${projColor(pid)}"></span>${esc(projName(pid))}</div><div class="gdays" style="${cols}">${cells()}</div></div>`;
     for(const t of list){
-      const p=progOf(t),a=Math.max(0,di(t.start_date)),b=Math.min(span-1,di(t.due_date));
-      const L=(a/span*100).toFixed(2),W=(((b-a+1))/span*100).toFixed(2);
+      const p=progOf(t),a=ui(t.start_date),b=Math.max(ui(t.due_date),a);
+      const L=(a/span*100).toFixed(2),W=((b-a+1)/span*100).toFixed(2);
       rows+=`<div class="grow"><div class="gname" onclick="selTask('${t.id}')" title="${esc(t.title)}">${avh(t.assignee,1)}${esc(t.title)}</div>
         <div class="gdays" style="${cols}">${cells()}
           <div class="gbar" style="left:${L}%;width:${W}%" onclick="selTask('${t.id}')" title="${esc(t.title)} (${t.start_date}~${t.due_date}) ${p.v}%">
@@ -976,11 +1036,24 @@ function renderGanttView(){
   }
   if(!dated.length)rows+='<div class="empty">시작일·마감일이 모두 입력된 업무가 없습니다. 업무 상세에서 기간을 넣으면 여기 나타납니다.</div>';
   document.getElementById('content').innerHTML=
-    `<div class="gantt"><div class="ggrid">${head}${rows}</div>
+    `<div class="chips" style="padding:0 0 10px">${zoomChips}</div>
+     <div class="gantt"><div class="ggrid">${head}${rows}</div>
      <div class="glegend"><span><i style="background:var(--st-wait)"></i>대기</span><span><i style="background:var(--st-run)"></i>진행</span>
      <span><i style="background:var(--st-hold)"></i>보류</span><span><i style="background:var(--today)"></i>오늘</span>
-     <span style="margin-left:auto">막대 채움 = 진척도(자동) · 업무 데이터와 동일 원천</span></div></div>`;
+     <span style="margin-left:auto">막대 채움 = 진척도(자동) · 단위: ${{day:'1일',week:'1주',month:'1개월'}[GZOOM]}</span></div></div>`;
   document.getElementById('vtitle').innerHTML='간트차트<span class="n">WBS 타임라인</span>';
+}
+
+/* ── 캘린더 래퍼 (기존 renderCalendar를 새 레이아웃 안에서 구동) ── */
+function renderCalendarView(){
+  const names={'calendar-month':'월간','calendar-week':'주간','calendar-events':'일정 목록'};
+  const sub=Object.keys(names).map(p=>
+    `<span class="chip ${PAGE===p?'onf':''}" onclick="PAGE='${p}';SEL=null;render()">${names[p]}</span>`).join('');
+  document.getElementById('content').innerHTML=
+    `<div class="chips" style="padding:0 0 10px">${sub}</div>
+     <div class="calbox"><div id="listHeader" class="calhead2"></div><div id="listContent"></div></div>`;
+  renderCalendar();
+  document.getElementById('vtitle').innerHTML='캘린더<span class="n">'+names[PAGE]+'</span>';
 }
 
 /* ── 피드 뷰 ── */
@@ -1048,7 +1121,7 @@ let _descEditing=false;
 function updateDetail(){
   const dp=document.getElementById('dp');
   if(!SEL){dp.classList.remove('open');return}
-  const t=tById(SEL);if(!t){closeDetail();return}
+  const t=tById(SEL);if(!t){if(VIEW==='calendar'){dp.classList.remove('open');return}closeDetail();return}
   const parent=t.parent_id?tById(t.parent_id):null;
   const p=progOf(t),subs=subsOf(t.id);
   const ck=t.checklist||[];
@@ -1257,6 +1330,151 @@ async function delTaskNew(){
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDetail()});
 PAGE='team-tasks-all';
 boot();
+function calDays(y,m){return new Date(y,m+1,0).getDate()}
+function calDow(y,m){return new Date(y,m,1).getDay()}
+function dueSet(){
+  const s=new Set();
+  T.forEach(t=>{if(t.due_date&&t.due_date!=='N/A'){const d=t.due_date.replace(/-/g,'');s.add(d)}});
+  Object.keys(EV).forEach(k=>{if(EV[k]&&EV[k].date){const d=EV[k].date.replace(/-/g,'');s.add(d)}});
+  return s;
+}
+function evOnDay(y,m,d){
+  const ds=`${String(y)}${String(m+1).padStart(2,'0')}${String(d).padStart(2,'0')}`;
+  const tasks=T.filter(t=>t.due_date&&t.due_date!=='N/A'&&t.due_date.replace(/-/g,'')===ds);
+  const events=[];Object.entries(EV).forEach(([id,e])=>{if(e&&e.date&&e.date.replace(/-/g,'')===ds)events.push({id,...e})});
+  return {tasks,events};
+}
+function renderCalendar(){
+  const now=new Date();
+  if(calY===undefined){calY=now.getFullYear();calM=now.getMonth()}
+  const today=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  const todayStr=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const ds=dueSet(),totalDays=calDays(calY,calM),startDow=calDow(calY,calM);
+  const dows=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const mName=calY+'년 '+(calM+1)+'월';
+  if(PAGE==='calendar-events'){
+    const allEv=[];Object.entries(EV).forEach(([id,e])=>{if(e)allEv.push({id,...e})});
+    allEv.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    document.getElementById('listHeader').innerHTML=`<h3>📅 All Events<span class="c">${allEv.length}</span></h3><button class="btn primary" onclick="addEvent()">+ Event</button>`;
+    document.getElementById('listContent').innerHTML=allEv.length===0
+      ?'<div class="empty"><div class="ei">📭</div><p>No events</p></div>'
+      :`<div class="ev-list">${allEv.map(e=>`<div class="ev-item personal" onclick="editEvent('${e.id}')"><div class="ev-dot personal"></div><div class="ev-body"><div class="ev-title">${esc(e.title)}</div><div class="ev-meta">📅 ${e.date}${e.time?' ⏰ '+e.time:''}</div></div><span class="ev-status" style="color:var(--muted)">✎</span></div>`).join('')}</div>`;
+    return;
+  }
+  if(PAGE==='calendar-week'){
+    const today=new Date();
+    const baseDate=new Date(today);baseDate.setDate(today.getDate()-today.getDay()+calWeekOffset);
+    const startOfWeek=new Date(baseDate);startOfWeek.setDate(baseDate.getDate()-baseDate.getDay());
+    const endOfWeek=new Date(startOfWeek);endOfWeek.setDate(startOfWeek.getDate()+6);
+    const weekLabel=startOfWeek.toLocaleDateString('ko-KR',{month:'long',day:'numeric'})+' — '+endOfWeek.toLocaleDateString('ko-KR',{month:'long',day:'numeric'});
+    document.getElementById('listHeader').innerHTML=`<h3>📅 Week</h3><button class="btn primary" onclick="addEvent()">+ Event</button>`;
+    let whtml=`<div class="cal-hdr"><button class="cal-nav" onclick="calWeekNav(-7)">◀</button><h4>${weekLabel}</h4><button class="cal-nav" onclick="calWeekNav(7)">▶</button><button class="btn sm" onclick="calWeekGoToday()">Today</button></div>`;
+    whtml+=`<div class="week-strip">`;
+    for(let i=0;i<7;i++){
+      const d=new Date(startOfWeek);d.setDate(startOfWeek.getDate()+i);
+      const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const isToday=ds===todayStr;
+      const dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+      const dayTasks=T.filter(t=>t.due_date&&t.due_date!=='N/A'&&t.due_date===ds);
+      const dayEvents=[];Object.entries(EV).forEach(([id,e])=>{if(e&&e.date===ds)dayEvents.push({id,...e})});
+      whtml+=`<div class="week-day${isToday?' today':''}" onclick="if(event.target.tagName!=='SELECT')SEL='${ds}';render();">
+        <div class="wd-date">${d.getDate()}</div><div class="wd-dow">${dow}</div>
+        <div class="wd-items">`;
+      dayTasks.forEach(t=>{whtml+=`<div class="wd-item task" onclick="event.stopPropagation();selTask('${t.id}')"><span class="wi-dot">●</span>${esc(t.title)}</div>`});
+      dayEvents.forEach(e=>{whtml+=`<div class="wd-item event" onclick="event.stopPropagation();editEvent('${e.id}')"><span class="wi-dot">○</span>${esc(e.title)}</div>`});
+      if(!dayTasks.length&&!dayEvents.length)whtml+=`<div class="wd-empty">—</div>`;
+      whtml+=`</div></div>`;
+    }
+    whtml+=`</div>`;
+    document.getElementById('listContent').innerHTML=whtml;
+    return;
+  }
+  document.getElementById('listHeader').innerHTML=`<h3>📅 Calendar</h3><button class="btn primary" onclick="addEvent()">+ Event</button>`;
+  let html=`<div class="cal-hdr"><button class="cal-nav" onclick="calNav(-1)">◀</button><h4>${mName}</h4><button class="cal-nav" onclick="calNav(1)">▶</button><button class="btn sm" onclick="calGoToday()">Today</button></div>`;
+  html+=`<div class="cal-grid">${dows.map(d=>`<div class="dow">${d}</div>`).join('')}`;
+  for(let i=0;i<startDow;i++)html+=`<div class="cal-day other"></div>`;
+  for(let d=1;d<=totalDays;d++){
+    const dk=`${calY}${String(calM+1).padStart(2,'0')}${String(d).padStart(2,'0')}`;
+    const cls=['cal-day'];if(dk===today)cls.push('today');if(ds.has(dk))cls.push('has-task');
+    let hasEv=false;Object.values(EV).forEach(e=>{if(e&&e.date&&e.date.replace(/-/g,'')===dk)hasEv=true});
+    if(hasEv)cls.push('has-event');
+    html+=`<div class="${cls.join(' ')}" onclick="calClick(${d})">${d}</div>`;
+  }
+  html+=`</div>`;
+  if(PAGE==='calendar-month'&&!SEL){
+    const{events}=evOnDay(calY,calM,now.getDate());
+    const todayTasks=T.filter(t=>t.due_date&&t.due_date!=='N/A'&&t.due_date===todayStr);
+    if(todayTasks.length||events.length){
+      html+=`<h5 style="margin-top:16px">📌 Today — ${todayStr}</h5><div class="ev-list">`;
+      todayTasks.forEach(t=>{html+=`<div class="ev-item task" onclick="selTask('${t.id}')"><div class="ev-dot task"></div><div class="ev-body"><div class="ev-title">${esc(t.title)}</div><div class="ev-meta">👤 ${esc(t.assignee)} · ${STL[t.status]}</div></div><span class="ev-status" style="background:rgba(238,117,30,.1);color:var(--accent2)">⏳ ${t.due_date}</span></div>`});
+      events.forEach(e=>{html+=`<div class="ev-item personal" onclick="editEvent('${e.id}')"><div class="ev-dot personal"></div><div class="ev-body"><div class="ev-title">${esc(e.title)}</div><div class="ev-meta">${e.time?'⏰ '+e.time:'종일'}</div></div><span class="ev-status" style="color:var(--muted);font-size:10px">개인</span></div>`});
+      html+=`</div>`;
+    }
+  }
+  if(SEL&&PAGE==='calendar-month'){
+    const dt=`${calY}-${String(calM+1).padStart(2,'0')}-${String(SEL).padStart(2,'0')}`;
+    const{events}=evOnDay(calY,calM,SEL);
+    const dayTasks=T.filter(t=>t.due_date&&t.due_date!=='N/A'&&t.due_date===dt);
+    html+=`<h5 style="margin-top:16px">📌 ${mName} ${SEL}일</h5><div class="ev-list">`;
+    if(!dayTasks.length&&!events.length)html+=`<div style="color:var(--muted);font-size:12px;padding:8px 0">No tasks or events</div>`;
+    dayTasks.forEach(t=>{html+=`<div class="ev-item task" onclick="selTask('${t.id}')"><div class="ev-dot task"></div><div class="ev-body"><div class="ev-title">${esc(t.title)}</div><div class="ev-meta">👤 ${esc(t.assignee)} · ${STL[t.status]}</div></div><span class="ev-status" style="background:rgba(238,117,30,.1);color:var(--accent2)">과제</span></div>`});
+    events.forEach(e=>{html+=`<div class="ev-item personal" onclick="editEvent('${e.id}')"><div class="ev-dot personal"></div><div class="ev-body"><div class="ev-title">${esc(e.title)}</div><div class="ev-meta">${e.time?'⏰ '+e.time:'종일'}</div></div><span class="ev-status" style="color:var(--muted);font-size:10px">개인</span></div>`});
+    html+=`</div><button class="btn sm" style="margin-top:8px" onclick="addEvent('${dt}')">+ Add Event</button>`;
+  }
+  document.getElementById('listContent').innerHTML=html;
+}
+
+function calNav(dir){calM+=dir;if(calM<0){calM=11;calY--}if(calM>11){calM=0;calY++}SEL=null;render()}
+function calGoToday(){const n=new Date();calY=n.getFullYear();calM=n.getMonth();SEL=null;render()}
+function calClick(d){SEL=d;render()}
+function calWeekNav(days){calWeekOffset+=days;render()}
+function calWeekGoToday(){calWeekOffset=0;render()}
+
+async function addEvent(date){
+  const title=prompt('이벤트 제목:');if(!title)return;
+  const d=date||prompt('날짜 (YYYY-MM-DD):',new Date().toISOString().slice(0,10));if(!d)return;
+  const time=prompt('시간 (선택, HH:MM):','');
+  const id='ev'+Date.now();
+
+  // API mode: POST to /api/event
+  if(API_BASE){
+    try{
+      const result=await apiPost('/api/event',{id,title,date:d,time:time||'',action:'add'});
+      if(result&&result.ok){
+        EV[id]={title,date:d,time:time||'',created:now()};
+        s();render();updateDetail();toast('Event added');
+        return;
+      }
+    }catch(e){console.error('API event failed',e);}
+  }
+  // localStorage fallback
+  EV[id]={title,date:d,time:time||'',created:now()};
+  s();render();updateDetail();toast('Event added');
+}
+async function editEvent(id){
+  const e=EV[id];if(!e)return;
+  const act=prompt('Edit / Delete?\n\n제목: '+e.title+'\n날짜: '+e.date+'\n시간: '+(e.time||'없음')+'\n\n"d" 입력 = 삭제, 새 제목 입력 = 수정');
+  if(act===null)return;
+
+  // API mode: POST to /api/event
+  if(API_BASE){
+    try{
+      if(act.toLowerCase()==='d'){
+        await apiPost('/api/event',{id,title:e.title,date:e.date,time:e.time||'',action:'delete'});
+      }else if(act.trim()){
+        await apiPost('/api/event',{id,title:act.trim(),date:e.date,time:e.time||'',action:'add'});
+      }
+      // Refresh from API
+      const data=await apiGet('/api/state');
+      if(data&&data.ok){EV=data.events||{};}
+      render();toast(act.toLowerCase()==='d'?'Deleted':'Updated');
+      return;
+    }catch(e){console.error('API event edit failed',e);}
+  }
+  // localStorage fallback
+  if(act.toLowerCase()==='d'){delete EV[id];s();render();toast('Deleted');return}
+  if(act.trim()){EV[id].title=act.trim();s();render();toast('Updated')}
+}
 
 </script>
 </body>
