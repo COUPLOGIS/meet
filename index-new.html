@@ -317,6 +317,7 @@ a{color:var(--accent2)}
 
 .pmv{display:none;font-size:9px;color:var(--ink3);padding:2px 4px;border-radius:4px;cursor:pointer;flex:none}
 .navitem:hover .pmv{display:inline-block}
+.trow:hover .pmv{display:inline-block}
 .pmv:hover{color:var(--accent2);background:var(--surface2)}
 </style>
 </head>
@@ -840,8 +841,9 @@ function projName(p){const pj=PROJECTS_DB.find(x=>x.id===p);return pj?pj.name:(p
 
 /* ── 계층 헬퍼 (미러 제외) ── */
 function baseTasks(){return all().filter(t=>!t.mirrored_from)}
-function subsOf(id){return baseTasks().filter(t=>t.parent_id===id)}
-function topTasks(){return baseTasks().filter(t=>!t.parent_id)}
+const byOrd=(a,b)=>((a.ord??0)-(b.ord??0))||String(a.id).localeCompare(String(b.id));
+function subsOf(id){return baseTasks().filter(t=>t.parent_id===id).sort(byOrd)}
+function topTasks(){return baseTasks().filter(t=>!t.parent_id).sort(byOrd)}
 function tById(id){return all().find(t=>t.id===id)}
 
 /* ── 진척도 = 파생값 (입력 아님) ── */
@@ -935,6 +937,19 @@ async function addProjectFromModal(){
   else sel.value='';
 }
 
+
+async function moveTask(id,dir){
+  const t=tById(id);if(!t)return;
+  const sibs=topTasks().filter(x=>(x.project||'')===(t.project||''));
+  const i=sibs.findIndex(x=>x.id===id),j=i+dir;
+  if(i<0||j<0||j>=sibs.length)return;
+  const tmp=sibs[i];sibs[i]=sibs[j];sibs[j]=tmp;
+  const updates=[];
+  sibs.forEach((x,idx)=>{if((x.ord??0)!==idx){const bt=T.find(y=>y.id===x.id);if(bt)bt.ord=idx;updates.push({id:x.id,ord:idx})}});
+  render();
+  for(const u of updates)await apiPost('/api/task/save',u);
+  _dirty=true;_lastLocal=Date.now();setTimeout(()=>{_dirty=false},2000);
+}
 async function moveProject(pid,dir){
   const i=PROJECTS_DB.findIndex(p=>p.id===pid);if(i<0)return;
   const j=i+dir;if(j<0||j>=PROJECTS_DB.length)return;
@@ -1019,7 +1034,7 @@ function rowL2(t){
   return `<div class="trow${t.id===SEL?' sel':''}" tabindex="0" role="button" onclick="selTask('${t.id}')" onkeydown="if(event.key==='Enter')selTask('${t.id}')">
     <div class="tname">
       <button class="tgl${subs.length?'':' none'}" onclick="event.stopPropagation();openSubs.has('${t.id}')?openSubs.delete('${t.id}'):openSubs.add('${t.id}');render()">${opened?'−':'+'}</button>
-      <span class="tt">${esc(t.title)}</span>${subs.length?`<span class="scount">(${subs.length})</span>`:''}${mir?'<span class="mirrorb">⇄</span>':''}</div>
+      <span class="tt">${esc(t.title)}</span>${subs.length?`<span class="scount">(${subs.length})</span>`:''}${mir?'<span class="mirrorb">⇄</span>':''}<span class="pmv" onclick="event.stopPropagation();moveTask('${t.id}',-1)">▲</span><span class="pmv" onclick="event.stopPropagation();moveTask('${t.id}',1)">▼</span></div>
     <div>${stPill(t)}</div>
     <div class="asg">${avh(t.assignee,1)}<span>${esc(t.assignee||'—')}</span></div>
     <div class="dt">${dshort(t.start_date)}</div>
