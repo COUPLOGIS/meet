@@ -368,6 +368,10 @@ a{color:var(--accent2)}
 .lbx:hover{background:rgba(255,255,255,.25)}
 /* #18 모바일 사이드바 스크림 */
 .mscrim{position:fixed;inset:0;background:rgba(10,20,30,.35);z-index:44;display:none}
+/* #17 로그인 게이트 */
+#loginGate{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center}
+.lgcard{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);
+  padding:38px 46px;text-align:center;max-width:92vw}
 .lklist{display:flex;flex-wrap:wrap;gap:6px}
 .lkchip{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:var(--surface2);
   border:1px solid var(--border);border-radius:14px;padding:4px 11px;text-decoration:none;color:var(--ink2);max-width:100%}
@@ -410,7 +414,7 @@ a{color:var(--accent2)}
         <button class="iconbtn" title="좌측 메뉴 접기/펼치기" onclick="toggleSide()">≪</button>
         <span class="vtitle" id="vtitle">전체 업무</span>
         <div class="tb-right">
-          <span class="av" id="meAv" title=""></span>
+          <span class="av" id="meAv" title="" style="cursor:pointer" onclick="if(confirm('로그아웃할까요?'))logout()"></span>
         </div>
       </div>
       <div class="chips" id="chips"></div>
@@ -471,7 +475,14 @@ let API_BASE = (() => {
   return 'https://teamlog.shares.zrok.io';
 })();
 
-const USER_ID = new URLSearchParams(location.search).get('user') || '';
+let USER_ID = new URLSearchParams(location.search).get('user') || '';
+// #17: 텔레그램 로그인 세션 (URL ?user= 가 없으면 저장된 인증 사용)
+try{
+  if(!USER_ID){
+    const _a=JSON.parse(localStorage.getItem('tlv2_auth')||'null');
+    if(_a&&_a.id)USER_ID=String(_a.id);
+  }
+}catch(e){}
 let T=[],M=[],MH={},ED={},EV={},calY,calM,PAGE=USER_ID?'my-tasks':'team-tasks-all',SEL=null,USERS={},CP_ITEMS=[];
 var SORT_BY='id',SORT_DIR='asc',Q='',FILTER_STATUS='',FILTER_PRIORITY='',KANBAN=false;
 var FILTER_TAG='';
@@ -1826,6 +1837,38 @@ async function addMeeting(){
 
 function selMeet(id){SEL=SEL===id?null:id;render()}
 
+/* ── #17 텔레그램 로그인 게이트 ── */
+function showLogin(){
+  if(document.getElementById('loginGate'))return;
+  const d=document.createElement('div');d.id='loginGate';
+  d.innerHTML=`<div class="lgcard">
+    <img src="logo_new.png" alt="TeamLog" style="height:30px;margin-bottom:16px">
+    <div style="font-size:15px;font-weight:800;margin-bottom:5px">팀로그 로그인</div>
+    <div style="font-size:12.5px;color:var(--ink3);margin-bottom:18px">텔레그램 계정으로 본인 확인 후 이용합니다</div>
+    <div id="tgWidget"></div>
+    <div style="font-size:11px;color:var(--ink3);margin-top:16px">텔레그램 앱에서 확인 요청이 오면 승인해 주세요</div></div>`;
+  document.body.appendChild(d);
+  const s=document.createElement('script');
+  s.src='https://telegram.org/js/telegram-widget.js?22';s.async=true;
+  s.setAttribute('data-telegram-login','Teamlog2_bot');
+  s.setAttribute('data-size','large');
+  s.setAttribute('data-radius','8');
+  s.setAttribute('data-onauth','onTgAuth(user)');
+  document.getElementById('tgWidget').appendChild(s);
+}
+async function onTgAuth(user){
+  try{
+    const r=await fetch(API_BASE+'/api/auth/telegram',{method:'POST',
+      headers:{'Content-Type':'application/json','skip_zrok_interstitial':'true'},
+      body:JSON.stringify(user)});
+    const j=await r.json();
+    if(j&&j.ok){localStorage.setItem('tlv2_auth',JSON.stringify(user));location.reload()}
+    else alert('로그인 검증 실패: '+((j&&j.error)||'서버 오류'));
+  }catch(e){alert('로그인 실패 — 서버(k12) 연결을 확인해 주세요')}
+}
+function logout(){localStorage.removeItem('tlv2_auth');
+  location.href=location.pathname}  // ?user= 제거 후 게이트로
+
 /* ── 초기화 ── */
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
@@ -1834,6 +1877,7 @@ document.addEventListener('keydown',e=>{
   closeDetail();
 });
 PAGE='team-tasks-all';
+if(!USER_ID)showLogin();  // #17: 미인증 접속은 텔레그램 로그인
 /* #18: 모바일은 사이드바 닫힌 채 시작 + 왼쪽 스와이프로 닫기 */
 if(window.innerWidth<=960)document.getElementById('shell').classList.add('side-hidden');
 syncMscrim();
