@@ -302,6 +302,18 @@ a{color:var(--accent2)}
 .ev-status{font-size:10.5px;border-radius:4px;padding:2px 6px;background:var(--surface2)}
 .calbox h5{font-size:12.5px;color:var(--ink2)}
 .ei{font-size:22px}
+
+/* ── 회의록 ── */
+.mcard{display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:8px;padding:10px 12px;margin-top:8px;cursor:pointer;border:1px solid transparent}
+.mcard:hover{background:var(--hover)}
+.mcard.active{border-color:var(--accent);background:var(--accent-tint)}
+.mc-body{flex:1;min-width:0}
+.mc-date{font-size:11px;color:var(--ink3)}
+.mc-title{font-weight:600;font-size:13px}
+.mc-meta{font-size:11.5px;color:var(--ink3)}
+.mc-tasks{font-size:11px;color:var(--accent2);background:var(--surface);border-radius:10px;padding:2px 8px;flex:none}
+.mdetail{border:1px solid var(--border);border-top:0;border-radius:0 0 8px 8px;padding:10px 14px;font-size:12.5px;color:var(--ink2)}
+.mdetail ul{padding-left:18px;margin:4px 0}
 </style>
 </head>
 <body>
@@ -317,6 +329,7 @@ a{color:var(--accent2)}
       <button class="navitem" data-nav="calendar" onclick="navTo('calendar')"><span class="ic">▦</span>캘린더</button>
       <button class="navitem" data-nav="mentions" onclick="navTo('mentions')"><span class="ic">@</span>나를 언급<span class="cnt" id="cntMention"></span></button>
       <button class="navitem" data-nav="myposts" onclick="navTo('myposts')"><span class="ic">▣</span>내 게시물<span class="cnt" id="cntMine"></span></button>
+      <button class="navitem" data-nav="meetings" onclick="navTo('meetings')"><span class="ic">▧</span>회의록<span class="cnt" id="cntMeet"></span></button>
     </div>
     <div class="navsec">
       <div class="navlabel">프로젝트 <span class="mini" onclick="addProject()" title="프로젝트 추가">＋</span></div>
@@ -919,6 +932,7 @@ function updateCounts(){
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v||''};
   set('cntAll',topTasks().length);
   set('cntMine',baseTasks().filter(t=>String(t.created_by||'')===USER_ID||t.assignee===myName().replace(/^@/,'')).length);
+  set('cntMeet',M.length);
   const me=myName().replace(/^@/,'');
   set('cntMention',me?COMMENTS.filter(c=>(c.mentions||[]).includes(me)).length:'');
 }
@@ -933,6 +947,7 @@ function render(){
   else if(VIEW==='mentions')renderMentionsView();
   else if(VIEW==='myposts')renderMyPostsView();
   else if(VIEW==='calendar')renderCalendarView();
+  else if(VIEW==='meetings')renderMeetingsView();
   updateDetail();
 }
 function renderContent(){render()}
@@ -1134,7 +1149,7 @@ let _descEditing=false;
 function updateDetail(){
   const dp=document.getElementById('dp');
   if(!SEL){dp.classList.remove('open');return}
-  const t=tById(SEL);if(!t){if(VIEW==='calendar'){dp.classList.remove('open');return}closeDetail();return}
+  const t=tById(SEL);if(!t){if(VIEW==='calendar'||VIEW==='meetings'){dp.classList.remove('open');return}closeDetail();return}
   const parent=t.parent_id?tById(t.parent_id):null;
   const p=progOf(t),subs=subsOf(t.id);
   const ck=t.checklist||[];
@@ -1338,6 +1353,33 @@ async function delTaskNew(){
   T=T.filter(x=>x.id!==SEL);delete ED[SEL];
   closeDetail();s();render();toast('삭제됨');
 }
+
+
+/* ── 회의록 뷰 (고도화 대비 틀 유지) ── */
+function renderMeetingsView(){
+  let h='<div class="calbox">';
+  h+=`<div class="calhead2"><h3>회의록<span class="c">${M.length}</span></h3><span class="deschint">회의봇(음성→AI요약→과제 자동추출) 연동 시 자동 적재</span></div>`;
+  if(!M.length)h+='<div class="empty">아직 회의록이 없습니다.<br>회의봇 연동 고도화 시 여기에 쌓이고, 추출된 과제가 업무와 자동 연결됩니다.</div>';
+  for(const m of M){
+    const on=SEL===m.id;
+    h+=`<div class="mcard${on?' active':''}" onclick="selMeet('${m.id}')">
+      <div class="mc-body"><div class="mc-date">${esc(m.date||String(m.id).replace(/_/g,' '))}</div>
+      <div class="mc-title">${esc(m.tp||'회의')}</div><div class="mc-meta">참여: ${esc(m.p||'—')}</div></div>
+      <div class="mc-tasks">${(m.ts||[]).length}개 과제</div></div>`;
+    if(on){
+      h+='<div class="mdetail">';
+      if((m.sm||[]).length)h+='<div class="sect">요약</div><ul>'+m.sm.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>';
+      const linked=baseTasks().filter(t=>t.meeting_id===m.id);
+      if(linked.length)h+='<div class="sect">연결된 과제</div><div class="subs">'+linked.map(t=>`<div class="subitem" onclick="event.stopPropagation();selTask('${t.id}')">${stPill(t)}<span class="t">${esc(t.title)}</span>${avh(t.assignee,1)}</div>`).join('')+'</div>';
+      if(!(m.sm||[]).length&&!linked.length)h+='<div style="color:var(--ink3)">상세 내용 없음</div>';
+      h+='</div>';
+    }
+  }
+  h+='</div>';
+  document.getElementById('content').innerHTML=h;
+  document.getElementById('vtitle').innerHTML=`회의록<span class="n">${M.length}</span>`;
+}
+function selMeet(id){SEL=SEL===id?null:id;render()}
 
 /* ── 초기화 ── */
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDetail()});
