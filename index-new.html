@@ -307,7 +307,36 @@ a{color:var(--accent2)}
 #toast.show{transform:translateX(-50%) translateY(0)}
 @media (max-width:960px){ .side{position:fixed;z-index:45;height:100vh;box-shadow:var(--shadow)} .shell.side-hidden .side{display:none}
   .shell:not(.side-hidden) .side{display:flex} .shell.pinned .main{margin-right:0} }
-@media (max-width:520px){ .panel{width:100vw} }
+@media (max-width:640px){ .panel{width:100vw} }
+
+/* ── #26 모바일: 카드 리스트 + 하단 탭바 (≤640px에서만) ── */
+.tabbar{display:none}
+.mlist{display:flex;flex-direction:column;gap:8px}
+.mproj{display:flex;align-items:center;gap:9px;background:var(--surface);border:1.5px solid var(--border2);
+  border-radius:11px;padding:13px 14px;font-size:14px;cursor:pointer}
+.mproj b{font-weight:800}
+.mproj .caret{color:var(--ink3);font-size:12px}
+.mgrp{display:flex;flex-direction:column;gap:6px;margin:0 0 4px;padding-left:4px}
+.mtask{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer}
+.mtask.sel{border-color:var(--accent)}
+.mtt{font-size:13.5px;font-weight:600;margin-bottom:7px;word-break:break-word}
+.mtr{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.mdd{margin-left:auto;font-size:12px;font-weight:700;color:var(--ink3);font-variant-numeric:tabular-nums}
+.mdd.soon{color:var(--st-hold)}
+.mdd.over{color:var(--today)}
+.mchip{font-size:10.5px;background:var(--surface2);border-radius:8px;padding:2px 7px;color:var(--ink2)}
+@media (max-width:640px){
+  .tabbar{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--surface);
+    border-top:1px solid var(--border);z-index:40;padding:6px 0 calc(6px + env(safe-area-inset-bottom))}
+  .tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:17px;color:var(--ink3)}
+  .tabbar button span{font-size:10.5px;font-weight:600}
+  .tabbar button.on{color:var(--accent2)}
+  .content{padding:10px 10px 92px}
+  .topbar{padding:8px 12px 0}
+  .chips input{width:120px}
+  .qarow{padding:8px 10px}
+  .qarow.sqa{padding-left:10px}
+}
 
 /* ── 캘린더 (기존 기능 이식) ── */
 :root{--muted:#8CA0AF}
@@ -436,6 +465,13 @@ a{color:var(--accent2)}
     <div class="content" id="content"></div>
   </main>
 </div>
+<!-- #26 모바일 하단 탭바 -->
+<nav class="tabbar" id="tabbar">
+  <button data-tab="tasks" onclick="navTo('tasks',true)">☰<span>업무</span></button>
+  <button data-tab="feed" onclick="navTo('feed')">◎<span>피드</span></button>
+  <button data-tab="calendar" onclick="navTo('calendar')">▦<span>캘린더</span></button>
+  <button data-tab="myposts" onclick="navTo('myposts')">▣<span>내 업무</span></button>
+</nav>
 <div class="scrim" id="scrim" onclick="closeDetail()"></div>
 <div class="mscrim" id="mscrim" onclick="toggleSide()"></div>
 <aside class="panel" id="dp" aria-label="업무 상세"></aside>
@@ -947,6 +983,51 @@ function isSoon(d){if(!d||d==='N/A')return false;const dd=new Date(d),td=new Dat
 function projColor(p){const pj=PROJECTS_DB.find(x=>x.id===p||x.name===p);return pj?pj.color:'#8CA0AF'}
 function projName(p){const pj=PROJECTS_DB.find(x=>x.id===p);return pj?pj.name:(p||'미분류')}
 
+/* ── #26 모바일 헬퍼 ── */
+const MOBILE=()=>window.innerWidth<=640;
+function ddInfo(d){
+  if(!d||d==='N/A')return null;
+  const dd=new Date(d),td=new Date();td.setHours(0,0,0,0);dd.setHours(0,0,0,0);
+  if(isNaN(dd))return null;
+  const n=Math.round((dd-td)/864e5);
+  return {txt:n===0?'오늘':(n>0?`D-${n}`:`D+${-n}`),cls:n<0?'over':(n<=2?'soon':'')};
+}
+function cardL2(t){
+  const subs=subsOf(t.id),al=asgList(t),dd=ddInfo(t.due_date);
+  return `<div class="mtask${t.id===SEL?' sel':''}" onclick="selTask('${t.id}')">
+    <div class="mtt">${esc(t.title)}${(t.links||[]).length?' 🔗':''}</div>
+    <div class="mtr">${stPill(t)}${al.slice(0,3).map(n=>avh(n,1)).join('')}
+      ${subs.length?`<span class="mchip">세부 ${subs.length}</span>`:''}${ckCount(t)}
+      ${dd?`<span class="mdd ${dd.cls}">${dd.txt}</span>`:''}</div></div>`;
+}
+function mjToggle(pid){openProj[pid]=openProj[pid]===true?false:true;pjSaveOpen();render()}
+function renderListViewMobile(){
+  const groups=[...new Set([...PROJECTS_DB.map(p=>p.id),...topTasks().map(t=>t.project||'')])]
+    .filter(pid=>!F_PROJ||pid===F_PROJ);
+  let h='<div class="mlist">';let shown=0;
+  for(const pid of groups){
+    const list=topTasks().filter(t=>(t.project||'')===pid&&matchesFilters(t));
+    if(!list.length&&pid==='')continue;
+    shown+=list.length;
+    const open=openProj[pid]===true;  // 모바일 기본 접힘
+    const pp=projProgOf(pid);
+    h+=`<div class="mproj" onclick="mjToggle('${pid}')">
+      <span class="dot" style="background:${projColor(pid)}"></span><b>${esc(projName(pid))}</b>
+      <span class="gcnt">${list.length}</span>
+      <span class="pnum" style="margin-left:auto">${pp}%</span><span class="caret">${open?'▾':'▸'}</span></div>`;
+    if(open){
+      h+='<div class="mgrp">';
+      if(QA===pid)h+=`<div class="qarow"><input id="qaIn" onblur="qaBlur()" placeholder="업무 제목 입력 후 Enter" onkeydown="qaKey(event,'${pid}')"></div>`;
+      h+=list.map(cardL2).join('');
+      h+=`<div class="addrow" style="border:0;padding:8px 4px" onclick="qaOpen('${pid}')">＋ 새 업무</div></div>`;
+    }
+  }
+  if(!shown)h+='<div class="empty">표시할 업무가 없습니다</div>';
+  h+='</div>';
+  document.getElementById('content').innerHTML=h;
+  document.getElementById('vtitle').innerHTML=`전체 업무<span class="n">${shown}</span>`;
+}
+
 /* ── 계층 헬퍼 (미러 제외) ── */
 function baseTasks(){return all().filter(t=>!t.mirrored_from)}
 const byOrd=(a,b)=>((a.ord??0)-(b.ord??0))||String(a.id).localeCompare(String(b.id));
@@ -1138,6 +1219,7 @@ function updateCounts(){
 function render(){
   renderProjNav();renderChips();updateCounts();
   document.querySelectorAll('.navitem[data-nav]').forEach(b=>b.classList.toggle('on',b.dataset.nav===VIEW));
+  document.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.tab===VIEW));
   if(VIEW==='tasks')renderListView();
   else if(VIEW==='gantt')renderGanttView();
   else if(VIEW==='feed')renderFeedView();
@@ -1340,6 +1422,7 @@ function toggleSide(){document.getElementById('shell').classList.toggle('side-hi
 
 /* ── 리스트 뷰 (대그룹 박스 → 2단계 +− → 3단계) ── */
 function renderListView(){
+  if(MOBILE())return renderListViewMobile();
   const groups=[...new Set([...PROJECTS_DB.map(p=>p.id),...topTasks().map(t=>t.project||'')])]
     .filter(pid=>!F_PROJ||pid===F_PROJ);
   let h='<div class="listscroll"><div class="listinner">';
@@ -1413,6 +1496,10 @@ function rowL3(s){
 /* ── 간트 뷰 (일/주/월 줌 · 대-중-소) ── */
 let GZOOM='day';
 function renderGanttView(){
+  if(MOBILE()){
+    document.getElementById('content').innerHTML='<div class="empty">간트차트는 화면이 넓은 PC에서 확인하세요 📊<br><br>폰에서는 [업무] 탭의 마감 D-일수로 일정을 보세요.</div>';
+    document.getElementById('vtitle').innerHTML='간트차트<span class="n">PC 전용</span>';return;
+  }
   const stc={대기중:'var(--st-wait)',진행중:'var(--st-run)',완료:'var(--st-done)',종결:'var(--st-end)',보류:'var(--st-hold)'};
   const hasD=t=>t.start_date&&t.due_date&&t.due_date!=='N/A';
   const dsubs=t=>subsOf(t.id).filter(hasD);
@@ -1531,6 +1618,11 @@ function renderMentionsView(){
 function renderMyPostsView(){
   const me=myName().replace(/^@/,'');
   const list=baseTasks().filter(t=>String(t.created_by||'')===USER_ID||t.assignee===me);
+  if(MOBILE()){
+    document.getElementById('content').innerHTML='<div class="mlist">'
+      +(list.length?list.filter(t=>!t.parent_id).map(cardL2).join(''):'<div class="empty">내 업무가 없습니다.</div>')+'</div>';
+    document.getElementById('vtitle').innerHTML=`내 업무<span class="n">${list.length}</span>`;return;
+  }
   let h='<div class="listscroll"><div class="listinner">';
   h+=`<div class="colhead"><div>업무명</div><div>상태</div><div>담당자</div><div>시작일</div><div>마감일</div><div>진척도</div><div>회의</div><div>수정일</div></div>`;
   h+='<div class="projbox">';
@@ -2010,6 +2102,8 @@ syncMscrim();
     sx=null;
   },{passive:true});
 })();
+/* #26: 화면 회전/크기 변화 시 레이아웃 재선택 */
+let _rzT;window.addEventListener('resize',()=>{clearTimeout(_rzT);_rzT=setTimeout(render,200)});
 boot();
 function calDays(y,m){return new Date(y,m+1,0).getDate()}
 function calDow(y,m){return new Date(y,m,1).getDay()}
