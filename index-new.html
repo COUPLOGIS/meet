@@ -438,7 +438,7 @@ function l(){
 async function apiGet(endpoint){
   if(!API_BASE)return null;
   try{
-    const res=await fetch(API_BASE+endpoint);
+    const res=await fetch(API_BASE+endpoint,{headers:{'skip_zrok_interstitial':'true'}});
     const ct=res.headers.get('content-type')||'';
     if(!res.ok)throw new Error('HTTP '+res.status);
     if(!ct.includes('json'))throw new Error('Not JSON: '+ct);
@@ -459,7 +459,7 @@ async function apiPost(endpoint, body){
   try{
     const res=await fetch(API_BASE+endpoint,{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','skip_zrok_interstitial':'true'},
       body:JSON.stringify(body)
     });
     const ct=res.headers.get('content-type')||'';
@@ -935,7 +935,7 @@ async function addProject(){
   const pid='pj_'+Date.now().toString(36);
   const color=PALETTE[PROJECTS_DB.length%PALETTE.length];
   const r=await apiPost('/api/project/save',{id:pid,name:name.trim(),color,ord:PROJECTS_DB.length});
-  if(r&&r.ok){PROJECTS_DB.push({id:pid,name:name.trim(),color,ord:PROJECTS_DB.length});render();toast('프로젝트 생성됨')}
+  if(r&&r.ok){PROJECTS_DB.push({id:pid,name:name.trim(),color,ord:PROJECTS_DB.length});render();toast('프로젝트 생성됨')}else toast('저장 실패 — 네트워크/서버 확인')
 }
 
 /* ── 카운트 ── */
@@ -1027,12 +1027,12 @@ function renderGanttView(){
   const stc={대기중:'var(--st-wait)',진행중:'var(--st-run)',완료:'var(--st-done)',보류:'var(--st-hold)'};
   const hasD=t=>t.start_date&&t.due_date&&t.due_date!=='N/A';
   const dsubs=t=>subsOf(t.id).filter(hasD);
-  const parents=topTasks().filter(t=>matchesFilters(t)&&(hasD(t)||dsubs(t).length));
+  const parents=topTasks().filter(t=>matchesFilters(t)&&hasD(t));
   const today=new Date();today.setHours(0,0,0,0);
   let min=new Date(today.getTime()-3*864e5),max=new Date(today.getTime()+11*864e5);
   const feed=t=>{if(hasD(t)){const a=new Date(t.start_date),b=new Date(t.due_date);
     if(!isNaN(a)&&a<min)min=a;if(!isNaN(b)&&b>max)max=b}};
-  for(const t of parents){feed(t);for(const s of dsubs(t))feed(s)}
+  for(const t of parents)feed(t);
   /* 단위 배열 */
   let units=[];
   if(GZOOM==='day'){
@@ -1068,7 +1068,7 @@ function renderGanttView(){
   };
   const zoomChips=['day','week','month'].map(z=>
     `<span class="chip ${GZOOM===z?'onf':''}" onclick="GZOOM='${z}';render()">${{day:'일',week:'주',month:'월'}[z]}</span>`).join('');
-  let head=`<div class="grow head"><div class="gname">업무 (WBS · 대-중-소)</div><div class="gdays" style="${cols}">`;
+  let head=`<div class="grow head"><div class="gname">업무 (WBS · 대-중)</div><div class="gdays" style="${cols}">`;
   head+=units.map(u=>`<div class="gday${u.wk?' wkend':''}">${u.label}</div>`).join('');
   head+='</div></div>';
   let rows='';
@@ -1078,9 +1078,6 @@ function renderGanttView(){
     rows+=`<div class="grow gproj"><div class="gname"><span class="dot" style="background:${projColor(pid)}"></span>${esc(projName(pid))}</div><div class="gdays" style="${cols}">${cells()}</div></div>`;
     for(const t of list){
       rows+=`<div class="grow"><div class="gname" onclick="selTask('${t.id}')" title="${esc(t.title)}">${avh(t.assignee,1)}${esc(t.title)}</div>${bar(t)}</div>`;
-      for(const s of dsubs(t)){
-        rows+=`<div class="grow"><div class="gname" style="padding-left:34px;font-size:11.5px;color:var(--ink2)" onclick="selTask('${s.id}')" title="${esc(s.title)}">└ ${esc(s.title)}</div>${bar(s)}</div>`;
-      }
     }
   }
   if(!parents.length)rows+='<div class="empty">시작일·마감일이 입력된 업무가 없습니다. 업무 상세에서 기간을 넣으면 여기 나타납니다.</div>';
@@ -1371,7 +1368,7 @@ async function addSubTask(parentId){
 async function delTaskNew(){
   if(!SEL)return;const t=tById(SEL);
   if(!confirm(`「${t?.title}」 업무를 삭제할까요?`))return;
-  if(API_BASE){try{await fetch(API_BASE+'/api/task/delete?id='+encodeURIComponent(SEL),{method:'DELETE'})}catch(e){}}
+  if(API_BASE){try{await fetch(API_BASE+'/api/task/delete?id='+encodeURIComponent(SEL),{method:'DELETE',headers:{'skip_zrok_interstitial':'true'}})}catch(e){}}
   T=T.filter(x=>x.id!==SEL);delete ED[SEL];
   closeDetail();s();render();toast('삭제됨');
 }
