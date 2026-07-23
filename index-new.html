@@ -128,7 +128,7 @@ a{color:var(--accent2)}
 .trow:hover{background:var(--hover)}
 .trow.sel{background:var(--accent-tint)}
 .trow>div{padding:8px 10px;min-width:0}
-.tname{display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden}
+.tname{display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;position:relative}
 .tname .tt{overflow:hidden;text-overflow:ellipsis;font-weight:700}
 .tgl{width:17px;height:17px;flex:none;border:1px solid var(--border2);border-radius:4px;
   display:inline-flex;align-items:center;justify-content:center;font-size:12px;line-height:1;
@@ -899,7 +899,12 @@ function startPolling(){
    (데이터 레이어·미러·폴링은 위의 기존 검증 코드 그대로)
    ════════════════════════════════════════════════════════ */
 let VIEW='tasks', PROJECTS_DB=[], FEED=[], PIN=false, QA=null;
-let SQA=null, PSQA=null, RNP=null, ADDP=false, PJMORE=false, DRAG=null, _tEdit=false, _aEdit=false;
+let SQA=null, PSQA=null, RNP=null, ADDP=false, PJMORE=false, DRAG=null, _tEdit=false, _aEdit=false, _qaBusy=false;
+/* 신규입력칸: 다른 곳 클릭(blur) 시 자동 닫힘 — Enter 처리 중에는 유지 */
+function qaBlur(){setTimeout(()=>{if(!_qaBusy&&QA&&document.activeElement?.id!=='qaIn'){QA=null;render()}},150)}
+function sqaBlur(){setTimeout(()=>{if(!_qaBusy&&SQA&&document.activeElement?.id!=='sqaIn'){SQA=null;render()}},150)}
+function psqaBlur(){setTimeout(()=>{if(!_qaBusy&&PSQA&&document.activeElement?.id!=='sqaIn2'){PSQA=null;updateDetail()}},150)}
+function npBlur(){setTimeout(()=>{if(!_qaBusy&&ADDP&&document.activeElement?.id!=='npIn'){ADDP=false;render()}},150)}
 let openProj={};try{openProj=JSON.parse(localStorage.getItem('tlv2_open')||'{}')}catch(e){openProj={}}
 const openSubs=new Set();
 let F_MINE=false, F_ACTIVE=true, F_PROJ='';
@@ -1077,7 +1082,7 @@ function renderProjNav(){
       <span class="dot" style="background:${projColor(pid)}"></span>${esc(projName(pid))}<span class="cnt">${n}</span></button>`;
   }).join('')
   +(ids.length>LIMIT?`<button class="navitem" style="color:var(--ink3)" onclick="PJMORE=!PJMORE;render()">${PJMORE?'▴ 접기':`▾ 나머지 ${ids.length-LIMIT}개 보기`}</button>`:'')
-  +(ADDP?`<div style="padding:4px 8px"><input id="npIn" placeholder="새 프로젝트 이름 · Enter" style="width:100%;border:1.5px solid var(--accent);border-radius:6px;padding:6px 9px;font-size:12px;background:var(--surface)" onkeydown="npKey(event)"></div>`
+  +(ADDP?`<div style="padding:4px 8px"><input id="npIn" onblur="npBlur()" placeholder="새 프로젝트 이름 · Enter" style="width:100%;border:1.5px solid var(--accent);border-radius:6px;padding:6px 9px;font-size:12px;background:var(--surface)" onkeydown="npKey(event)"></div>`
         :`<button class="navitem" style="border:1px dashed var(--border2);color:var(--ink3);margin-top:2px" onclick="addpOpen()">＋ 새 프로젝트 (대분류)</button>`);
   const me=document.getElementById('meAv');
   if(me){const n=myName().replace(/^@/,'')||'게스트';me.textContent=n.slice(0,2);me.title=n}
@@ -1151,7 +1156,7 @@ async function qaKey(ev,pid){
   if(ev.key==='Escape'){QA=null;render();return}
   if(ev.key!=='Enter')return;
   const v=ev.target.value.trim();if(!v)return;
-  ev.target.value='';
+  ev.target.value='';_qaBusy=true;setTimeout(()=>{_qaBusy=false},3000);
   const ids=T.map(t=>parseInt(String(t.id).slice(1))).filter(n=>!isNaN(n));
   const nid=`T${String((Math.max(0,...ids)+1)).padStart(3,'0')}`;
   const ord=topTasks().filter(t=>(t.project||'')===pid).length;
@@ -1199,14 +1204,14 @@ async function sqaKey(ev,pid){
   if(ev.key==='Escape'){SQA=null;render();return}
   if(ev.key!=='Enter')return;
   const v=ev.target.value.trim();if(!v)return;
-  ev.target.value='';
+  ev.target.value='';_qaBusy=true;setTimeout(()=>{_qaBusy=false},3000);
   if(await sqaCreate(pid,v)){render();setTimeout(()=>document.getElementById('sqaIn')?.focus(),40);toast('세부업무 추가: '+v)}
 }
 async function psqaKey(ev,pid){
   if(ev.key==='Escape'){PSQA=null;updateDetail();return}
   if(ev.key!=='Enter')return;
   const v=ev.target.value.trim();if(!v)return;
-  ev.target.value='';
+  ev.target.value='';_qaBusy=true;setTimeout(()=>{_qaBusy=false},3000);
   if(await sqaCreate(pid,v)){render();setTimeout(()=>document.getElementById('sqaIn2')?.focus(),40);toast('세부업무 추가: '+v)}
 }
 function addSubTask(pid){psqaOpen(pid)}  // 구 prompt 진입점 호환
@@ -1234,7 +1239,7 @@ async function npKey(ev){
   if(ev.key==='Escape'){ADDP=false;render();return}
   if(ev.key!=='Enter')return;
   const v=ev.target.value.trim();if(!v)return;
-  ev.target.value='';
+  ev.target.value='';_qaBusy=true;setTimeout(()=>{_qaBusy=false},3000);
   const pid='pj_'+Date.now().toString(36);
   const color=PALETTE[PROJECTS_DB.length%PALETTE.length];
   const r=await apiPost('/api/project/save',{id:pid,name:v,color,ord:PROJECTS_DB.length});
@@ -1342,11 +1347,11 @@ function renderListView(){
         ${pid?`<span class="pmv" onclick="event.stopPropagation();renameProject('${pid}')" title="이름 수정">✎</span>`:'<span class="pmv" style="visibility:hidden">✎</span>'}</div>`;
     if(open){
       h+=`<div class="projbox" ondragover="boxOver(event,'${pid}')" ondragleave="boxLeave(event)" ondrop="boxDrop(event,'${pid}')">`;
-      if(QA===pid)h+=`<div class="qarow"><input id="qaIn" placeholder="업무 제목 입력 후 Enter — 연속 추가 가능 · Esc 닫기" onkeydown="qaKey(event,'${pid}')"></div>`;
+      if(QA===pid)h+=`<div class="qarow"><input id="qaIn" onblur="qaBlur()" placeholder="업무 제목 입력 후 Enter — 연속 추가 가능 · Esc 닫기" onkeydown="qaKey(event,'${pid}')"></div>`;
       for(const t of list){
         h+=rowL2(t);
         if(openSubs.has(t.id))for(const s of subsOf(t.id))h+=rowL3(s);
-        if(SQA===t.id)h+=`<div class="qarow sqa"><input id="sqaIn" placeholder="세부업무 제목 입력 후 Enter — 연속 추가 · Esc 닫기" onkeydown="sqaKey(event,'${t.id}')"></div>`;
+        if(SQA===t.id)h+=`<div class="qarow sqa"><input id="sqaIn" onblur="sqaBlur()" placeholder="세부업무 제목 입력 후 Enter — 연속 추가 · Esc 닫기" onkeydown="sqaKey(event,'${t.id}')"></div>`;
       }
       h+=`<div class="addrow" onclick="qaOpen('${pid}')">＋ 새 업무 추가</div></div>`;
     }
@@ -1360,14 +1365,15 @@ function rowL2(t){
   const p=progOf(t),subs=subsOf(t.id),opened=openSubs.has(t.id);
   const mir=(TEAM_MIRRORS[t.id]||[]).length;
   return `<div class="trow${t.id===SEL?' sel':''}" tabindex="0" role="button" onclick="selTask('${t.id}')" onkeydown="if(event.key==='Enter')selTask('${t.id}')"
+    draggable="true" ondragstart="tDragStart(event,'${t.id}')" ondragend="dragEnd()"
     ondragover="rowOver(event,'${t.id}')" ondragleave="rowLeave(event)" ondrop="rowDrop(event,'${t.id}','${t.project||''}')">
     <div class="tname">
       <button class="tgl${subs.length?'':' none'}" onclick="event.stopPropagation();openSubs.has('${t.id}')?openSubs.delete('${t.id}'):openSubs.add('${t.id}');render()">${opened?'−':'+'}</button>
-      <span class="tt">${esc(t.title)}</span>${subs.length?`<span class="scount">(${subs.length})</span>`:''}${(t.links||[]).length?'<span class="scount" title="연결 문서 있음">🔗</span>':''}${mir?'<span class="mirrorb">⇄</span>':''}</div>
-    <span class="racts">
-      <span class="ract" title="세부업무 추가" onclick="event.stopPropagation();sqaOpen('${t.id}')">⊞</span>
-      <span class="ract grip" title="끌어서 순서 변경 · 다른 프로젝트로 이동" draggable="true" onclick="event.stopPropagation()" ondragstart="tDragStart(event,'${t.id}')" ondragend="dragEnd()">⠿</span>
-    </span>
+      <span class="tt">${esc(t.title)}</span>${subs.length?`<span class="scount">(${subs.length})</span>`:''}${(t.links||[]).length?'<span class="scount" title="연결 문서 있음">🔗</span>':''}${mir?'<span class="mirrorb">⇄</span>':''}
+      <span class="racts">
+        <span class="ract" title="세부업무 추가" onclick="event.stopPropagation();sqaOpen('${t.id}')">⊞</span>
+        <span class="ract grip" title="끌어서 순서 변경 · 다른 프로젝트로 이동" draggable="true" onclick="event.stopPropagation()" ondragstart="tDragStart(event,'${t.id}')" ondragend="dragEnd()">⠿</span>
+      </span></div>
     <div>${stPill(t)}</div>
     <div class="asg">${avh(t.assignee,1)}<span>${esc(t.assignee||'—')}</span></div>
     <div class="dt">${dshort(t.start_date)}</div>
@@ -1561,7 +1567,7 @@ function updateDetail(){
     subsHtml=`<div class="sect">세부업무 <span class="n">${subs.length}</span> · 상태만 바꾸면 진척도 자동</div><div class="subs">`;
     for(const s of subs)subsHtml+=`<div class="subitem" onclick="selTask('${s.id}')">${stPill(s)}<span class="t">${esc(s.title)}</span>${ckCount(s)}${avh(s.assignee,1)}<span class="dt">${dshort(s.due_date)}</span></div>`;
     subsHtml+=`</div>`+(PSQA===t.id
-      ?`<div class="ckadd" style="margin-top:8px"><input id="sqaIn2" placeholder="세부업무 제목 입력 후 Enter — 연속 추가 · Esc 닫기" onkeydown="psqaKey(event,'${t.id}')"></div>`
+      ?`<div class="ckadd" style="margin-top:8px"><input id="sqaIn2" onblur="psqaBlur()" placeholder="세부업무 제목 입력 후 Enter — 연속 추가 · Esc 닫기" onkeydown="psqaKey(event,'${t.id}')"></div>`
       :`<button class="addsub" onclick="psqaOpen('${t.id}')">＋ 세부업무 추가</button>`);
   }
   let cmtHtml=`<div class="sect">댓글 <span class="n">${cmts.length}</span> · @멘션 → 텔레그램</div>`;
