@@ -373,12 +373,12 @@ a{color:var(--accent2)}
 </div>
 <!-- 회의록 작성 모달 -->
 <div class="mo" id="mtgModal" onclick="if(event.target===this)mClose('mtgModal')">
-  <div class="mbox">
+  <div class="mbox" style="width:640px">
     <h3>회의록 작성</h3>
     <label>날짜</label><input id="mDate" type="date">
     <label>주제</label><input id="mTopic">
     <label>참여자</label><input id="mParts" placeholder="조한표, 권용훈">
-    <label>요약 (한 줄에 하나씩 bullet이 됩니다)</label><textarea id="mSum" rows="6"></textarea>
+    <label>요약 (한 줄에 하나씩 bullet이 됩니다 · 글자수 제한 없음)</label><textarea id="mSum" rows="14" style="resize:vertical;line-height:1.6"></textarea>
     <div class="mbtns"><button class="bsm" onclick="mClose('mtgModal')">취소</button><button class="bsm pri" onclick="addMeeting()">저장</button></div>
   </div>
 </div>
