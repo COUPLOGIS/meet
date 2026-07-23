@@ -349,7 +349,7 @@ a{color:var(--accent2)}
   <div class="mbox">
     <h3>새 업무</h3>
     <label>제목</label><input id="aTitle">
-    <label>프로젝트</label><select id="aProject"></select>
+    <label>프로젝트 (대분류)</label><select id="aProject" onchange="if(this.value==='__new__')addProjectFromModal()"></select>
     <label>상위 업무 (세부업무로 만들 때)</label><select id="aParent"><option value="">— 없음 (2단계 업무) —</option></select>
     <label>담당자</label><input id="aAssignee" placeholder="조한표">
     <label>시작일</label><input id="aStart" type="date">
@@ -371,7 +371,7 @@ const USER_ID = new URLSearchParams(location.search).get('user') || '';
 let T=[],M=[],MH={},ED={},EV={},calY,calM,PAGE=USER_ID?'my-tasks':'team-tasks-all',SEL=null,USERS={},CP_ITEMS=[];
 var SORT_BY='id',SORT_DIR='asc',Q='',FILTER_STATUS='',FILTER_PRIORITY='',KANBAN=false;
 var FILTER_TAG='';
-const SKEY='t5',EKEY='ev1',MIRKEY='ml1',ST=['대기중','진행중','완료','보류'];
+const SKEY='tlv2',EKEY='evv2',MIRKEY='mnv2',ST=['대기중','진행중','완료','보류'];
 let MENTIONS={}; // {taskId: [{username, timestamp}]}
 let TEAM_MIRRORS={}; // {teamTaskId: [mirrorTaskIds...]} — loaded from localStorage
 const STL={대기중:'Waiting',진행중:'In Progress',완료:'Done',보류:'Hold'};
@@ -406,7 +406,7 @@ function l(){
     ED=JSON.parse(localStorage.getItem(SKEY)||'{}');
     EV=JSON.parse(localStorage.getItem(EKEY)||'{}');
     MENTIONS=JSON.parse(localStorage.getItem(MIRKEY)||'{}');
-    const m=JSON.parse(localStorage.getItem('ml2')||'{}');
+    const m=JSON.parse(localStorage.getItem('mrv2')||'{}');
     TEAM_MIRRORS=m.tm||{};
   }catch(e){ED={};EV={};MENTIONS={};TEAM_MIRRORS={}}
 }
@@ -427,7 +427,7 @@ function s(){
   localStorage.setItem(SKEY,JSON.stringify(ED));
   localStorage.setItem(EKEY,JSON.stringify(EV));
   localStorage.setItem(MIRKEY,JSON.stringify(MENTIONS));
-  localStorage.setItem('ml2',JSON.stringify({tm:TEAM_MIRRORS}));
+  localStorage.setItem('mrv2',JSON.stringify({tm:TEAM_MIRRORS}));
 }
 // apiPost(): helper to POST to API endpoint
 async function apiPost(endpoint, body){
@@ -888,11 +888,23 @@ function renderProjNav(){
     const n=topTasks().filter(t=>(t.project||'')===pid).length;
     return `<button class="navitem ${F_PROJ===pid&&VIEW==='tasks'?'on':''}" onclick="F_PROJ=F_PROJ==='${pid}'?'':'${pid}';navTo('tasks')">
       <span class="dot" style="background:${projColor(pid)}"></span>${esc(projName(pid))}<span class="cnt">${n}</span></button>`;
-  }).join('');
+  }).join('')+`<button class="navitem" style="border:1px dashed var(--border2);color:var(--ink3);margin-top:2px" onclick="addProject()">＋ 새 프로젝트 (대분류)</button>`;
   const me=document.getElementById('meAv');
   if(me){const n=myName().replace(/^@/,'')||'게스트';me.textContent=n.slice(0,2);me.title=n}
   const br=document.getElementById('botRow');
   if(br)br.innerHTML=['1호기','2호기','3호기','4호기','8호기','Claude'].map(b=>avh(b)).join('');
+}
+
+async function addProjectFromModal(){
+  const sel=document.getElementById('aProject');
+  const name=prompt('새 프로젝트(대분류) 이름:');
+  if(!name||!name.trim()){sel.value='';return}
+  const pid='pj_'+Date.now().toString(36);
+  const color=PALETTE[PROJECTS_DB.length%PALETTE.length];
+  const r=await apiPost('/api/project/save',{id:pid,name:name.trim(),color,ord:PROJECTS_DB.length});
+  if(r&&r.ok){PROJECTS_DB.push({id:pid,name:name.trim(),color,ord:PROJECTS_DB.length});
+    fillAddModal();sel.value=pid;renderProjNav();toast('프로젝트 생성: '+name.trim())}
+  else sel.value='';
 }
 async function addProject(){
   const name=prompt('프로젝트 이름:');if(!name||!name.trim())return;
@@ -1035,9 +1047,10 @@ function renderGanttView(){
     }
   }
   if(!dated.length)rows+='<div class="empty">시작일·마감일이 모두 입력된 업무가 없습니다. 업무 상세에서 기간을 넣으면 여기 나타납니다.</div>';
+  const gw=GZOOM==='day'?'':'min-width:0;max-width:'+(240+span*(GZOOM==='week'?54:70))+'px';
   document.getElementById('content').innerHTML=
     `<div class="chips" style="padding:0 0 10px">${zoomChips}</div>
-     <div class="gantt"><div class="ggrid">${head}${rows}</div>
+     <div class="gantt"><div class="ggrid" style="${gw}">${head}${rows}</div>
      <div class="glegend"><span><i style="background:var(--st-wait)"></i>대기</span><span><i style="background:var(--st-run)"></i>진행</span>
      <span><i style="background:var(--st-hold)"></i>보류</span><span><i style="background:var(--today)"></i>오늘</span>
      <span style="margin-left:auto">막대 채움 = 진척도(자동) · 단위: ${{day:'1일',week:'1주',month:'1개월'}[GZOOM]}</span></div></div>`;
@@ -1272,7 +1285,7 @@ function notifyStatusChange(taskId,oldStatus,newStatus){
 /* ── 업무 생성/삭제 ── */
 function fillAddModal(){
   const ps=document.getElementById('aProject');
-  ps.innerHTML=['',...PROJECTS_DB.map(x=>x.id)].map(pid=>`<option value="${pid}">${esc(projName(pid))}</option>`).join('');
+  ps.innerHTML=['',...PROJECTS_DB.map(x=>x.id)].map(pid=>`<option value="${pid}">${esc(projName(pid))}</option>`).join('')+'<option value="__new__">＋ 새 프로젝트 만들기…</option>';
   const pp=document.getElementById('aParent');
   pp.innerHTML='<option value="">— 없음 (2단계 업무) —</option>'+topTasks().map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join('');
 }
