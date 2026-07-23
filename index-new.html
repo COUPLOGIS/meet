@@ -314,6 +314,10 @@ a{color:var(--accent2)}
 .mc-tasks{font-size:11px;color:var(--accent2);background:var(--surface);border-radius:10px;padding:2px 8px;flex:none}
 .mdetail{border:1px solid var(--border);border-top:0;border-radius:0 0 8px 8px;padding:10px 14px;font-size:12.5px;color:var(--ink2)}
 .mdetail ul{padding-left:18px;margin:4px 0}
+
+.pmv{display:none;font-size:9px;color:var(--ink3);padding:2px 4px;border-radius:4px;cursor:pointer;flex:none}
+.navitem:hover .pmv{display:inline-block}
+.pmv:hover{color:var(--accent2);background:var(--surface2)}
 </style>
 </head>
 <body>
@@ -911,7 +915,7 @@ function renderProjNav(){
   el.innerHTML=ids.map(pid=>{
     const n=topTasks().filter(t=>(t.project||'')===pid).length;
     return `<button class="navitem ${F_PROJ===pid&&VIEW==='tasks'?'on':''}" onclick="F_PROJ=F_PROJ==='${pid}'?'':'${pid}';navTo('tasks')">
-      <span class="dot" style="background:${projColor(pid)}"></span>${esc(projName(pid))}<span class="cnt">${n}</span></button>`;
+      <span class="dot" style="background:${projColor(pid)}"></span>${esc(projName(pid))}<span class="pmv" onclick="event.stopPropagation();moveProject('${pid}',-1)">▲</span><span class="pmv" onclick="event.stopPropagation();moveProject('${pid}',1)">▼</span><span class="cnt">${n}</span></button>`;
   }).join('')+`<button class="navitem" style="border:1px dashed var(--border2);color:var(--ink3);margin-top:2px" onclick="addProject()">＋ 새 프로젝트 (대분류)</button>`;
   const me=document.getElementById('meAv');
   if(me){const n=myName().replace(/^@/,'')||'게스트';me.textContent=n.slice(0,2);me.title=n}
@@ -929,6 +933,18 @@ async function addProjectFromModal(){
   if(r&&r.ok){PROJECTS_DB.push({id:pid,name:name.trim(),color,ord:PROJECTS_DB.length});
     fillAddModal();sel.value=pid;renderProjNav();toast('프로젝트 생성: '+name.trim())}
   else sel.value='';
+}
+
+async function moveProject(pid,dir){
+  const i=PROJECTS_DB.findIndex(p=>p.id===pid);if(i<0)return;
+  const j=i+dir;if(j<0||j>=PROJECTS_DB.length)return;
+  const a=PROJECTS_DB[i],b=PROJECTS_DB[j];
+  PROJECTS_DB[i]=b;PROJECTS_DB[j]=a;
+  PROJECTS_DB.forEach((p,idx)=>p.ord=idx);
+  render();
+  await apiPost('/api/project/save',{id:a.id,name:a.name,color:a.color,ord:a.ord});
+  await apiPost('/api/project/save',{id:b.id,name:b.name,color:b.color,ord:b.ord});
+  _dirty=true;_lastLocal=Date.now();setTimeout(()=>{_dirty=false},2000);
 }
 async function addProject(){
   const name=prompt('프로젝트 이름:');if(!name||!name.trim())return;
