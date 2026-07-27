@@ -1,0 +1,308 @@
+<title>푸드레인 가격 레이더</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --bg:#F6F3EE; --surface:#FFFFFF; --surface2:#F0EBE3; --line:#E4DDD1; --line2:#D6CCBB;
+  --ink:#2A2320; --ink2:#6B6157; --ink3:#9A8F82;
+  --accent:#B8791E; --accent-soft:rgba(184,121,30,.12);
+  --bad:#C4433A; --bad-soft:rgba(196,67,58,.10); --bad-line:rgba(196,67,58,.35);
+  --good:#0E7C6B; --good-soft:rgba(14,124,107,.12);
+  --shadow:0 6px 24px rgba(52,40,28,.10);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#1B1815; --surface:#252019; --surface2:#2D271F; --line:#3A322A; --line2:#483f34;
+    --ink:#F2ECE1; --ink2:#B9AE9E; --ink3:#8A7F70;
+    --accent:#E0A04A; --accent-soft:rgba(224,160,74,.16);
+    --bad:#E86A60; --bad-soft:rgba(232,106,96,.14); --bad-line:rgba(232,106,96,.4);
+    --good:#3DB39C; --good-soft:rgba(61,179,156,.16);
+    --shadow:0 6px 24px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="light"]{
+  --bg:#F6F3EE; --surface:#FFFFFF; --surface2:#F0EBE3; --line:#E4DDD1; --line2:#D6CCBB;
+  --ink:#2A2320; --ink2:#6B6157; --ink3:#9A8F82;
+  --accent:#B8791E; --accent-soft:rgba(184,121,30,.12);
+  --bad:#C4433A; --bad-soft:rgba(196,67,58,.10); --bad-line:rgba(196,67,58,.35);
+  --good:#0E7C6B; --good-soft:rgba(14,124,107,.12); --shadow:0 6px 24px rgba(52,40,28,.10);
+}
+:root[data-theme="dark"]{
+  --bg:#1B1815; --surface:#252019; --surface2:#2D271F; --line:#3A322A; --line2:#483f34;
+  --ink:#F2ECE1; --ink2:#B9AE9E; --ink3:#8A7F70;
+  --accent:#E0A04A; --accent-soft:rgba(224,160,74,.16);
+  --bad:#E86A60; --bad-soft:rgba(232,106,96,.14); --bad-line:rgba(232,106,96,.4);
+  --good:#3DB39C; --good-soft:rgba(61,179,156,.16); --shadow:0 6px 24px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);
+  font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:22px 18px 60px}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* 헤더 */
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.brand .ey{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.brand h1{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.1;margin-top:3px}
+.brand .sub{color:var(--ink2);font-size:13px;margin-top:4px}
+.themebtn{border:1px solid var(--line2);background:var(--surface);color:var(--ink2);
+  border-radius:9px;padding:7px 12px;font-size:12.5px;cursor:pointer}
+.themebtn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:15px 16px}
+.kpi .l{font-size:11.5px;color:var(--ink3);letter-spacing:.02em;font-weight:600}
+.kpi .v{font-size:30px;font-weight:800;letter-spacing:-.02em;margin-top:6px;line-height:1}
+.kpi .u{font-size:13px;color:var(--ink3);font-weight:600;margin-left:2px}
+.kpi.alert{background:var(--bad-soft);border-color:var(--bad-line)}
+.kpi.alert .v{color:var(--bad)}
+
+/* 경보 배너 */
+.alertbar{display:flex;align-items:center;gap:12px;background:var(--bad-soft);
+  border:1px solid var(--bad-line);border-radius:14px;padding:13px 17px;margin-bottom:22px}
+.alertbar .dot{width:9px;height:9px;border-radius:50%;background:var(--bad);flex:none;
+  box-shadow:0 0 0 4px var(--bad-soft)}
+.alertbar b{color:var(--bad)}
+.alertbar .msg{font-size:13.5px;color:var(--ink)}
+
+/* 섹션 */
+section{margin-bottom:30px}
+.shead{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.shead h2{font-size:16px;font-weight:800;letter-spacing:-.01em}
+.shead .n{font-size:12.5px;color:var(--ink3);font-weight:600}
+.shead .tools{margin-left:auto;display:flex;gap:8px;align-items:center}
+.search{border:1px solid var(--line2);background:var(--surface);border-radius:9px;
+  padding:6px 11px;font-size:13px;color:var(--ink);width:150px}
+.search::placeholder{color:var(--ink3)}
+.filt{border:1px solid var(--line2);background:var(--surface);color:var(--ink2);
+  border-radius:9px;padding:6px 11px;font-size:12.5px;cursor:pointer;font-weight:600;white-space:nowrap}
+.filt.on{background:var(--bad-soft);border-color:var(--bad-line);color:var(--bad)}
+
+/* 가격표 */
+.tbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.tscroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:640px}
+thead th{font-size:11px;color:var(--ink3);font-weight:700;text-align:right;padding:11px 12px;
+  letter-spacing:.02em;border-bottom:1.5px solid var(--line);cursor:pointer;white-space:nowrap;user-select:none;background:var(--surface2)}
+thead th:first-child{text-align:left}
+thead th:hover{color:var(--accent)}
+thead th .ar{opacity:0;font-size:9px;margin-left:3px}
+thead th.sorted .ar{opacity:1;color:var(--accent)}
+tbody td{padding:10px 12px;text-align:right;border-bottom:1px solid var(--line);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody td:first-child{text-align:left;white-space:normal;line-height:1.3;font-weight:600;
+  color:var(--ink);min-width:150px;max-width:230px}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--surface2)}
+tr.behind td:first-child{box-shadow:inset 3px 0 0 var(--bad)}
+tr.behind{background:var(--bad-soft)}
+.our{font-weight:800;color:var(--ink)}
+tr.behind .our{color:var(--bad)}
+.low{color:var(--good);font-weight:800}
+.low .st{font-size:9px;vertical-align:2px;margin-left:1px}
+.na{color:var(--ink3)}
+.gap{display:inline-block;font-size:11px;font-weight:800;color:var(--bad);
+  background:var(--bad-soft);border-radius:6px;padding:1px 6px;margin-left:5px}
+.code{font-size:10.5px;color:var(--ink3);font-weight:500;display:block;margin-top:2px}
+
+/* 배너 */
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.bcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+  text-decoration:none;display:block;transition:transform .12s,border-color .12s}
+.bcard:hover{transform:translateY(-2px);border-color:var(--accent)}
+.bcard img{width:100%;aspect-ratio:1.9;object-fit:cover;display:block;background:var(--surface2)}
+.bcard .cap{padding:8px 10px;font-size:11.5px;color:var(--ink2);font-weight:600}
+.mall-tag{display:inline-block;font-size:10px;font-weight:700;color:var(--accent);
+  text-transform:uppercase;letter-spacing:.04em}
+
+/* 신상품 */
+.nlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.ncard{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:12px 14px;
+  text-decoration:none;display:flex;justify-content:space-between;align-items:center;gap:10px;transition:border-color .12s}
+.ncard:hover{border-color:var(--accent)}
+.ncard .nm{font-size:13px;color:var(--ink);font-weight:600;line-height:1.3}
+.ncard .pr{font-size:13px;font-weight:800;color:var(--accent);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+footer{text-align:center;color:var(--ink3);font-size:12px;margin-top:36px;line-height:1.7}
+footer a{color:var(--accent)}
+
+@media (max-width:680px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .brand h1{font-size:22px}
+  .shead .tools{width:100%;margin-left:0}
+  .search{flex:1;width:auto}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="ey">Foodrain Price Radar</div>
+      <h1>경쟁사 가격 레이더</h1>
+      <div class="sub" id="subdate">—</div>
+    </div>
+    <button class="themebtn" id="themebtn">◐ 테마</button>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+  <div class="alertbar" id="alertbar" style="display:none">
+    <span class="dot"></span>
+    <span class="msg" id="alertmsg"></span>
+  </div>
+
+  <section>
+    <div class="shead">
+      <h2>가격 비교표</h2><span class="n" id="tcount"></span>
+      <div class="tools">
+        <input class="search" id="search" placeholder="상품 검색">
+        <button class="filt" id="fbehind">우리가 비싼 것만</button>
+      </div>
+    </div>
+    <div class="tbox"><div class="tscroll"><table>
+      <thead><tr>
+        <th data-k="name">상품<span class="ar">▼</span></th>
+        <th data-k="our">푸드레인<span class="ar">▼</span></th>
+        <th data-k="mega">메가커피<span class="ar">▼</span></th>
+        <th data-k="big">빅커피<span class="ar">▼</span></th>
+        <th data-k="cnt">CNT마트<span class="ar">▼</span></th>
+        <th data-k="oh">오커피<span class="ar">▼</span></th>
+        <th data-k="gap" class="sorted">우리 열위<span class="ar">▼</span></th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div></div>
+    <div style="font-size:11.5px;color:var(--ink3);margin-top:8px">
+      ★ = 경쟁사 최저가 · <span style="color:var(--bad);font-weight:700">분홍 줄</span> = 푸드레인이 더 비쌈 · 경쟁사 가격은 <b>배송비 포함</b> · 헤더 클릭 정렬
+    </div>
+  </section>
+
+  <section>
+    <div class="shead"><h2>경쟁사 행사 배너</h2><span class="n" id="bcount"></span></div>
+    <div class="bgrid" id="bgrid"></div>
+  </section>
+
+  <section>
+    <div class="shead"><h2>신규 입점</h2><span class="n" id="ncount"></span></div>
+    <div class="nlist" id="nlist"></div>
+  </section>
+
+  <section id="bksec" style="display:none">
+    <div class="shead"><h2>베이커리·디저트 4몰</h2><span class="n">배너·신상품 트렌드 (가격비교 제외)</span></div>
+    <div id="bkwrap"></div>
+  </section>
+
+  <footer>
+    매일 06:30 자동 갱신 · 카페납품 4몰 대비 푸드레인 가격 레이더<br>
+    데이터: 크롤 스냅샷 + 서버 판매가(SALE_TYPE 1) · 이 페이지는 목업 미리보기입니다
+  </footer>
+</div>
+
+<script>
+const DATA={"date": "2026-07-27", "rows": [{"code": "H000000397", "name": "M(립톤)복숭아아이스티 파우더 907g*12ea/BOX", "our": 9184, "mega": 7680, "big": 7790, "cnt": 8400, "oh": 7680, "low": 7680, "behind": true}, {"code": "H000000407", "name": "M분다버그_핑크자몽_375ml*12ea/Box", "our": 30800, "mega": 28900, "big": 32500, "cnt": 31600, "oh": 28900, "low": 28900, "behind": true}, {"code": "H000000409", "name": "M웅진식품_빅토리아 플레인탄산수(캔) 190ml*30ea/BOX", "our": 10450, "mega": 10350, "big": 10790, "cnt": 18500, "oh": 11900, "low": 10350, "behind": true}, {"code": "H000000411", "name": "M1883_헤이즐넛시럽 1L*6ea/BOX", "our": 14499, "mega": 14800, "big": 15500, "cnt": 15500, "oh": 15500, "low": 14800, "behind": false}, {"code": "H000000422", "name": "M1883_바닐라시럽 1L*6ea/BOX", "our": 14499, "mega": 14200, "big": 14500, "cnt": 15500, "oh": 14500, "low": 14200, "behind": true}, {"code": "H000000428", "name": "M다빈치_초코소스 2.6kg*3ea/BOX", "our": 24365, "mega": 23900, "big": 23990, "cnt": 27000, "oh": 20900, "low": 20900, "behind": true}, {"code": "H000000434", "name": "M포모나_망고스무디 2kg*6ea/BOX", "our": 8690, "mega": 9400, "big": 9400, "cnt": 9400, "oh": 9400, "low": 9400, "behind": false}, {"code": "H000000435", "name": "M포모나_딸기스무디 2kg*6ea/BOX", "our": 8745, "mega": 9400, "big": 9400, "cnt": 9400, "oh": 9400, "low": 9400, "behind": false}, {"code": "H000000444", "name": "M세미_후루티 딸기 스무디_1.8kg*6ea/Box", "our": 8732, "mega": 8570, "big": 8570, "cnt": 8690, "oh": 8500, "low": 8500, "behind": true}, {"code": "H000000445", "name": "M세미_후루티 망고 스무디_1.8kg*6ea/Box", "our": 8924, "mega": 8950, "big": 9290, "cnt": 8690, "oh": 8950, "low": 8690, "behind": true}, {"code": "H000000446", "name": "M세미_복숭아 아이스티_2kg*6ea/Box", "our": 13501, "mega": 12560, "big": 13590, "cnt": 12640, "oh": 12560, "low": 12560, "behind": true}, {"code": "H000000450", "name": "M(리치스)슈가시럽 1.5L*6ea/BOX", "our": 3949, "mega": 3200, "big": 4500, "cnt": 4800, "oh": 2200, "low": 2200, "behind": true}, {"code": "H000000465", "name": "M세미_베버시티 고구마라떼페이스트_1kg*10ea/BOX", "our": 7920, "mega": 7980, "big": 8350, "cnt": 8150, "oh": 7040, "low": 7040, "behind": true}, {"code": "H000000513", "name": "M민트라벨_복숭아아이스티_1kg*12ea/BOX", "our": 7150, "mega": 6190, "big": 7810, "cnt": null, "oh": 7500, "low": 6190, "behind": true}, {"code": "H000000517", "name": "M동서_리치스통단팥_3kg*6ea/BOX", "our": 11220, "mega": 9010, "big": 11690, "cnt": 12350, "oh": 9670, "low": 9010, "behind": true}, {"code": "H000000527", "name": "M제이씨_92파이/10oz 무지 컵홀더_1000ea/BOX", "our": 12375, "mega": 13300, "big": 14390, "cnt": 12900, "oh": 14500, "low": 12900, "behind": false}, {"code": "H000000528", "name": "M제이씨_테이크아웃컵 2구 캐리어 (합지캐리어/무지)_25ea*8pk/BOX", "our": 18480, "mega": 15990, "big": 18190, "cnt": 16900, "oh": 16500, "low": 15990, "behind": true}, {"code": "H000000600", "name": "M(AFP)10/13oz COFFEE LID_종이컵뚜껑(흰색,개폐형(신)) 1,000ea/Box", "our": 28050, "mega": 25700, "big": 30390, "cnt": 28900, "oh": 25400, "low": 25400, "behind": true}, {"code": "H000000606", "name": "M포모나_휘핑스프레이(가당) 500g*12ea/BOX", "our": 4675, "mega": 4850, "big": 4970, "cnt": 4850, "oh": 8700, "low": 4850, "behind": false}, {"code": "H000000616", "name": "M상진_92파이 돔리드(페트)(투명컵뚜껑/돔형)_1,000ea/BOX", "our": 25740, "mega": 19900, "big": 19290, "cnt": 22900, "oh": 20400, "low": 19290, "behind": true}, {"code": "H000000624", "name": "M아이팩_92파이 PET 투명컵 16oz_1,000ea/BOX", "our": 48840, "mega": 48900, "big": null, "cnt": 54000, "oh": 58000, "low": 48900, "behind": false}, {"code": "H000000656", "name": "M_13oz 종이컵_1,000ea/Box", "our": 39215, "mega": 33000, "big": 32990, "cnt": 33000, "oh": 34500, "low": 32990, "behind": true}, {"code": "H000000657", "name": "M(CNP)_16oz 종이컵_1,000ea/Box", "our": 50875, "mega": 41400, "big": null, "cnt": 54800, "oh": 55000, "low": 41400, "behind": true}, {"code": "H000001057", "name": "M(AFP)_12/16/17oz COFFEE LID (흰색,종이컵뚜껑,개폐형) 1,000ea/Box", "our": 31900, "mega": 27500, "big": 32470, "cnt": 33900, "oh": 27950, "low": 27500, "behind": true}, {"code": "H000001419", "name": "M셀플러스_밀크아이스크림파우더_1kg*12ea/BOX", "our": null, "mega": null, "big": null, "cnt": null, "oh": null, "low": null, "behind": false}, {"code": "H000001472", "name": "M아이팩_92파이 PET 투명컵 20oz_1,000ea/BOX", "our": 62590, "mega": 59900, "big": 64990, "cnt": 68000, "oh": 63800, "low": 59900, "behind": true}, {"code": "H000003106", "name": "M셀플러스_민트라벨 제주말차_500g*18ea/BOX", "our": 10989, "mega": 11900, "big": 12140, "cnt": null, "oh": 11900, "low": 11900, "behind": false}, {"code": "H000004238", "name": "M포모나_제주봄빛 말차파우더_500g*12ea/BOX", "our": 8690, "mega": 8700, "big": 9000, "cnt": 9800, "oh": 8700, "low": 8700, "behind": false}, {"code": "H000004322", "name": "M스위트컵_레몬 농축액_1.8kg*6ea/BOX", "our": 21450, "mega": 22500, "big": 22500, "cnt": 22500, "oh": 22500, "low": 22500, "behind": false}, {"code": "H000004323", "name": "M스위트컵_자몽 농축액_1.8kg*6ea/BOX", "our": 21010, "mega": 22500, "big": 22500, "cnt": 22500, "oh": 22500, "low": 22500, "behind": false}, {"code": "H000004427", "name": "M스위트컵_찻잎담다 말차_1.2kg*6ea/BOX", "our": 15565, "mega": 19000, "big": 21810, "cnt": 21500, "oh": 19000, "low": 19000, "behind": false}], "banners": [{"mall": "cntmart", "img_url": "https://www.cntmart.com/upload/display/promotion/0/thumb/202606291621491682.jpg", "link_url": "https://www.cntmart.com/featured/pages/2532", "title": ""}, {"mall": "cntmart", "img_url": "https://www.cntmart.com/upload/display/promotion/0/thumb/202607091057551414.jpg", "link_url": "https://www.cntmart.com/featured/pages/2543", "title": ""}, {"mall": "cntmart", "img_url": "https://www.cntmart.com/upload/display/promotion/0/thumb/202607071304096854.jpg", "link_url": "https://www.cntmart.com/featured/pages/2526", "title": ""}, {"mall": "megacoffee", "img_url": "https://megacotr3116.cdn-nhncommerce.com/data/skin/front/moment/img/banner/slider_3451591343/ee96703be1f641bea2ff8faa55fd81d4_35804.jpg", "link_url": "https://www.megacoffee.co.kr/goods/event_sale.php?sno=3818", "title": ""}, {"mall": "megacoffee", "img_url": "https://megacotr3116.cdn-nhncommerce.com/data/skin/front/moment/img/banner/slider_3451591343/ee96703be1f641bea2ff8faa55fd81d4_23151.jpg", "link_url": "https://www.megacoffee.co.kr/goods/event_sale.php?sno=3773", "title": ""}, {"mall": "megacoffee", "img_url": "https://megacotr3116.cdn-nhncommerce.com/data/skin/front/moment/img/banner/slider_3451591343/ee96703be1f641bea2ff8faa55fd81d4_99553.jpg", "link_url": "https://www.megacoffee.co.kr/goods/event_sale.php?sno=3831", "title": ""}], "newitems": [{"mall": "cntmart", "name": "네이쳐티 포멜로 인 시럽 850g", "price": 15000, "url": "https://www.cntmart.com/item/G2000041505"}, {"mall": "cntmart", "name": "네이쳐티 맥스에너지 700ml", "price": 14000, "url": "https://www.cntmart.com/item/G2000041502"}, {"mall": "cntmart", "name": "네이쳐티 zero 맥스에너지 700ml", "price": 15000, "url": "https://www.cntmart.com/item/G2000041499"}, {"mall": "cntmart", "name": "로아커 클래식 바닐라 30gx25ea", "price": 37500, "url": "https://www.cntmart.com/item/G2000041490"}, {"mall": "cntmart", "name": "로아커 웨하스 콰드라티니 나폴리타너 125g", "price": 6000, "url": "https://www.cntmart.com/item/G2000015210"}, {"mall": "cntmart", "name": "로아커 웨하스 콰드라티니 더블초코 125g", "price": 6000, "url": "https://www.cntmart.com/item/G2000041487"}, {"mall": "cntmart", "name": "로아커 웨하스 콰드라티니 말차 110g", "price": 6000, "url": "https://www.cntmart.com/item/G2000041484"}, {"mall": "cntmart", "name": "로아커 웨하스 콰드라티니 티라미스 110g", "price": 6000, "url": "https://www.cntmart.com/item/G2000015218"}, {"mall": "cntmart", "name": "로아커 웨하스 콰드라티니 다크초콜릿 125g", "price": 6000, "url": "https://www.cntmart.com/item/G2000015212"}, {"mall": "cntmart", "name": "로아커 웨하스 콰드라티니 바닐라 125g", "price": 6000, "url": "https://www.cntmart.com/item/G2000015214"}], "behind_cnt": 19};
+const BK={"allbakery": {"banners": [{"img": "https://allbakery.co.kr/data/banner/353?20260701134454", "link": "https://allbakery.co.kr/shop/bannerhit.php?bn_id=353"}, {"img": "https://allbakery.co.kr/data/banner/351?20260608131531", "link": "https://allbakery.co.kr/shop/bannerhit.php?bn_id=351"}, {"img": "https://allbakery.co.kr/data/banner/349?20260511091135", "link": "https://allbakery.co.kr/shop/bannerhit.php?bn_id=349"}, {"img": "https://allbakery.co.kr/data/banner/347?20260511091115", "link": "https://allbakery.co.kr/shop/bannerhit.php?bn_id=347"}], "newitems": []}, "piececake": {"banners": [{"img": "https://www.piececake.co.kr/UPLOAD/BANNER/img_main_banner20250524milk.jpg", "link": "https://www.piececake.co.kr/product/product_view?prodNo=PD2347"}, {"img": "https://www.piececake.co.kr/UPLOAD/BANNER/img_main_banner20260723mini.jpg", "link": "https://www.piececake.co.kr/product/product_new_list?cDpGrp=&dp_grp="}, {"img": "https://www.piececake.co.kr/UPLOAD/BANNER/img_main_banner20260702peanut.jpg", "link": "https://www.piececake.co.kr/product/product_view?prodNo=PD2616"}, {"img": "https://www.piececake.co.kr/UPLOAD/BANNER/img_main_banner20260625ugly.jpg", "link": "https://www.piececake.co.kr/product/product_view?prodNo=PD2614"}], "newitems": [{"name": "케이크", "url": "https://www.piececake.co.kr/product/product_list?cDpGrp=A&dp_grp=A", "img": "https://www.piececake.co.kr/resources/images/common/gnb_icon02.png"}, {"name": "머핀/쿠키/스낵", "url": "https://www.piececake.co.kr/product/product_list?cDpGrp=B&dp_grp=D", "img": "https://www.piececake.co.kr/resources/images/common/gnb_icon03.png"}, {"name": "구움과자", "url": "https://www.piececake.co.kr/product/product_list?cDpGrp=C&dp_grp=!", "img": "https://www.piececake.co.kr/resources/images/common/gnb_icon06.png"}, {"name": "샌드위치/핫도그", "url": "https://www.piececake.co.kr/product/product_list?cDpGrp=D&dp_grp=J", "img": "https://www.piececake.co.kr/resources/images/common/gnb_icon07.png"}, {"name": "베이커리 완제품", "url": "https://www.piececake.co.kr/product/product_list?cDpGrp=E&dp_grp=O", "img": "https://www.piececake.co.kr/resources/images/common/gnb_icon06.png"}, {"name": "유제품", "url": "https://www.piececake.co.kr/product/product_list?cDpGrp=I&dp_grp=ⓔ", "img": "https://www.piececake.co.kr/resources/images/common/gnb_icon07.png"}, {"name": "냉동생지/반제품", "url": "https://www.piececake.co.kr/product/product_list?cDpGrp=F&dp_grp=T", "img": "https://www.piececake.co.kr/resources/images/common/gnb_icon08.png"}, {"name": "시럽/음료/냉동과일", "url": "https://www.piececake.co.kr/product/product_list?cDpGrp=G&dp_grp=~", "img": "https://www.piececake.co.kr/resources/images/common/gnb_icon08.png"}, {"name": "간편식", "url": "https://www.piececake.co.kr/product/product_list?cDpGrp=K&dp_grp=*", "img": "https://www.piececake.co.kr/resources/images/common/gnb_icon03.png"}, {"name": "미니마카롱(초코)", "url": "https://www.piececake.co.kr/product/product_view?prodNo=PD2622", "img": "https://www.piececake.co.kr/prodImg?p=mini_macaron_chocolate.jpg"}]}, "rangcompany": {"banners": [{"img": "https://ceeauoytpdrw28934453.gcdn.ntruss.com/data/mall_data/images/banner/120/911e1ede132180411eee8bda7d1800df.jpg", "link": "https://www.rangcompany.com/event/eventDetail/17"}, {"img": "https://ceeauoytpdrw28934453.gcdn.ntruss.com/data/mall_data/images/banner/141/d8713b7388d0b3e91b09c1492a00e06e.jpg", "link": "https://www.rangcompany.com/shop/goodsView/0000000259"}, {"img": "https://ceeauoytpdrw28934453.gcdn.ntruss.com/data/mall_data/images/banner/139/4d515062996a6f0f7a940c4ca488375f.jpg", "link": "https://www.rangcompany.com/shop/goodsView/0000000258"}, {"img": "https://ceeauoytpdrw28934453.gcdn.ntruss.com/data/mall_data/images/banner/137/a3ef93ba8de66c1ef47b1013dda89de8.jpg", "link": "https://www.rangcompany.com/shop/goodsView/0000000257"}], "newitems": [{"name": "왁뿌 요거베리 소금빵", "url": "https://www.rangcompany.com/shop/goodsView/0000000259", "img": "https://ceeauoytpdrw28934453.gcdn.ntruss.com/data/mall_data/images/banner/83/3587f9fb2e81f950c39a5c9ebb51a9dd.jpg"}, {"name": "초당옥수수 모찌 소보로빵", "url": "https://www.rangcompany.com/shop/goodsView/0000000258", "img": "https://ceeauoytpdrw28934453.gcdn.ntruss.com/data/mall_data/images/banner/111/cfa0b1e24ee5f77d32556e928e252417.jpg"}, {"name": "블랙 올리브 치아바타", "url": "https://www.rangcompany.com/shop/goodsView/0000000257", "img": "https://ceeauoytpdrw28934453.gcdn.ntruss.com/data/mall_data/images/banner/129/9d8995ef7bec39fa2323ed986470ab73.jpg"}, {"name": "바스크 치즈 케익", "url": "https://rangcompany.com/shop/goodsView/0000000030", "img": "https://ceeauoytpdrw28934453.gcdn.ntruss.com/data/mall_data/images/icon/34.gif"}, {"name": "치즈 수플레", "url": "https://rangcompany.com/shop/goodsView/0000000036", "img": "https://ceeauoytpdrw28934453.gcdn.ntruss.com/data/mall_data/images/icon/34.gif"}, {"name": "순수 우유 케익", "url": "https://rangcompany.com/shop/goodsView/0000000019", "img": "https://ceeauoytpdrw28934453.gcdn.ntruss.com/data/mall_data/images/icon/34.gif"}, {"name": "레인보우", "url": "https://rangcompany.com/shop/goodsView/0000000002", "img": "https://ceeauoytpdrw28934453.gcdn.ntruss.com/data/mall_data/images/icon/33.gif"}, {"name": "레몬 아이싱 파운드 케익", "url": "https://www.rangcompany.com/shop/goodsView/0000000147", "img": "https://ceeauoytpdrw28934453.gcdn.ntruss.com/data/mall_data/images/banner/12/2337baa667f66eac73fe17013f587367.jpg"}, {"name": "오렌지 파운드 케익", "url": "https://www.rangcompany.com/shop/goodsView/0000000044", "img": "https://ceeauoytpdrw28934453.gcdn.ntruss.com/data/mall_data/images/banner/43/5e57b82179bd7f5506f9b43e80c74d18.jpg"}, {"name": "크랜베리 쿠키", "url": "https://www.rangcompany.com/shop/goodsView/0000000008", "img": "https://ceeauoytpdrw28934453.gcdn.ntruss.com/data/mall_data/images/banner/45/1ea025d6a493eb76ddad871dd14ee5c1.jpg"}]}, "goldenbrown": {"banners": [{"img": "https://www.goldenbrown.co.kr/uploaded/banner/6215b64e36932c2a3932f250c083b0e7.jpg", "link": "https://www.goldenbrown.co.kr/product/list.php?odby=nw"}, {"img": "https://www.goldenbrown.co.kr/uploaded/banner/e0c645f2ae6962785279663d2c197cdb.jpg", "link": "https://www.goldenbrown.co.kr/product/list.php?odby=nw"}, {"img": "https://www.goldenbrown.co.kr/uploaded/banner/9e303a2e241d527b8c68759977c90c08.jpg", "link": "https://goldenbrown.co.kr/product/product_view.php?idx=426"}, {"img": "https://www.goldenbrown.co.kr/uploaded/banner/47cced57ff2e5d0a9965c11bf4dfadf8.jpg", "link": "https://www.goldenbrown.co.kr/product/product_view.php?idx=425"}], "newitems": [{"name": "NEW I CAKE", "url": "https://www.goldenbrown.co.kr/product/list.php?odby=nw", "img": "https://www.goldenbrown.co.kr/uploaded/banner/6215b64e36932c2a3932f250c083b0e7.jpg"}, {"name": "NEW I BREAD", "url": "https://goldenbrown.co.kr/product/product_view.php?idx=426", "img": "https://www.goldenbrown.co.kr/uploaded/banner/9e303a2e241d527b8c68759977c90c08.jpg"}, {"name": "NEW I BREAD", "url": "https://www.goldenbrown.co.kr/product/product_view.php?idx=425", "img": "https://www.goldenbrown.co.kr/uploaded/banner/47cced57ff2e5d0a9965c11bf4dfadf8.jpg"}, {"name": "NEW I CAKE", "url": "https://goldenbrown.co.kr/product/product_view.php?idx=424", "img": "https://www.goldenbrown.co.kr/uploaded/banner/51f15e062687c3779e8743f7c6fe0b7c.jpg"}, {"name": "NEW I BREAD", "url": "https://goldenbrown.co.kr/product/product_view.php?idx=423", "img": "https://www.goldenbrown.co.kr/uploaded/banner/cd009b084e66b3949144bf3a315d0b11.jpg"}]}};
+const MALLS={mega:"메가커피",big:"빅커피",cnt:"CNT마트",oh:"오커피"};
+const won=n=>n==null?"—":n.toLocaleString("ko-KR");
+const shortName=s=>(s||"").replace(/^M(\([^)]*\)|[가-힣\w]+?_)/,"").replace(/[\s_][\d.,]+[a-zA-Z가-힣*/]+.*$/,"").trim()||s;
+
+document.getElementById("subdate").textContent=DATA.date+" 기준 · 4개 경쟁몰 자동 조사";
+
+// KPI
+const behindCnt=DATA.rows.filter(r=>r.behind).length;
+const okCnt=DATA.rows.filter(r=>[r.mega,r.big,r.cnt,r.oh].some(x=>x!=null)).length;
+document.getElementById("kpis").innerHTML=[
+  ["조사 완료",okCnt,"종",""],
+  ["푸드레인이 비싼 상품",behindCnt,"종","alert"],
+  ["신규 입점",DATA.newitems.length,"건",""],
+  ["행사 배너",DATA.banners.length,"개",""],
+].map(([l,v,u,c])=>`<div class="kpi ${c}"><div class="l">${l}</div><div class="v tnum">${v}<span class="u">${u}</span></div></div>`).join("");
+
+if(behindCnt){
+  document.getElementById("alertbar").style.display="flex";
+  const worst=[...DATA.rows].filter(r=>r.behind).sort((a,b)=>(b.our/b.low)-(a.our/a.low))[0];
+  const pct=Math.round((worst.our/worst.low-1)*100);
+  document.getElementById("alertmsg").innerHTML=
+    `<b>${behindCnt}개 상품</b>에서 푸드레인이 경쟁사 최저가보다 비쌉니다. 최대 격차: <b>${shortName(worst.name)} +${pct}%</b> (우리 ${won(worst.our)} vs ${won(worst.low)}원)`;
+}
+
+// 표
+let sortK="gap",sortAsc=false,fBehind=false,q="";
+const gapOf=r=>(r.our&&r.low&&r.our>r.low)?(r.our/r.low-1):-1;
+function render(){
+  let rows=DATA.rows.filter(r=>{
+    if(fBehind&&!r.behind)return false;
+    if(q&&!(r.name||"").toLowerCase().includes(q)&&!(shortName(r.name)).toLowerCase().includes(q))return false;
+    return true;
+  });
+  rows.sort((a,b)=>{
+    let x,y;
+    if(sortK==="name"){x=shortName(a.name);y=shortName(b.name);return sortAsc?x.localeCompare(y):y.localeCompare(x);}
+    if(sortK==="gap"){x=gapOf(a);y=gapOf(b);}
+    else{x=a[sortK]??-1;y=b[sortK]??-1;}
+    return sortAsc?x-y:y-x;
+  });
+  document.getElementById("tbody").innerHTML=rows.map(r=>{
+    const cell=v=>v==null?'<td class="na">—</td>':`<td class="${v===r.low?'low':''}">${won(v)}${v===r.low?'<span class="st">★</span>':''}</td>`;
+    const g=(r.our&&r.low&&r.our>r.low)?`<span class="gap">+${Math.round((r.our/r.low-1)*100)}%</span>`:'<span class="na">—</span>';
+    return `<tr class="${r.behind?'behind':''}">
+      <td>${shortName(r.name)}<span class="code">${r.code}</span></td>
+      <td class="our">${won(r.our)}</td>
+      ${cell(r.mega)}${cell(r.big)}${cell(r.cnt)}${cell(r.oh)}
+      <td>${g}</td></tr>`;
+  }).join("");
+  document.getElementById("tcount").textContent=`${rows.length}종`;
+  document.querySelectorAll("thead th").forEach(th=>{
+    th.classList.toggle("sorted",th.dataset.k===sortK);
+    const ar=th.querySelector(".ar");if(ar)ar.textContent=sortAsc?"▲":"▼";
+  });
+}
+document.querySelectorAll("thead th").forEach(th=>th.onclick=()=>{
+  const k=th.dataset.k;
+  if(sortK===k)sortAsc=!sortAsc;else{sortK=k;sortAsc=(k==="name");}
+  render();
+});
+document.getElementById("search").oninput=e=>{q=e.target.value.toLowerCase().trim();render();};
+document.getElementById("fbehind").onclick=e=>{fBehind=!fBehind;e.target.classList.toggle("on",fBehind);render();};
+render();
+
+// 배너
+document.getElementById("bcount").textContent=DATA.banners.length+"개";
+document.getElementById("bgrid").innerHTML=DATA.banners.map(b=>{
+  const mk={megacoffee:"mega",bigcoffee:"big",cntmart:"cnt",ohcoffee:"oh"}[b.mall]||b.mall;
+  return `<a class="bcard" href="${b.link_url||'#'}" target="_blank" rel="noopener">
+    <img src="${b.img_url}" alt="배너" loading="lazy">
+    <div class="cap"><span class="mall-tag">${MALLS[mk]||b.mall}</span>${b.title?`<div style="margin-top:3px;color:var(--ink);font-weight:700">${b.title}</div>`:''}</div></a>`;
+}).join("")||'<div class="na">배너 없음</div>';
+
+// 신상품
+document.getElementById("ncount").textContent=DATA.newitems.length+"건";
+document.getElementById("nlist").innerHTML=DATA.newitems.map(n=>{
+  const mk={megacoffee:"mega",bigcoffee:"big",cntmart:"cnt",ohcoffee:"oh"}[n.mall]||n.mall;
+  return `<a class="ncard" href="${n.url||'#'}" target="_blank" rel="noopener">
+    <span class="nm">${n.name||'—'}<br><span class="mall-tag">${MALLS[mk]||n.mall}</span></span>
+    <span class="pr">${won(n.price)}원</span></a>`;
+}).join("")||'<div class="na">신상품 없음</div>';
+
+// 베이커리·디저트 4몰
+const BKNAME={allbakery:"올베이커리",piececake:"피스케이크",rangcompany:"랑컴퍼니",goldenbrown:"골든브라운"};
+if(typeof BK!=="undefined"&&BK){
+  let h="";
+  for(const k of ["allbakery","piececake","rangcompany","goldenbrown"]){
+    const v=BK[k];if(!v||(!v.banners.length&&!v.newitems.length))continue;
+    h+=`<div style="margin-bottom:22px"><div style="font-weight:800;color:var(--accent);margin-bottom:9px">${BKNAME[k]||k}</div>`;
+    if(v.banners.length)h+='<div class="bgrid">'+v.banners.map(b=>
+      `<a class="bcard" href="${b.link||'#'}" target="_blank" rel="noopener"><img src="${b.img}" alt="배너" loading="lazy">${b.title?`<div class="cap" style="color:var(--ink);font-weight:700">${b.title}</div>`:''}</a>`).join('')+'</div>';
+    if(v.newitems.length)h+='<div class="nlist" style="margin-top:10px">'+v.newitems.map(n=>
+      `<a class="ncard" href="${n.url||'#'}" target="_blank" rel="noopener"><span class="nm">${n.name}</span></a>`).join('')+'</div>';
+    h+="</div>";
+  }
+  if(h){document.getElementById("bksec").style.display="block";document.getElementById("bkwrap").innerHTML=h;}
+}
+
+// 테마 토글
+document.getElementById("themebtn").onclick=()=>{
+  const cur=document.documentElement.getAttribute("data-theme")
+    ||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");
+  document.documentElement.setAttribute("data-theme",cur==="dark"?"light":"dark");
+};
+</script>
