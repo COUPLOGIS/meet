@@ -1839,10 +1839,16 @@ async function saveDescNew(){const v=document.getElementById('ni').value;_descEd
 
 /* ── 체크리스트 (4뎁스 대체) ── */
 async function saveChecklist(t,ck){
-  if(API_BASE){const r=await apiPost('/api/task/save',{id:t.id,checklist:ck});
-    if(r&&r.ok){const bt=T.find(x=>x.id===t.id);if(bt)bt.checklist=ck;
-      _dirty=true;_lastLocal=Date.now();setTimeout(()=>{_dirty=false},2000);render();return}}
-  const e=ED[t.id]||{};e.checklist=ck;ED[t.id]=e;const bt=T.find(x=>x.id===t.id);if(bt)bt.checklist=ck;s();render();
+  // ① 로컬 즉시 반영 (await 전에) — 연속 입력 race 방지
+  const bt=T.find(x=>x.id===t.id);if(bt)bt.checklist=ck;
+  const e=ED[t.id]||{};e.checklist=ck;ED[t.id]=e;
+  _dirty=true;_lastLocal=Date.now();setTimeout(()=>{_dirty=false},2500);
+  // ② 리스트만 갱신 + 입력칸 포커스 복원 (연속 입력 끊김 방지)
+  updateDetail();
+  setTimeout(()=>{const n=document.getElementById('ckNew');if(n)n.focus()},20);
+  // ③ 저장은 백그라운드 (화면 안 기다림)
+  if(API_BASE){try{await apiPost('/api/task/save',{id:t.id,checklist:ck})}catch(err){toast('체크리스트 저장 지연 — 네트워크 확인')}}
+  else s();
 }
 function ckToggle(i){const t=tById(SEL);if(!t)return;const ck=[...(t.checklist||[])];ck[i]={...ck[i],done:!ck[i].done};saveChecklist(t,ck)}
 function ckDel(i){const t=tById(SEL);if(!t)return;const ck=[...(t.checklist||[])];ck.splice(i,1);saveChecklist(t,ck)}
