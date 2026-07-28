@@ -102,9 +102,9 @@ a{color:var(--accent2)}
 .projhead .pprog{margin-left:auto}
 .projhead .pbar{background:#fff;border:1px solid var(--border2);height:7px}
 .projhead input{font-weight:600;font-size:13.5px;border:1.5px solid var(--accent);border-radius:6px;padding:4px 9px;background:var(--surface);min-width:200px}
-.phadd{width:22px;height:22px;border-radius:6px;background:var(--accent);color:#fff;flex:none;
-  display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1;font-weight:600}
-.phadd:hover{filter:brightness(1.12)}
+.phadd{height:24px;padding:0 11px;border-radius:12px;background:var(--accent);color:#fff;flex:none;
+  display:inline-flex;align-items:center;gap:2px;font-size:12px;line-height:1;font-weight:700;white-space:nowrap}
+.phadd:hover{filter:brightness(1.1);box-shadow:0 1px 5px var(--accent-tint)}
 .qarow{padding:8px 14px 8px 40px;border-top:1px solid var(--border);background:var(--accent-tint)}
 .qarow input{width:100%;border:1.5px solid var(--accent);border-radius:7px;padding:7px 11px;font-size:12.5px;background:var(--surface)}
 .qarow.sqa{padding-left:64px;background:var(--subbg)}
@@ -1345,8 +1345,31 @@ async function npKey(ev){
 }
 
 /* ── #15 드래그 순서변경 ── */
-function tDragStart(e,id){DRAG={t:'task',id};e.dataTransfer.effectAllowed='move';
+function tDragStart(e,id,type,pid){DRAG={t:type||'task',id,pid:pid||null};e.dataTransfer.effectAllowed='move';
   try{e.dataTransfer.setData('text/plain',id)}catch(x){};e.stopPropagation()}
+/* 세부업무(3단계) 드래그: 같은 상위업무 내 순서 변경 */
+function subOver(e,id){if(!DRAG||DRAG.t!=='sub'||DRAG.id===id)return;
+  e.preventDefault();e.dataTransfer.dropEffect='move';
+  const r=e.currentTarget.getBoundingClientRect();const top=(e.clientY-r.top)<r.height/2;
+  e.currentTarget.classList.toggle('drag-top',top);e.currentTarget.classList.toggle('drag-bot',!top)}
+async function subDrop(e,id,parentId){e.preventDefault();e.stopPropagation();
+  if(!DRAG||DRAG.t!=='sub'||DRAG.id===id||DRAG.pid!==parentId){dragEnd();return}
+  const r=e.currentTarget.getBoundingClientRect();const before=(e.clientY-r.top)<r.height/2;
+  const dragId=DRAG.id;dragEnd();
+  await reorderSub(dragId,parentId,id,before)}
+async function reorderSub(id,parentId,refId,before){
+  const bt=T.find(x=>x.id===id);if(!bt)return;
+  const list=subsOf(parentId).filter(x=>x.id!==id);
+  let idx=list.length;
+  if(refId){const i=list.findIndex(x=>x.id===refId);if(i>=0)idx=before?i:i+1}
+  list.splice(idx,0,ap(bt));
+  const updates=[];
+  list.forEach((x,i)=>{const b=T.find(y=>y.id===x.id);if(b&&(b.ord??0)!==i){b.ord=i;updates.push({id:x.id,ord:i})}});
+  render();
+  for(const u of updates)await apiPost('/api/task/save',u);
+  _dirty=true;_lastLocal=Date.now();setTimeout(()=>{_dirty=false},2000);
+  if(updates.length)toast('세부업무 순서 변경됨');
+}
 function pDragStart(e,pid){DRAG={t:'proj',id:pid};e.dataTransfer.effectAllowed='move';
   try{e.dataTransfer.setData('text/plain',pid)}catch(x){};e.stopPropagation()}
 function dragEnd(){DRAG=null;
@@ -1440,7 +1463,7 @@ function renderListView(){
     h+=`<div class="projhead ${open?'':'closed'}" onclick="pjToggle('${pid}')" ${pid?`draggable="true" ondragstart="pDragStart(event,'${pid}')" ondragend="dragEnd()" ondragover="navOver(event)" ondrop="navDrop(event,'${pid}')"`:''}>
         <span class="caret">▼</span><span class="dot" style="background:${projColor(pid)}"></span>${nameHtml}
         <span class="gcnt">${list.length}</span>
-        <span class="phadd" onclick="event.stopPropagation();qaOpen('${pid}')" title="이 프로젝트에 바로 업무 추가">＋</span>
+        <span class="phadd" onclick="event.stopPropagation();qaOpen('${pid}')" title="이 프로젝트에 바로 업무 추가">＋ 업무 추가</span>
         <span class="pprog"><span class="pbar" style="width:64px"><span class="pfill" style="width:${pp}%;display:block;height:100%"></span></span><span class="pnum">${pp}%</span></span>
         ${pid?`<span class="pmv" onclick="event.stopPropagation();renameProject('${pid}')" title="이름 수정">✎</span>`:'<span class="pmv" style="visibility:hidden">✎</span>'}</div>`;
     if(open){
@@ -1483,7 +1506,9 @@ function rowL2(t){
 }
 function rowL3(s){
   /* #2+#6: 들여쓰기는 제목 칸 안에서만 · 상태/담당/날짜 컬럼은 상위행과 동일 그리드 정렬 */
-  return `<div class="srow${s.id===SEL?' sel':''}" tabindex="0" role="button" onclick="selTask('${s.id}')" onkeydown="if(event.key==='Enter')selTask('${s.id}')">
+  return `<div class="srow${s.id===SEL?' sel':''}" tabindex="0" role="button" onclick="selTask('${s.id}')" onkeydown="if(event.key==='Enter')selTask('${s.id}')"
+    draggable="true" ondragstart="tDragStart(event,'${s.id}','sub','${s.parent_id}')" ondragend="dragEnd()"
+    ondragover="subOver(event,'${s.id}')" ondragleave="rowLeave(event)" ondrop="subDrop(event,'${s.id}','${s.parent_id}')">
     <div class="tname" style="--pjc:${projColor(s.project||'')}"><span class="tt">${esc(s.title)}</span>${ckCount(s)}${(s.links||[]).length?'<span class="scount">🔗</span>':''}</div>
     <div>${stPill(s)}</div>
     <div class="asg">${(()=>{const al=asgList(s);
