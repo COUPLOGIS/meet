@@ -303,6 +303,15 @@ a{color:var(--accent2)}
 .mdbar{display:flex;gap:5px;margin:3px 0 5px;flex-wrap:wrap}
 .mdbar button{border:1px solid var(--border2);background:var(--surface);border-radius:6px;padding:4px 9px;font-size:12px;color:var(--ink2);cursor:pointer;line-height:1}
 .mdbar button:hover{border-color:var(--accent);color:var(--accent2);background:var(--accent-tint)}
+/* 회의록 검색·정렬·그룹 */
+.mtools{display:flex;gap:8px;align-items:center;margin:4px 0 12px}
+.msearch{flex:1;border:1px solid var(--border2);border-radius:9px;padding:8px 12px;font-size:13px;background:var(--surface)}
+.mgrouphd{display:flex;align-items:center;gap:8px;padding:9px 4px 6px;cursor:pointer;user-select:none;
+  font-weight:800;font-size:14px;border-bottom:1px solid var(--border);margin-top:6px}
+.mgrouphd:hover{color:var(--accent2)}
+.mgrouphd .caret{color:var(--ink3);font-size:12px}
+.mgrouphd .mgn{font-size:11.5px;color:var(--ink3);font-weight:600;background:var(--surface2);border-radius:9px;padding:1px 8px}
+.mglist{padding-left:6px}
 .mbox h3{font-size:15px;margin-bottom:14px}
 .mbox label{display:block;font-size:11.5px;color:var(--ink3);margin:10px 0 4px}
 .mbox input,.mbox select,.mbox textarea{width:100%;border:1px solid var(--border2);border-radius:7px;padding:8px 10px;font-size:13px;background:var(--surface)}
@@ -516,6 +525,7 @@ a{color:var(--accent2)}
   <div class="mbox" style="width:640px">
     <h3 id="mtgTitle">회의록 작성</h3>
     <label>날짜</label><input id="mDate" type="date">
+    <label>분류 (그룹 · 비우면 미분류)</label><input id="mCat" list="mCatList" placeholder="예: 주간회의 / 거래처미팅 / 기획"><datalist id="mCatList"></datalist>
     <label>주제</label><input id="mTopic">
     <label>참여자</label><input id="mParts" placeholder="조한표, 권용훈">
     <label>회의 내용 (마크다운 지원 · 아래 버튼으로 서식 삽입)</label>
@@ -841,7 +851,7 @@ async function boot(){
         const apiMids=new Set(apiMeetings.map(m=>m.id||m.date));
         // Merge with tasks that reference meetings not in API
         const extraMids=[...mids].filter(id=>!apiMids.has(id));
-        M=[...apiMeetings.map(m=>({id:m.id||m.date,date:m.date||m.id,p:m.p||m.participants||'',tp:m.tp||m.topic||'',sm:m.sm||m.summary||[],ts:m.ts||m.task_ids||[]}))];
+        M=[...apiMeetings.map(m=>({id:m.id||m.date,date:m.date||m.id,p:m.p||m.participants||'',tp:m.tp||m.topic||'',sm:m.sm||m.summary||[],ts:m.ts||m.task_ids||[],cat:m.cat||m.category||""}))];
         extraMids.forEach(id=>{
           const ts=T.filter(t=>(t.meeting_id||t.meeting_date)===id);
           let date='',p='',tp='',sm=[];
@@ -942,7 +952,7 @@ function startPolling(){
         COMMENTS=data.comments||[];PROJECTS_DB=data.projects||[];FEED=data.feed||[];
         // Update meetings if changed
         if(data.meetings&&data.meetings.length){
-          const apiMeetings=data.meetings.map(m=>({id:m.id||m.date,date:m.date||m.id,p:m.p||m.participants||'',tp:m.tp||m.topic||'',sm:m.sm||m.summary||[],ts:m.ts||m.task_ids||[]}));
+          const apiMeetings=data.meetings.map(m=>({id:m.id||m.date,date:m.date||m.id,p:m.p||m.participants||'',tp:m.tp||m.topic||'',sm:m.sm||m.summary||[],ts:m.ts||m.task_ids||[],cat:m.cat||m.category||""}));
           const apiMids=new Set(apiMeetings.map(m=>m.id));
           // Keep local meetings not in API
           const localOnly=M.filter(m=>!apiMids.has(m.id));
@@ -2068,37 +2078,69 @@ async function delTaskNew(){
 }
 
 
-/* ── 회의록 뷰 (고도화 대비 틀 유지) ── */
+/* ── 회의록 뷰 (2뎁스 그룹핑 · 검색 · 일자정렬) ── */
+let MSEARCH='', MSORT_ASC=false;
+const openMcat={};
+function mcatList(){return [...new Set(M.map(m=>m.cat||'').filter(Boolean))].sort()}
+function mSearch(v){MSEARCH=v;const sc=document.getElementById('mScrollY');const y=sc?sc.scrollTop:0;renderMeetingsView();const s2=document.getElementById('mScrollY');if(s2)s2.scrollTop=y}
+function mSortToggle(){MSORT_ASC=!MSORT_ASC;renderMeetingsView()}
+function mcatToggle(c){openMcat[c]=openMcat[c]===false;renderMeetingsView()}
+function _mcard(m){
+  const on=SEL===m.id;
+  let h=`<div class="mcard${on?' active':''}" onclick="selMeet('${m.id}')">
+    <div class="mc-body"><div class="mc-date">${esc(m.date||String(m.id).replace(/_/g,' '))}</div>
+    <div class="mc-title">${esc(m.tp||'회의')}</div><div class="mc-meta">참여: ${esc(m.p||'—')}</div></div>
+    <div class="mc-tasks">${(m.ts||[]).length}개 과제</div></div>`;
+  if(on){
+    h+='<div class="mdetail">';
+    h+=`<div style="text-align:right;margin-bottom:8px">
+      <span class="lnk" onclick="event.stopPropagation();editMeeting('${m.id}')">✎ 수정</span>
+      <span class="lnk" style="color:var(--today);margin-left:12px" onclick="event.stopPropagation();delMeeting('${m.id}')">🗑 삭제</span></div>`;
+    if((m.sm||[]).length)h+='<div class="sect">회의 내용</div><div class="descbox" style="cursor:default">'+mdRender((m.sm||[]).join('\n'))+'</div>';
+    const linked=baseTasks().filter(t=>t.meeting_id===m.id);
+    if(linked.length)h+='<div class="sect">연결된 과제</div><div class="subs">'+linked.map(t=>`<div class="subitem" onclick="event.stopPropagation();selTask('${t.id}')">${stPill(t)}<span class="t">${esc(t.title)}</span>${avh(t.assignee,1)}</div>`).join('')+'</div>';
+    if(!(m.sm||[]).length&&!linked.length)h+='<div style="color:var(--ink3)">상세 내용 없음 — ✎ 수정으로 작성하세요</div>';
+    h+='</div>';
+  }
+  return h;
+}
 function renderMeetingsView(){
+  // 검색 (일자·참여자·타이틀·내용)
+  let list=M.slice();
+  if(MSEARCH){const q=MSEARCH.toLowerCase();
+    list=list.filter(m=>[m.date,m.p,m.tp,(m.sm||[]).join(' ')].join(' ').toLowerCase().includes(q))}
+  // 일자 정렬
+  list.sort((a,b)=>{const x=String(a.date||a.id),y=String(b.date||b.id);return MSORT_ASC?x.localeCompare(y):y.localeCompare(x)});
+  // 그룹핑 (2뎁스: 분류 > 회의록)
+  const groups={};
+  for(const m of list){const c=m.cat||'미분류';(groups[c]=groups[c]||[]).push(m)}
+  const cats=Object.keys(groups).sort((a,b)=>a==='미분류'?1:b==='미분류'?-1:a.localeCompare(b));
+
   let h='<div class="calbox">';
   h+=`<div class="calhead2"><h3>회의록<span class="c">${M.length}</span></h3><button class="btn primary" onclick="newMeeting()">＋ 회의록 작성</button></div>`;
-  if(!M.length)h+='<div class="empty">아직 회의록이 없습니다.<br>회의봇 연동 고도화 시 여기에 쌓이고, 추출된 과제가 업무와 자동 연결됩니다.</div>';
-  for(const m of M){
-    const on=SEL===m.id;
-    h+=`<div class="mcard${on?' active':''}" onclick="selMeet('${m.id}')">
-      <div class="mc-body"><div class="mc-date">${esc(m.date||String(m.id).replace(/_/g,' '))}</div>
-      <div class="mc-title">${esc(m.tp||'회의')}</div><div class="mc-meta">참여: ${esc(m.p||'—')}</div></div>
-      <div class="mc-tasks">${(m.ts||[]).length}개 과제</div></div>`;
-    if(on){
-      h+='<div class="mdetail">';
-      h+=`<div style="text-align:right;margin-bottom:8px">
-        <span class="lnk" onclick="event.stopPropagation();editMeeting('${m.id}')">✎ 수정</span>
-        <span class="lnk" style="color:var(--today);margin-left:12px" onclick="event.stopPropagation();delMeeting('${m.id}')">🗑 삭제</span></div>`;
-      if((m.sm||[]).length)h+='<div class="sect">회의 내용</div><div class="descbox" style="cursor:default">'+mdRender((m.sm||[]).join('\n'))+'</div>';
-      const linked=baseTasks().filter(t=>t.meeting_id===m.id);
-      if(linked.length)h+='<div class="sect">연결된 과제</div><div class="subs">'+linked.map(t=>`<div class="subitem" onclick="event.stopPropagation();selTask('${t.id}')">${stPill(t)}<span class="t">${esc(t.title)}</span>${avh(t.assignee,1)}</div>`).join('')+'</div>';
-      if(!(m.sm||[]).length&&!linked.length)h+='<div style="color:var(--ink3)">상세 내용 없음 — ✎ 수정으로 작성하세요</div>';
-      h+='</div>';
-    }
+  h+=`<div class="mtools">
+    <input class="msearch" placeholder="🔍 일자·참여자·제목·내용 검색" value="${esc(MSEARCH)}" oninput="mSearch(this.value)">
+    <button class="btn sm" onclick="mSortToggle()">일자 ${MSORT_ASC?'▲ 과거순':'▼ 최신순'}</button></div>`;
+  if(!M.length)h+='<div class="empty">아직 회의록이 없습니다. ＋ 회의록 작성으로 시작하세요.</div>';
+  else if(!list.length)h+='<div class="empty">검색 결과가 없습니다.</div>';
+  h+='<div id="mScrollY">';
+  for(const cat of cats){
+    const items=groups[cat];const open=openMcat[cat]!==false;
+    h+=`<div class="mgrouphd" onclick="mcatToggle('${esc(cat).replace(/'/g,"")}')">
+      <span class="caret">${open?'▾':'▸'}</span><span class="mgname">${esc(cat)}</span><span class="mgn">${items.length}</span></div>`;
+    if(open){h+='<div class="mglist">';for(const m of items)h+=_mcard(m);h+='</div>';}
   }
-  h+='</div>';
+  h+='</div></div>';
   document.getElementById('content').innerHTML=h;
   document.getElementById('vtitle').innerHTML=`회의록<span class="n">${M.length}</span>`;
 }
 
 let _editMid=null;
+function fillMcatOptions(){const dl=document.getElementById('mCatList');
+  if(dl)dl.innerHTML=mcatList().map(c=>`<option value="${esc(c)}">`).join('')}
 function newMeeting(){_editMid=null;
-  ['mTopic','mParts','mSum','mDate'].forEach(i=>{const e=document.getElementById(i);if(e)e.value=''});
+  ['mTopic','mParts','mSum','mDate','mCat'].forEach(i=>{const e=document.getElementById(i);if(e)e.value=''});
+  fillMcatOptions();
   const t=document.getElementById('mtgTitle');if(t)t.textContent='회의록 작성';
   mShow('mtgModal');}
 function editMeeting(id){const m=M.find(x=>x.id===id);if(!m)return;
@@ -2106,7 +2148,9 @@ function editMeeting(id){const m=M.find(x=>x.id===id);if(!m)return;
   document.getElementById('mDate').value=m.date&&/^\d{4}-\d\d-\d\d/.test(m.date)?m.date.slice(0,10):'';
   document.getElementById('mTopic').value=m.tp||'';
   document.getElementById('mParts').value=m.p||'';
+  document.getElementById('mCat').value=m.cat||'';
   document.getElementById('mSum').value=(m.sm||[]).join('\n');
+  fillMcatOptions();
   const t=document.getElementById('mtgTitle');if(t)t.textContent='회의록 수정';
   mShow('mtgModal');}
 async function delMeeting(id){const m=M.find(x=>x.id===id);
@@ -2126,15 +2170,16 @@ async function addMeeting(){  // 저장(신규/수정 공용)
   const date=document.getElementById('mDate').value||new Date().toISOString().slice(0,10);
   const topic=document.getElementById('mTopic').value.trim();if(!topic)return toast('주제를 입력하세요');
   const parts=document.getElementById('mParts').value.trim();
+  const category=(document.getElementById('mCat')?.value||'').trim();
   const summary=document.getElementById('mSum').value.split('\n').map(x=>x.replace(/\s+$/,'')).filter(x=>x);
   const editing=_editMid;
   const mid=editing||('mtg_'+date+'_'+Date.now().toString(36));
   const ts=editing?(M.find(x=>x.id===mid)?.ts||[]):[];
-  const r=await apiPost('/api/meeting/save',{id:mid,date,topic,participants:parts,summary,task_ids:ts});
+  const r=await apiPost('/api/meeting/save',{id:mid,date,topic,participants:parts,summary,task_ids:ts,category});
   if(r&&r.ok){
-    const rec={id:mid,date,p:parts,tp:topic,sm:summary,ts};
+    const rec={id:mid,date,p:parts,tp:topic,sm:summary,ts,cat:category};
     if(editing){const i=M.findIndex(x=>x.id===mid);if(i>=0)M[i]=rec;}else M.unshift(rec);
-    _editMid=null;mClose('mtgModal');['mTopic','mParts','mSum','mDate'].forEach(i=>document.getElementById(i).value='');
+    _editMid=null;mClose('mtgModal');['mTopic','mParts','mSum','mDate','mCat'].forEach(i=>document.getElementById(i).value='');
     _dirty=true;_lastLocal=Date.now();setTimeout(()=>{_dirty=false},2000);
     VIEW='meetings';SEL=mid;render();toast(editing?'회의록 수정됨':'회의록 저장됨')}
   else toast('저장 실패 — 서버 확인 필요');
