@@ -105,6 +105,9 @@ a{color:var(--accent2)}
 .phadd{height:24px;padding:0 11px;border-radius:12px;background:var(--accent);color:#fff;flex:none;
   display:inline-flex;align-items:center;gap:2px;font-size:12px;line-height:1;font-weight:700;white-space:nowrap}
 .phadd:hover{filter:brightness(1.1);box-shadow:0 1px 5px var(--accent-tint)}
+.pjdel{margin-left:auto;font-size:12px;color:var(--ink3);opacity:0;padding:0 5px;border-radius:5px;flex:none}
+.navitem:hover .pjdel{opacity:.7}
+.pjdel:hover{opacity:1;color:var(--today);background:var(--surface2)}
 .qarow{padding:8px 14px 8px 40px;border-top:1px solid var(--border);background:var(--accent-tint)}
 .qarow input{width:100%;border:1.5px solid var(--accent);border-radius:7px;padding:7px 11px;font-size:12.5px;background:var(--surface)}
 .qarow.sqa{padding-left:64px;background:var(--subbg)}
@@ -1174,7 +1177,7 @@ function renderProjNav(){
   el.innerHTML=shown.map(pid=>{
     const n=topTasks().filter(t=>(t.project||'')===pid).length;
     return `<button class="navitem ${F_PROJ===pid&&VIEW==='tasks'?'on':''}" ${pid?`draggable="true" ondragstart="pDragStart(event,'${pid}')" ondragend="dragEnd()" ondragover="navOver(event)" ondrop="navDrop(event,'${pid}')"`:''} onclick="F_PROJ=F_PROJ==='${pid}'?'':'${pid}';navTo('tasks')">
-      <span class="dot" style="background:${projColor(pid)}"></span>${esc(projName(pid))}<span class="cnt">${n}</span></button>`;
+      <span class="dot" style="background:${projColor(pid)}"></span>${esc(projName(pid))}${pid?`<span class="pjdel" onclick="event.stopPropagation();deleteProject('${pid}')" title="프로젝트 삭제">✕</span>`:''}<span class="cnt">${n}</span></button>`;
   }).join('')
   +(ids.length>LIMIT?`<button class="navitem" style="color:var(--ink3)" onclick="PJMORE=!PJMORE;render()">${PJMORE?'▴ 접기':`▾ 나머지 ${ids.length-LIMIT}개 보기`}</button>`:'')
   +(ADDP?`<div style="padding:4px 8px"><input id="npIn" onblur="npBlur()" placeholder="새 프로젝트 이름 · Enter" style="width:100%;border:1.5px solid var(--accent);border-radius:6px;padding:6px 9px;font-size:12px;background:var(--surface)" onkeydown="npKey(event)"></div>`
@@ -1200,6 +1203,20 @@ async function addProjectFromModal(){
 
 
 function addProject(){addpOpen()}  // 구 진입점 호환 → 사이드바 인라인 입력
+async function deleteProject(pid){
+  const cnt=topTasks().filter(t=>(t.project||'')===pid).length;
+  const msg=`프로젝트 「${projName(pid)}」를 삭제하시겠습니까?`+(cnt?`\n\n소속 업무 ${cnt}개는 삭제되지 않고 '미분류'로 이동합니다.`:'');
+  if(!confirm(msg))return;
+  // 소속 업무(상위+세부) 프로젝트 비우기 — 업무 자체는 보존
+  const tasks=all().filter(t=>(t.project||'')===pid);
+  for(const t of tasks){const bt=T.find(x=>x.id===t.id);if(bt)bt.project='';
+    if(API_BASE)await apiPost('/api/task/save',{id:t.id,project:''});}
+  if(API_BASE)await apiPost('/api/project/save',{id:pid,action:'delete'});
+  PROJECTS_DB=PROJECTS_DB.filter(x=>x.id!==pid);
+  if(F_PROJ===pid)F_PROJ='';
+  _dirty=true;_lastLocal=Date.now();setTimeout(()=>{_dirty=false},2000);
+  render();toast('프로젝트 삭제됨'+(cnt?` · 업무 ${cnt}개는 미분류로 이동`:''));
+}
 function navOver(e){if(DRAG&&DRAG.t==='proj')e.preventDefault()}
 async function navDrop(e,pid){e.preventDefault();
   if(DRAG&&DRAG.t==='proj'&&DRAG.id!==pid&&pid){const d=DRAG;dragEnd();await reorderProj(d.id,pid)}
