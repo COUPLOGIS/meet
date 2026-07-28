@@ -1509,7 +1509,7 @@ function rowL2(t){
       <button class="tgl${subs.length?'':' none'}" onclick="event.stopPropagation();openSubs.has('${t.id}')?openSubs.delete('${t.id}'):openSubs.add('${t.id}');render()">${opened?'−':'+'}</button>
       <span class="tt">${esc(t.title)}</span>${subs.length?`<span class="scount">(${subs.length})</span>`:''}${(t.links||[]).length?'<span class="scount" title="연결 문서 있음">🔗</span>':''}${mir?'<span class="mirrorb">⇄</span>':''}
       <span class="racts">
-        <span class="ract" title="세부업무 추가" onclick="event.stopPropagation();sqaOpen('${t.id}')">⊞</span>
+        <span class="ract" title="세부업무 추가" onclick="event.stopPropagation();sqaOpen('${t.id}')">＋</span>
         <span class="ract grip" title="끌어서 순서 변경 · 다른 프로젝트로 이동" draggable="true" onclick="event.stopPropagation()" ondragstart="tDragStart(event,'${t.id}')" ondragend="dragEnd()">⠿</span>
       </span></div>
     <div>${stPill(t)}</div>
