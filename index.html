@@ -446,7 +446,7 @@ a{color:var(--accent2)}
 <body>
 <div class="shell" id="shell">
   <nav class="side" id="sidebar">
-    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.07.29 19:07</span></div>
+    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.07.29 19:16</span></div>
     <button class="newbtn" onclick="mShow('addModal')">＋ 새 업무</button>
     <div class="navsec">
       <div class="navlabel">모아보기</div>
@@ -603,13 +603,18 @@ function l(){
 // apiGet(): helper to GET from API endpoint
 async function apiGet(endpoint){
   if(!API_BASE)return null;
-  try{
-    const res=await fetch(API_BASE+endpoint,{headers:{'skip_zrok_interstitial':'true'}});
-    const ct=res.headers.get('content-type')||'';
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    if(!ct.includes('json'))throw new Error('Not JSON: '+ct);
-    return await res.json();
-  }catch(e){console.error('API GET failed:',endpoint,e.message);API_BASE=null;return null;}
+  for(let attempt=0;attempt<2;attempt++){  // ★ 순간 실패는 재시도 — API_BASE를 죽이지 않음(영구 폴백 방지)
+    try{
+      const res=await fetch(API_BASE+endpoint,{headers:{'skip_zrok_interstitial':'true'},cache:'no-store'});
+      const ct=res.headers.get('content-type')||'';
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      if(!ct.includes('json'))throw new Error('Not JSON: '+ct);
+      return await res.json();
+    }catch(e){
+      if(attempt===0){await new Promise(r=>setTimeout(r,400));continue;}
+      console.error('API GET failed:',endpoint,e.message);return null;  // API_BASE 유지 → 다음 요청 재시도
+    }
+  }
 }
 // s(): save to localStorage (fallback) or mark dirty for API
 function s(){
@@ -622,17 +627,25 @@ function s(){
 // apiPost(): helper to POST to API endpoint
 async function apiPost(endpoint, body){
   if(!API_BASE)return null;
-  try{
-    const res=await fetch(API_BASE+endpoint,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','skip_zrok_interstitial':'true'},
-      body:JSON.stringify(body)
-    });
-    const ct=res.headers.get('content-type')||'';
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    if(!ct.includes('json'))throw new Error('Not JSON: '+ct);
-    return await res.json();
-  }catch(e){console.error('API POST failed:',endpoint,e.message);API_BASE=null;return null;}
+  for(let attempt=0;attempt<3;attempt++){  // ★ 저장은 최대 3회 재시도 — 순간 실패로 데이터 유실 방지, API_BASE 유지
+    try{
+      const res=await fetch(API_BASE+endpoint,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','skip_zrok_interstitial':'true'},
+        cache:'no-store',
+        body:JSON.stringify(body)
+      });
+      const ct=res.headers.get('content-type')||'';
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      if(!ct.includes('json'))throw new Error('Not JSON: '+ct);
+      return await res.json();
+    }catch(e){
+      if(attempt<2){await new Promise(r=>setTimeout(r,500));continue;}
+      console.error('API POST failed:',endpoint,e.message);
+      try{toast('⚠ 저장 실패 — 네트워크 확인 후 다시 시도하세요')}catch(x){}
+      return null;  // API_BASE 유지 → 다음 저장 재시도
+    }
+  }
 }
 // ap(): apply ED overrides to base task. In API mode, comments come from COMMENTS array.
 function ap(t){
