@@ -865,24 +865,9 @@ async function boot(){
           M.push({id,date,p,tp,sm,ts});
         });
         M.sort((a,b)=>b.id.localeCompare(a.id));
-        // Load localStorage as fallback cache
+        // 미러/이벤트만 로컬 캐시에서 로드. ★ API(서버)가 단일 진실 — ED task stub은 병합하지 않는다
+        // (병합하면: 삭제한 업무 부활 · 순서/프로젝트 덮어씀 · 빈 stub이 (no title)로 뜸)
         l();
-        // Merge localStorage ED tasks not yet synced to API
-        Object.keys(ED).forEach(id => {
-          if (!T.find(t => t.id === id)) {
-            const e = ED[id];
-            T.push({
-              id, title: e.title || '', description: e.description || '',
-              tags: e.tags || [], parent_id: e.parent_id || null,
-              assignee: e.assignee || '', collaborators: e.collaborators || [],
-              due_date: e.due_date || '', priority: e.priority || '보통',
-              status: e.status || '대기중', meeting_id: e.meeting_id || e._meeting_id || '',
-              source: e.source || 'personal', created_by: e.created_by || '',
-              links: e.links || [],
-              _h: e._ha || [{t: e.created_at || '?', a: 'Created', n: ''}]
-            });
-          }
-        });
         render();
         startPolling();
         return;
@@ -929,24 +914,8 @@ function startPolling(){
     try{
       const data=await apiGet('/api/state');
       if(data&&data.ok){
-        // Merge updates: replace T, EV, USERS, COMMENTS while preserving local ED
+        // ★ 서버 상태로 완전 교체 (API가 단일 진실). ED task stub 병합 안 함 — 삭제 부활·순서 엉킴·미분류·(no title) 방지
         T=(data.tasks||[]).map(t=>({...t,_h:t._h||[{t:t.meeting_date||t.meeting_id||'?',a:'Created',n:''}]}));
-        // Merge localStorage ED tasks not yet synced to API
-        Object.keys(ED).forEach(id => {
-          if (!T.find(t => t.id === id)) {
-            const e = ED[id];
-            T.push({
-              id, title: e.title || '', description: e.description || '',
-              tags: e.tags || [], parent_id: e.parent_id || null,
-              assignee: e.assignee || '', collaborators: e.collaborators || [],
-              due_date: e.due_date || '', priority: e.priority || '보통',
-              status: e.status || '대기중', meeting_id: e.meeting_id || e._meeting_id || '',
-              source: e.source || 'personal', created_by: e.created_by || '',
-              links: e.links || [],
-              _h: e._ha || [{t: e.created_at || '?', a: 'Created', n: ''}]
-            });
-          }
-        });
         USERS=data.users||{};
         EV=data.events||{};
         COMMENTS=data.comments||[];PROJECTS_DB=data.projects||[];FEED=data.feed||[];
