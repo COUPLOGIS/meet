@@ -446,7 +446,7 @@ a{color:var(--accent2)}
 <body>
 <div class="shell" id="shell">
   <nav class="side" id="sidebar">
-    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.07.29 19:16</span></div>
+    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.07.30 17:29</span></div>
     <button class="newbtn" onclick="mShow('addModal')">＋ 새 업무</button>
     <div class="navsec">
       <div class="navlabel">모아보기</div>
@@ -522,8 +522,8 @@ a{color:var(--accent2)}
   </div>
 </div>
 <!-- 회의록 작성 모달 -->
-<div class="mo" id="mtgModal" onclick="if(event.target===this)mClose('mtgModal')">
-  <div class="mbox" style="width:640px">
+<div class="mo" id="mtgModal" onclick="mtgBgClose(event)">
+  <div class="mbox" style="width:640px" oninput="mtgDraft()">
     <h3 id="mtgTitle">회의록 작성</h3>
     <label>날짜</label><input id="mDate" type="date">
     <label>분류 (그룹 · 비우면 미분류)</label><input id="mCat" list="mCatList" placeholder="예: 주간회의 / 거래처미팅 / 기획"><datalist id="mCatList"></datalist>
@@ -538,7 +538,7 @@ a{color:var(--accent2)}
       <button type="button" onclick="mdIns('mSum','\`','\`')" title="코드">&lt;/&gt;</button>
     </div>
     <textarea id="mSum" rows="12" style="resize:vertical;line-height:1.6" placeholder="# 안건&#10;- 논의 내용&#10;- [ ] 할 일&#10;**중요** 사항"></textarea>
-    <div class="mbtns"><button class="bsm" onclick="_editMid=null;mClose('mtgModal')">취소</button><button class="bsm pri" onclick="addMeeting()">저장</button></div>
+    <div class="mbtns"><button class="bsm" onclick="mtgCancelClose()">취소</button><button class="bsm pri" onclick="addMeeting()">저장</button></div>
   </div>
 </div>
 <div id="toast"></div>
@@ -2121,10 +2121,35 @@ function renderMeetingsView(){
 let _editMid=null;
 function fillMcatOptions(){const dl=document.getElementById('mCatList');
   if(dl)dl.innerHTML=mcatList().map(c=>`<option value="${esc(c)}">`).join('')}
+/* 회의록 작성 안전장치: 배경클릭 방지 + 임시저장(draft) */
+const MDRAFT='tlv2_mtgdraft';
+function _mv(id){return document.getElementById(id)?.value||''}
+function mtgDraft(){try{localStorage.setItem(MDRAFT,JSON.stringify({
+  editMid:_editMid,cat:_mv('mCat'),date:_mv('mDate'),topic:_mv('mTopic'),parts:_mv('mParts'),sum:_mv('mSum')}))}catch(e){}}
+function mtgClearDraft(){try{localStorage.removeItem(MDRAFT)}catch(e){}}
+function mtgBgClose(e){
+  if(e.target!==e.currentTarget)return;  // 모달 안(입력칸 등) 클릭은 무시 — 배경만
+  const has=(_mv('mSum')+_mv('mTopic')).trim();
+  if(has&&!confirm('작성 중인 내용이 있습니다.\n닫으면 내용이 사라집니다. 닫을까요?'))return;
+  _editMid=null;mtgClearDraft();mClose('mtgModal');
+}
+function mtgCancelClose(){
+  const has=(_mv('mSum')+_mv('mTopic')).trim();
+  if(has&&!confirm('작성 중인 내용이 사라집니다. 취소할까요?'))return;
+  _editMid=null;mtgClearDraft();mClose('mtgModal');
+}
 function newMeeting(){_editMid=null;
   ['mTopic','mParts','mSum','mDate','mCat'].forEach(i=>{const e=document.getElementById(i);if(e)e.value=''});
   fillMcatOptions();
   const t=document.getElementById('mtgTitle');if(t)t.textContent='회의록 작성';
+  // 저장 안 된 작성 내용 복원
+  try{const d=JSON.parse(localStorage.getItem(MDRAFT)||'null');
+    if(d&&!d.editMid&&(d.sum||d.topic)&&confirm('저장하지 않은 회의록 작성 내용이 있습니다.\n이어서 작성할까요?')){
+      document.getElementById('mCat').value=d.cat||'';document.getElementById('mDate').value=d.date||'';
+      document.getElementById('mTopic').value=d.topic||'';document.getElementById('mParts').value=d.parts||'';
+      document.getElementById('mSum').value=d.sum||'';
+    }else mtgClearDraft();
+  }catch(e){mtgClearDraft()}
   mShow('mtgModal');}
 function editMeeting(id){const m=M.find(x=>x.id===id);if(!m)return;
   _editMid=id;
@@ -2162,7 +2187,7 @@ async function addMeeting(){  // 저장(신규/수정 공용)
   if(r&&r.ok){
     const rec={id:mid,date,p:parts,tp:topic,sm:summary,ts,cat:category};
     if(editing){const i=M.findIndex(x=>x.id===mid);if(i>=0)M[i]=rec;}else M.unshift(rec);
-    _editMid=null;mClose('mtgModal');['mTopic','mParts','mSum','mDate','mCat'].forEach(i=>document.getElementById(i).value='');
+    _editMid=null;mtgClearDraft();mClose('mtgModal');['mTopic','mParts','mSum','mDate','mCat'].forEach(i=>document.getElementById(i).value='');
     _dirty=true;_lastLocal=Date.now();setTimeout(()=>{_dirty=false},2000);
     VIEW='meetings';SEL=mid;render();toast(editing?'회의록 수정됨':'회의록 저장됨')}
   else toast('저장 실패 — 서버 확인 필요');
