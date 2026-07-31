@@ -266,8 +266,12 @@ a{color:var(--accent2)}
   display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#fff}
 .ckitem.done .ckbox{background:var(--accent);border-color:var(--accent)}
 .ckitem.done .ckt{text-decoration:line-through;color:var(--ink3)}
-.ckitem .ckdel{margin-left:auto;color:var(--ink3);opacity:0;font-size:13px}
-.ckitem:hover .ckdel{opacity:.7}
+.ckitem .cked{margin-left:auto;color:var(--ink3);opacity:0;font-size:12px;padding:0 3px}
+.ckitem .ckdel{color:var(--ink3);opacity:0;font-size:13px;padding:0 2px}
+.ckitem:hover .cked,.ckitem:hover .ckdel{opacity:.6}
+.ckitem .cked:hover{opacity:1;color:var(--accent2)}
+.ckitem .ckdel:hover{opacity:1;color:var(--today)}
+.ckedin{flex:1;border:1.5px solid var(--accent);border-radius:6px;padding:4px 8px;font-size:12.5px;background:var(--surface)}
 .ckadd{display:flex;gap:6px;margin-top:6px}
 .ckadd input{flex:1;border:1px solid var(--border2);border-radius:6px;padding:6px 10px;font-size:12px;background:var(--surface)}
 .cmt{display:flex;gap:9px;margin-bottom:12px}
@@ -446,7 +450,7 @@ a{color:var(--accent2)}
 <body>
 <div class="shell" id="shell">
   <nav class="side" id="sidebar">
-    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.07.30 17:29</span></div>
+    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.07.31 14:42</span></div>
     <button class="newbtn" onclick="mShow('addModal')">＋ 새 업무</button>
     <div class="navsec">
       <div class="navlabel">모아보기</div>
@@ -1713,9 +1717,18 @@ function updateDetail(){
   links.forEach((lk,i)=>{lkHtml+=`<a class="lkchip" href="${esc(lk.url)}" target="_blank" rel="noopener" title="${esc(lk.url)}">${lkIcon(lk.url)} <span class="lt">${esc(lk.t||lk.url)}</span><span class="ckdel" onclick="event.preventDefault();event.stopPropagation();lkDel(${i})">✕</span></a>`});
   lkHtml+=`</div><button class="addsub" onclick="lkAdd()">＋ 링크 추가</button>`;
   let ckHtml=`<div class="sect">체크리스트 <span class="n">${ck.filter(x=>x.done).length}/${ck.length||0}</span> · 리스트엔 안 나옴</div><div class="cklist">`;
-  ck.forEach((c,i)=>{ckHtml+=`<div class="ckitem ${c.done?'done':''}" onclick="ckToggle(${i})">
-    <span class="ckbox">${c.done?'✓':''}</span><span class="ckt">${esc(c.t)}</span>
-    <span class="ckdel" onclick="event.stopPropagation();ckDel(${i})">✕</span></div>`});
+  ck.forEach((c,i)=>{
+    if(_ckEdit===i){
+      ckHtml+=`<div class="ckitem"><span class="ckbox">${c.done?'✓':''}</span>
+        <input id="ckEditIn" class="ckedin" value="${esc(c.t)}"
+          onkeydown="if(event.key==='Enter')ckEditSave(${i});else if(event.key==='Escape'){_ckEdit=-1;updateDetail()}"
+          onblur="ckEditSave(${i})"></div>`;
+    }else{
+      ckHtml+=`<div class="ckitem ${c.done?'done':''}" onclick="ckToggle(${i})">
+        <span class="ckbox">${c.done?'✓':''}</span><span class="ckt">${esc(c.t)}</span>
+        <span class="cked" onclick="event.stopPropagation();ckEdit(${i})" title="수정">✎</span>
+        <span class="ckdel" onclick="event.stopPropagation();ckDel(${i})" title="삭제">✕</span></div>`;
+    }});
   ckHtml+=`</div><div class="ckadd"><input id="ckNew" placeholder="＋ 항목 추가 후 Enter" onkeydown="if(event.key==='Enter')ckAdd()"></div>`;
   let subsHtml='';
   if(!t.parent_id){
@@ -1843,7 +1856,13 @@ async function saveChecklist(t,ck){
   if(API_BASE){try{await apiPost('/api/task/save',{id:t.id,checklist:ck})}catch(err){toast('체크리스트 저장 지연 — 네트워크 확인')}}
   else s();
 }
-function ckToggle(i){const t=tById(SEL);if(!t)return;const ck=[...(t.checklist||[])];ck[i]={...ck[i],done:!ck[i].done};saveChecklist(t,ck)}
+let _ckEdit=-1;
+function ckEdit(i){_ckEdit=i;updateDetail();setTimeout(()=>{const e=document.getElementById('ckEditIn');if(e){e.focus();e.select()}},30)}
+function ckEditSave(i){const e=document.getElementById('ckEditIn');const t=tById(SEL);_ckEdit=-1;
+  if(!e||!t){updateDetail();return}
+  const v=e.value.trim();const ck=[...(t.checklist||[])];
+  if(v&&ck[i]&&v!==ck[i].t){ck[i]={...ck[i],t:v};saveChecklist(t,ck)}else updateDetail();}
+function ckToggle(i){if(_ckEdit>=0)return;const t=tById(SEL);if(!t)return;const ck=[...(t.checklist||[])];ck[i]={...ck[i],done:!ck[i].done};saveChecklist(t,ck)}
 function ckDel(i){const t=tById(SEL);if(!t)return;const ck=[...(t.checklist||[])];ck.splice(i,1);saveChecklist(t,ck)}
 function ckAdd(){const t=tById(SEL);if(!t)return;const inp=document.getElementById('ckNew');
   const v=inp.value.trim();if(!v)return;inp.value='';saveChecklist(t,[...(t.checklist||[]),{t:v,done:false}])}
