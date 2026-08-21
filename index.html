@@ -450,7 +450,7 @@ a{color:var(--accent2)}
 <body>
 <div class="shell" id="shell">
   <nav class="side" id="sidebar">
-    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.07.31 14:42</span></div>
+    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.08.21 11:17</span></div>
     <button class="newbtn" onclick="mShow('addModal')">＋ 새 업무</button>
     <div class="navsec">
       <div class="navlabel">모아보기</div>
@@ -1684,11 +1684,11 @@ function renderMyPostsView(){
 }
 
 /* ── 상세 패널 ── */
-function selTask(id){SEL=id;updateDetail();
+function selTask(id){flushDesc();SEL=id;updateDetail();
   const dp=document.getElementById('dp');dp.classList.add('open');
   if(!PIN&&window.innerWidth<1280)document.getElementById('scrim').classList.add('on');
   if(VIEW==='tasks')renderListView();}
-function closeDetail(soft){if(PIN&&soft===true)return;
+function closeDetail(soft){flushDesc();if(PIN&&soft===true)return;
   if(!soft)PIN=false,document.getElementById('shell').classList.remove('pinned');
   SEL=null;document.getElementById('dp').classList.remove('open');
   document.getElementById('scrim').classList.remove('on');
@@ -1708,8 +1708,8 @@ function updateDetail(){
     `<option value="${pid}" ${((t.project||'')===pid)?'selected':''}>${esc(projName(pid))}</option>`).join('');
   const crumb=`${esc(projName(t.project||''))}${parent?` › <b onclick="selTask('${parent.id}')">${esc(parent.title)}</b>`:''}`;
   const descHtml=_descEditing
-    ?`<textarea id="ni">${esc(t.description||'')}</textarea>
-      <div class="descbtns"><button class="bsm pri" onclick="saveDescNew()">저장</button><button class="bsm" onclick="_descEditing=false;updateDetail()">취소</button></div>`
+    ?`<textarea id="ni" onblur="flushDesc()">${esc(t.description||'')}</textarea>
+      <div class="descbtns"><button class="bsm pri" onclick="saveDescNew()">저장</button><span style="font-size:11px;color:var(--ink3);align-self:center">✔ 다른 곳을 클릭해도 자동 저장됩니다</span></div>`
     :`<div class="descbox" onclick="_descEditing=true;updateDetail();setTimeout(()=>document.getElementById('ni')?.focus(),50)">${mdRender(t.description)}</div>
       <div class="deschint"># 제목 · - 목록 · - [ ] 체크 · **굵게** · \`코드\` · URL 자동링크 · 이미지 Ctrl+V 붙여넣기</div>`;
   const links=t.links||[];
@@ -1842,6 +1842,17 @@ function asgDel(name){const t=tById(SEL);if(!t)return;
   else saveAsg(t,t.assignee,(t.collaborators||[]).filter(x=>x!==name));
 }
 async function saveDescNew(){const v=document.getElementById('ni').value;_descEditing=false;await ufx(SEL,'description',v)}
+/* 본문(메모) 이탈 시 자동저장 — 다른 곳 클릭/다른 업무 선택/패널 닫기 시 유실 방지 */
+let _descFlushing=false;
+function flushDesc(){
+  if(!_descEditing||_descFlushing)return;
+  const ni=document.getElementById('ni');if(!ni){_descEditing=false;return}
+  const v=ni.value;const t=SEL?T.find(x=>x.id===SEL):null;
+  const old=t?(ap(t).description||''):'';
+  _descEditing=false;_descFlushing=true;
+  if(t&&v!==old){ufx(SEL,'description',v);toast('메모 저장됨')}
+  setTimeout(()=>{_descFlushing=false},300);
+}
 
 /* ── 체크리스트 (4뎁스 대체) ── */
 async function saveChecklist(t,ck){
