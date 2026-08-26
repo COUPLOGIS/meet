@@ -450,7 +450,7 @@ a{color:var(--accent2)}
 <body>
 <div class="shell" id="shell">
   <nav class="side" id="sidebar">
-    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.08.21 11:17</span></div>
+    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.08.26 17:03</span></div>
     <button class="newbtn" onclick="mShow('addModal')">＋ 새 업무</button>
     <div class="navsec">
       <div class="navlabel">모아보기</div>
@@ -527,7 +527,7 @@ a{color:var(--accent2)}
 </div>
 <!-- 회의록 작성 모달 -->
 <div class="mo" id="mtgModal" onclick="mtgBgClose(event)">
-  <div class="mbox" style="width:640px" oninput="mtgDraft()">
+  <div class="mbox" style="width:min(920px,94vw)" oninput="mtgDraft()">
     <h3 id="mtgTitle">회의록 작성</h3>
     <label>날짜</label><input id="mDate" type="date">
     <label>분류 (그룹 · 비우면 미분류)</label><input id="mCat" list="mCatList" placeholder="예: 주간회의 / 거래처미팅 / 기획"><datalist id="mCatList"></datalist>
@@ -540,8 +540,10 @@ a{color:var(--accent2)}
       <button type="button" onclick="mdIns('mSum','- ','')" title="목록">• 목록</button>
       <button type="button" onclick="mdIns('mSum','- [ ] ','')" title="체크리스트">☐ 체크</button>
       <button type="button" onclick="mdIns('mSum','\`','\`')" title="코드">&lt;/&gt;</button>
+      <button type="button" id="mOrigBtn" onclick="toggleMtgOrigin()" style="display:none">↩ 원문 보기</button>
+      <button type="button" id="mAiBtn" onclick="aiSummarize()" title="AI가 두서없는 메모를 일목요연하게 정리" style="margin-left:auto;background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700">🤖 AI 정리</button>
     </div>
-    <textarea id="mSum" rows="12" style="resize:vertical;line-height:1.6" placeholder="# 안건&#10;- 논의 내용&#10;- [ ] 할 일&#10;**중요** 사항"></textarea>
+    <textarea id="mSum" rows="18" style="resize:vertical;line-height:1.6" placeholder="회의 중 떠오르는 대로 자유롭게 적으세요. 나중에 [🤖 AI 정리]를 누르면 일목요연하게 정리됩니다.&#10;&#10;# 안건&#10;- 논의 내용&#10;- [ ] 할 일&#10;**중요** 사항"></textarea>
     <div class="mbtns"><button class="bsm" onclick="mtgCancelClose()">취소</button><button class="bsm pri" onclick="addMeeting()">저장</button></div>
   </div>
 </div>
@@ -2168,8 +2170,33 @@ function mtgCancelClose(){
   if(has&&!confirm('작성 중인 내용이 사라집니다. 취소할까요?'))return;
   _editMid=null;mtgClearDraft();mClose('mtgModal');
 }
-function newMeeting(){_editMid=null;
+/* 회의록 AI 정리 (원문 보존 + 토글) */
+let _mtgOrigin=null;
+async function aiSummarize(){
+  const ta=document.getElementById('mSum');const text=(ta.value||'').trim();
+  if(!text)return toast('정리할 내용을 먼저 입력하세요');
+  const btn=document.getElementById('mAiBtn');const label=btn.textContent;
+  btn.textContent='🤖 정리 중…';btn.disabled=true;
+  try{
+    const r=await apiPost('/api/ai_summarize',{text});
+    if(r&&r.ok&&r.summary){
+      _mtgOrigin=text;ta.value=r.summary;mtgDraft();
+      const ob=document.getElementById('mOrigBtn');ob.style.display='';ob.textContent='↩ 원문 보기';
+      toast('AI 정리 완료 — [원문 보기]로 되돌릴 수 있어요');
+    }else toast('AI 정리 실패: '+((r&&r.error)||'서버 오류'));
+  }catch(e){toast('AI 정리 실패 — 네트워크 확인')}
+  btn.textContent=label;btn.disabled=false;
+}
+function toggleMtgOrigin(){
+  if(_mtgOrigin===null)return;
+  const ta=document.getElementById('mSum');const btn=document.getElementById('mOrigBtn');
+  const cur=ta.value;ta.value=_mtgOrigin;_mtgOrigin=cur;mtgDraft();
+  btn.textContent=btn.textContent.includes('원문')?'↪ 정리본 보기':'↩ 원문 보기';
+}
+function newMeeting(){_editMid=null;_mtgOrigin=null;
   ['mTopic','mParts','mSum','mDate','mCat'].forEach(i=>{const e=document.getElementById(i);if(e)e.value=''});
+  document.getElementById('mDate').value=new Date().toISOString().slice(0,10);  // 날짜 자동 오늘
+  const ob=document.getElementById('mOrigBtn');if(ob)ob.style.display='none';
   fillMcatOptions();
   const t=document.getElementById('mtgTitle');if(t)t.textContent='회의록 작성';
   // 저장 안 된 작성 내용 복원
@@ -2182,6 +2209,7 @@ function newMeeting(){_editMid=null;
   }catch(e){mtgClearDraft()}
   mShow('mtgModal');}
 function editMeeting(id){const m=M.find(x=>x.id===id);if(!m)return;
+  _mtgOrigin=null;const _ob=document.getElementById('mOrigBtn');if(_ob)_ob.style.display='none';
   _editMid=id;
   document.getElementById('mDate').value=m.date&&/^\d{4}-\d\d-\d\d/.test(m.date)?m.date.slice(0,10):'';
   document.getElementById('mTopic').value=m.tp||'';
