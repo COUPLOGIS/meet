@@ -450,7 +450,7 @@ a{color:var(--accent2)}
 <body>
 <div class="shell" id="shell">
   <nav class="side" id="sidebar">
-    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.08.26 17:03</span></div>
+    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.08.26 17:18</span></div>
     <button class="newbtn" onclick="mShow('addModal')">＋ 새 업무</button>
     <div class="navsec">
       <div class="navlabel">모아보기</div>
@@ -541,7 +541,8 @@ a{color:var(--accent2)}
       <button type="button" onclick="mdIns('mSum','- [ ] ','')" title="체크리스트">☐ 체크</button>
       <button type="button" onclick="mdIns('mSum','\`','\`')" title="코드">&lt;/&gt;</button>
       <button type="button" id="mOrigBtn" onclick="toggleMtgOrigin()" style="display:none">↩ 원문 보기</button>
-      <button type="button" id="mAiBtn" onclick="aiSummarize()" title="AI가 두서없는 메모를 일목요연하게 정리" style="margin-left:auto;background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700">🤖 AI 정리</button>
+      <button type="button" id="mAiBtn" onclick="aiSummarize('deepseek')" title="딥시크로 즉시 정리" style="margin-left:auto;background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700">⚡ 빠른 정리</button>
+      <button type="button" id="mAiBtnC" onclick="aiSummarize('claude')" title="클로드 구독으로 정리 (과금 0, 조금 느림)" style="background:#7A5CC2;color:#fff;border-color:#7A5CC2;font-weight:700">✨ 클로드 정리</button>
     </div>
     <textarea id="mSum" rows="18" style="resize:vertical;line-height:1.6" placeholder="회의 중 떠오르는 대로 자유롭게 적으세요. 나중에 [🤖 AI 정리]를 누르면 일목요연하게 정리됩니다.&#10;&#10;# 안건&#10;- 논의 내용&#10;- [ ] 할 일&#10;**중요** 사항"></textarea>
     <div class="mbtns"><button class="bsm" onclick="mtgCancelClose()">취소</button><button class="bsm pri" onclick="addMeeting()">저장</button></div>
@@ -2172,20 +2173,23 @@ function mtgCancelClose(){
 }
 /* 회의록 AI 정리 (원문 보존 + 토글) */
 let _mtgOrigin=null;
-async function aiSummarize(){
+async function aiSummarize(engine){
   const ta=document.getElementById('mSum');const text=(ta.value||'').trim();
   if(!text)return toast('정리할 내용을 먼저 입력하세요');
-  const btn=document.getElementById('mAiBtn');const label=btn.textContent;
-  btn.textContent='🤖 정리 중…';btn.disabled=true;
+  const claude=engine==='claude';
+  const ep=claude?'/api/ai_summarize_claude':'/api/ai_summarize';
+  const btn=document.getElementById(claude?'mAiBtnC':'mAiBtn');const label=btn.textContent;
+  const other=document.getElementById(claude?'mAiBtn':'mAiBtnC');
+  btn.textContent=claude?'✨ 클로드 정리 중…(느림)':'⚡ 정리 중…';btn.disabled=true;if(other)other.disabled=true;
   try{
-    const r=await apiPost('/api/ai_summarize',{text});
+    const r=await apiPost(ep,{text});
     if(r&&r.ok&&r.summary){
       _mtgOrigin=text;ta.value=r.summary;mtgDraft();
       const ob=document.getElementById('mOrigBtn');ob.style.display='';ob.textContent='↩ 원문 보기';
-      toast('AI 정리 완료 — [원문 보기]로 되돌릴 수 있어요');
+      toast((claude?'클로드':'빠른')+' 정리 완료 — [원문 보기]로 되돌릴 수 있어요');
     }else toast('AI 정리 실패: '+((r&&r.error)||'서버 오류'));
   }catch(e){toast('AI 정리 실패 — 네트워크 확인')}
-  btn.textContent=label;btn.disabled=false;
+  btn.textContent=label;btn.disabled=false;if(other)other.disabled=false;
 }
 function toggleMtgOrigin(){
   if(_mtgOrigin===null)return;
