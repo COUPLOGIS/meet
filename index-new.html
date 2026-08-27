@@ -529,7 +529,21 @@ a{color:var(--accent2)}
 <div class="mo" id="mtgModal" onclick="mtgBgClose(event)">
   <div class="mbox" style="width:min(920px,94vw)" oninput="mtgDraft()">
     <h3 id="mtgTitle">회의록 작성</h3>
-    <label>날짜</label><input id="mDate" type="date">
+    <label>날짜</label>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input id="mDate" type="date" style="flex:0 0 auto">
+      <span style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--ink3)">
+        <label style="display:flex;gap:4px;align-items:center;cursor:pointer;user-select:none"><input type="checkbox" id="mDateColorOn" onchange="mtgDraft()" style="width:auto">색</label>
+        <input type="color" id="mDateColor" value="#189AAD" oninput="mtgDraft()" title="날짜 글자색" style="width:34px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer">
+        <select id="mDateSize" onchange="mtgDraft()" title="날짜 글자크기" style="height:28px;border-radius:6px;padding:0 6px">
+          <option value="">크기 기본</option>
+          <option value="11">작게</option>
+          <option value="14">보통</option>
+          <option value="18">크게</option>
+          <option value="24">아주 크게</option>
+        </select>
+      </span>
+    </div>
     <label>분류 (그룹 · 비우면 미분류)</label><input id="mCat" list="mCatList" placeholder="예: 주간회의 / 거래처미팅 / 기획"><datalist id="mCatList"></datalist>
     <label>주제</label><input id="mTopic">
     <label>참여자</label><input id="mParts" placeholder="조한표, 권용훈">
@@ -872,7 +886,7 @@ async function boot(){
         const apiMids=new Set(apiMeetings.map(m=>m.id||m.date));
         // Merge with tasks that reference meetings not in API
         const extraMids=[...mids].filter(id=>!apiMids.has(id));
-        M=[...apiMeetings.map(m=>({id:m.id||m.date,date:m.date||m.id,p:m.p||m.participants||'',tp:m.tp||m.topic||'',sm:m.sm||m.summary||[],ts:m.ts||m.task_ids||[],cat:m.cat||m.category||""}))];
+        M=[...apiMeetings.map(m=>({id:m.id||m.date,date:m.date||m.id,p:m.p||m.participants||'',tp:m.tp||m.topic||'',sm:m.sm||m.summary||[],ts:m.ts||m.task_ids||[],cat:m.cat||m.category||"",dc:m.dc||m.date_color||"",ds:m.ds||m.date_size||""}))];
         extraMids.forEach(id=>{
           const ts=T.filter(t=>(t.meeting_id||t.meeting_date)===id);
           let date='',p='',tp='',sm=[];
@@ -942,7 +956,7 @@ function startPolling(){
         COMMENTS=data.comments||[];PROJECTS_DB=data.projects||[];FEED=data.feed||[];
         // Update meetings if changed
         if(data.meetings&&data.meetings.length){
-          const apiMeetings=data.meetings.map(m=>({id:m.id||m.date,date:m.date||m.id,p:m.p||m.participants||'',tp:m.tp||m.topic||'',sm:m.sm||m.summary||[],ts:m.ts||m.task_ids||[],cat:m.cat||m.category||""}));
+          const apiMeetings=data.meetings.map(m=>({id:m.id||m.date,date:m.date||m.id,p:m.p||m.participants||'',tp:m.tp||m.topic||'',sm:m.sm||m.summary||[],ts:m.ts||m.task_ids||[],cat:m.cat||m.category||"",dc:m.dc||m.date_color||"",ds:m.ds||m.date_size||""}));
           const apiMids=new Set(apiMeetings.map(m=>m.id));
           // Keep local meetings not in API
           const localOnly=M.filter(m=>!apiMids.has(m.id));
@@ -2103,8 +2117,12 @@ function mSortToggle(){MSORT_ASC=!MSORT_ASC;renderMeetingsView()}
 function mcatToggle(c){openMcat[c]=openMcat[c]===false;renderMeetingsView()}
 function _mcard(m){
   const on=SEL===m.id;
+  const _dst=[];
+  if(m.dc&&/^#[0-9a-fA-F]{3,8}$/.test(m.dc))_dst.push('color:'+m.dc);
+  if(m.ds){const _sz=Math.max(9,Math.min(40,parseInt(m.ds)||0));if(_sz)_dst.push('font-size:'+_sz+'px');}
+  const _dstyle=_dst.length?` style="${_dst.join(';')}"`:'';
   let h=`<div class="mcard${on?' active':''}" onclick="selMeet('${m.id}')">
-    <div class="mc-body"><div class="mc-date">${esc(m.date||String(m.id).replace(/_/g,' '))}</div>
+    <div class="mc-body"><div class="mc-date"${_dstyle}>${esc(m.date||String(m.id).replace(/_/g,' '))}</div>
     <div class="mc-title">${esc(m.tp||'회의')}</div><div class="mc-meta">참여: ${esc(m.p||'—')}</div></div>
     <div class="mc-tasks">${(m.ts||[]).length}개 과제</div></div>`;
   if(on){
@@ -2200,6 +2218,9 @@ function toggleMtgOrigin(){
 function newMeeting(){_editMid=null;_mtgOrigin=null;
   ['mTopic','mParts','mSum','mDate','mCat'].forEach(i=>{const e=document.getElementById(i);if(e)e.value=''});
   document.getElementById('mDate').value=new Date().toISOString().slice(0,10);  // 날짜 자동 오늘
+  {const c=document.getElementById('mDateColorOn');if(c)c.checked=false;
+   const cc=document.getElementById('mDateColor');if(cc)cc.value='#189AAD';
+   const cs=document.getElementById('mDateSize');if(cs)cs.value='';}
   const ob=document.getElementById('mOrigBtn');if(ob)ob.style.display='none';
   fillMcatOptions();
   const t=document.getElementById('mtgTitle');if(t)t.textContent='회의록 작성';
@@ -2220,6 +2241,8 @@ function editMeeting(id){const m=M.find(x=>x.id===id);if(!m)return;
   document.getElementById('mParts').value=m.p||'';
   document.getElementById('mCat').value=m.cat||'';
   document.getElementById('mSum').value=(m.sm||[]).join('\n');
+  {const c=document.getElementById('mDateColorOn'),cc=document.getElementById('mDateColor'),cs=document.getElementById('mDateSize');
+   if(c)c.checked=!!m.dc; if(cc&&m.dc)cc.value=m.dc; if(cs)cs.value=m.ds||'';}
   fillMcatOptions();
   const t=document.getElementById('mtgTitle');if(t)t.textContent='회의록 수정';
   mShow('mtgModal');}
@@ -2242,12 +2265,14 @@ async function addMeeting(){  // 저장(신규/수정 공용)
   const parts=document.getElementById('mParts').value.trim();
   const category=(document.getElementById('mCat')?.value||'').trim();
   const summary=document.getElementById('mSum').value.split('\n').map(x=>x.replace(/\s+$/,'')).filter(x=>x);
+  const dc=document.getElementById('mDateColorOn')?.checked?(document.getElementById('mDateColor')?.value||''):'';
+  const ds=document.getElementById('mDateSize')?.value||'';
   const editing=_editMid;
   const mid=editing||('mtg_'+date+'_'+Date.now().toString(36));
   const ts=editing?(M.find(x=>x.id===mid)?.ts||[]):[];
-  const r=await apiPost('/api/meeting/save',{id:mid,date,topic,participants:parts,summary,task_ids:ts,category});
+  const r=await apiPost('/api/meeting/save',{id:mid,date,topic,participants:parts,summary,task_ids:ts,category,date_color:dc,date_size:ds});
   if(r&&r.ok){
-    const rec={id:mid,date,p:parts,tp:topic,sm:summary,ts,cat:category};
+    const rec={id:mid,date,p:parts,tp:topic,sm:summary,ts,cat:category,dc,ds};
     if(editing){const i=M.findIndex(x=>x.id===mid);if(i>=0)M[i]=rec;}else M.unshift(rec);
     _editMid=null;mtgClearDraft();mClose('mtgModal');['mTopic','mParts','mSum','mDate','mCat'].forEach(i=>document.getElementById(i).value='');
     _dirty=true;_lastLocal=Date.now();setTimeout(()=>{_dirty=false},2000);
