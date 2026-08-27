@@ -445,12 +445,41 @@ a{color:var(--accent2)}
 
 .pmv{font-size:9px;color:var(--ink3);padding:2px 4px;border-radius:4px;cursor:pointer;flex:none}
 .pmv:hover{color:var(--accent2);background:var(--surface2)}
+
+/* #2 회의록 텍스트 우클릭 컨텍스트 메뉴 */
+#mtgCtx{position:fixed;z-index:9000;background:var(--card,#fff);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:5px;min-width:150px;font-size:13px}
+#mtgCtx .ctxitem{padding:9px 12px;border-radius:7px;cursor:pointer;white-space:nowrap;font-weight:600;color:var(--ink)}
+#mtgCtx .ctxitem:hover{background:var(--accent);color:#fff}
+.mdetail .descbox{user-select:text}
+
+/* #3 프레젠테이션 모드 */
+#presOverlay{position:fixed;inset:0;z-index:10000;background:#0d1117;display:none;flex-direction:column}
+#presOverlay.show{display:flex}
+.pres-stage{position:relative;flex:1;overflow:hidden}
+.pres-content{position:absolute;inset:0;overflow:auto;padding:56px 7vw 120px;color:#e8eef5;line-height:1.7}
+.pres-content h1,.pres-content .pres-title{font-size:38px;font-weight:800;color:#fff;margin:0 0 6px}
+.pres-content .pres-date{font-size:16px;color:#8ba0b3;margin-bottom:28px}
+.pres-content .descbox{font-size:26px;background:transparent;border:none;padding:0;color:#e8eef5}
+.pres-content .descbox h1{font-size:34px;color:#fff;margin:22px 0 10px}
+.pres-content .descbox h2{font-size:30px;color:#cfe0ee}
+.pres-content .descbox strong{color:#fff}
+.pres-content .descbox li{margin:8px 0}
+#presCanvas,#presLaser{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+#presLaser{pointer-events:none}
+.pres-bar{display:flex;gap:6px;align-items:center;padding:10px 14px;background:#161b22;border-top:1px solid #2a323c;flex-wrap:wrap;justify-content:center}
+.pres-bar button{background:#222b36;color:#cdd8e3;border:1px solid #333f4d;border-radius:9px;padding:8px 12px;font-size:14px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:5px}
+.pres-bar button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pres-bar button:hover{border-color:var(--accent)}
+.pres-bar .sep{width:1px;height:26px;background:#333f4d;margin:0 4px}
+.pres-bar .pcol{width:26px;height:26px;border-radius:50%;border:2px solid #333f4d;cursor:pointer;padding:0}
+.pres-bar .pcol.on{border-color:#fff;box-shadow:0 0 0 2px var(--accent)}
+.pres-bar .pexit{background:#3a2530;color:#ff9db0;border-color:#5a2a3a}
 </style>
 </head>
 <body>
 <div class="shell" id="shell">
   <nav class="side" id="sidebar">
-    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.08.26 17:18</span></div>
+    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.08.27 10:45</span></div>
     <button class="newbtn" onclick="mShow('addModal')">＋ 새 업무</button>
     <div class="navsec">
       <div class="navlabel">모아보기</div>
@@ -560,6 +589,30 @@ a{color:var(--accent2)}
     </div>
     <textarea id="mSum" rows="18" style="resize:vertical;line-height:1.6" placeholder="회의 중 떠오르는 대로 자유롭게 적으세요. 나중에 [🤖 AI 정리]를 누르면 일목요연하게 정리됩니다.&#10;&#10;# 안건&#10;- 논의 내용&#10;- [ ] 할 일&#10;**중요** 사항"></textarea>
     <div class="mbtns"><button class="bsm" onclick="mtgCancelClose()">취소</button><button class="bsm pri" onclick="addMeeting()">저장</button></div>
+  </div>
+</div>
+<!-- #3 프레젠테이션 오버레이 -->
+<div id="presOverlay">
+  <div class="pres-stage">
+    <div class="pres-content" id="presContent"></div>
+    <canvas id="presCanvas"></canvas>
+    <canvas id="presLaser"></canvas>
+  </div>
+  <div class="pres-bar">
+    <button id="ptMove" onclick="presTool('move')" title="드래그로 스크롤">✋ 이동</button>
+    <button id="ptPen" onclick="presTool('pen')" title="싸인펜">🖊 싸인펜</button>
+    <button id="ptHl" onclick="presTool('hl')" title="형광펜">🖍 형광펜</button>
+    <button id="ptLaser" onclick="presTool('laser')" title="레이저 포인터">🔴 레이저</button>
+    <button id="ptEraser" onclick="presTool('eraser')" title="지우개">🧽 지우개</button>
+    <span class="sep"></span>
+    <button class="pcol" data-c="#ff3b30" style="background:#ff3b30" onclick="presColor('#ff3b30')"></button>
+    <button class="pcol" data-c="#ffd60a" style="background:#ffd60a" onclick="presColor('#ffd60a')"></button>
+    <button class="pcol" data-c="#30d158" style="background:#30d158" onclick="presColor('#30d158')"></button>
+    <button class="pcol" data-c="#0a84ff" style="background:#0a84ff" onclick="presColor('#0a84ff')"></button>
+    <button class="pcol" data-c="#ffffff" style="background:#ffffff" onclick="presColor('#ffffff')"></button>
+    <span class="sep"></span>
+    <button onclick="presClear()" title="필기 전체 지우기">🗑 전체지우기</button>
+    <button class="pexit" onclick="exitPresentation()" title="닫기 (Esc)">✕ 닫기</button>
   </div>
 </div>
 <div id="toast"></div>
@@ -2050,6 +2103,7 @@ function notifyStatusChange(taskId,oldStatus,newStatus){
 
 /* ── 업무 생성/삭제 ── */
 function fillAddModal(){
+  _taskFromMeeting='';  // #2 기본은 회의록 비연결 (taskFromSelection이 mShow 후 다시 설정)
   const ps=document.getElementById('aProject');
   ps.innerHTML=['',...PROJECTS_DB.map(x=>x.id)].map(pid=>`<option value="${pid}">${esc(projName(pid))}</option>`).join('')+'<option value="__new__">＋ 새 프로젝트 만들기…</option>';
   ps.disabled=false;
@@ -2082,7 +2136,9 @@ async function addTask(){
   const nid=`T${String((Math.max(0,...ids)+1)).padStart(3,'0')}`;
   const ord=parentId?subsOf(parentId).length:topTasks().filter(t=>(t.project||'')===project).length;
   const payload={id:nid,title,description:desc,tags:[],parent_id:parentId,assignee,collaborators:[],
-    start_date,due_date,project,priority:'보통',status:'대기중',created_by:USER_ID,source:'team',ord};
+    start_date,due_date,project,priority:'보통',status:'대기중',created_by:USER_ID,source:'team',ord,
+    meeting_id:_taskFromMeeting||''};  // #2 회의록에서 등록 시 연결
+  const _fromMtg=_taskFromMeeting;_taskFromMeeting='';
   if(API_BASE){
     try{
       await apiPost('/api/task/save',payload);
@@ -2096,7 +2152,7 @@ async function addTask(){
     }catch(e){console.error('API task create failed',e)}
   }
   ED[nid]={...payload,_ha:[{t:now(),a:'Created (web)',n:''}],_new:true};
-  T.push({...payload,meeting_id:'',_h:[]});
+  T.push({...payload,_h:[]});
   s();mClose('addModal');if(parentId)openSubs.add(parentId);SEL=nid;render();selTask(nid);toast('업무 생성됨');
 }
 async function delTaskNew(){
@@ -2128,7 +2184,8 @@ function _mcard(m){
   if(on){
     h+='<div class="mdetail">';
     h+=`<div style="text-align:right;margin-bottom:8px">
-      <span class="lnk" onclick="event.stopPropagation();editMeeting('${m.id}')">✎ 수정</span>
+      <span class="lnk" style="color:var(--accent)" onclick="event.stopPropagation();startPresentation('${m.id}')">🖥 프레젠테이션 보기</span>
+      <span class="lnk" style="margin-left:12px" onclick="event.stopPropagation();editMeeting('${m.id}')">✎ 수정</span>
       <span class="lnk" style="color:var(--today);margin-left:12px" onclick="event.stopPropagation();delMeeting('${m.id}')">🗑 삭제</span></div>`;
     if((m.sm||[]).length)h+='<div class="sect">회의 내용</div><div class="descbox" style="cursor:default">'+mdRender((m.sm||[]).join('\n'))+'</div>';
     const linked=baseTasks().filter(t=>t.meeting_id===m.id);
@@ -2281,6 +2338,144 @@ async function addMeeting(){  // 저장(신규/수정 공용)
 }
 
 function selMeet(id){SEL=SEL===id?null:id;render()}
+
+/* ── #2 회의록 텍스트 → 우클릭 → 과제 등록 ── */
+let _taskFromMeeting='';   // 과제 생성 시 연결할 회의록 id
+let _pendingSel='';        // 우클릭 시점의 선택 텍스트
+function _selText(){return (window.getSelection&&window.getSelection().toString()||'').trim()}
+function _selInMeeting(){
+  const s=window.getSelection&&window.getSelection();
+  if(!s||!s.rangeCount)return null;
+  let n=s.anchorNode; n=n&&(n.nodeType===1?n:n.parentElement);
+  const box=n&&n.closest&&n.closest('.mdetail');
+  if(!box)return null;
+  const card=box.previousElementSibling; // .mcard (선택된 회의록)
+  return SEL||null;  // 현재 펼친 회의록 = SEL
+}
+document.addEventListener('contextmenu',function(e){
+  const txt=_selText(); if(!txt)return;             // 선택 없으면 브라우저 기본 메뉴
+  const mid=_selInMeeting(); if(!mid)return;         // 회의록 내용 밖이면 통과
+  e.preventDefault();
+  _pendingSel=txt; _ctxMid=mid;
+  document.getElementById('mtgCtx')?.remove();
+  const menu=document.createElement('div');menu.id='mtgCtx';
+  menu.innerHTML='<div class="ctxitem" onclick="taskFromSelection()">＋ 이 텍스트를 과제로 등록</div>';
+  document.body.appendChild(menu);
+  const mw=menu.offsetWidth||170,mh=menu.offsetHeight||44;
+  menu.style.left=Math.min(e.clientX,innerWidth-mw-8)+'px';
+  menu.style.top=Math.min(e.clientY,innerHeight-mh-8)+'px';
+});
+document.addEventListener('click',()=>document.getElementById('mtgCtx')?.remove());
+document.addEventListener('scroll',()=>document.getElementById('mtgCtx')?.remove(),true);
+let _ctxMid='';
+function taskFromSelection(){
+  document.getElementById('mtgCtx')?.remove();
+  const txt=_pendingSel; if(!txt)return;
+  const mid=_ctxMid||SEL||'';
+  mShow('addModal');                 // fillAddModal이 _taskFromMeeting='' 리셋 → 아래에서 다시 설정
+  _taskFromMeeting=mid;
+  const lines=txt.split('\n').map(x=>x.replace(/^[\s>\-*#\[\]xX·•]+/,'').trim()).filter(Boolean);
+  const title=(lines[0]||txt).slice(0,120);
+  const aT=document.getElementById('aTitle'); if(aT){aT.value=title;}
+  const aD=document.getElementById('aDesc'); if(aD){aD.value=lines.length>1?txt.trim():'';}
+  // 회의록의 분류를 프로젝트에 매칭 시도 (동명 프로젝트 있으면 자동 선택)
+  const m=M.find(x=>x.id===mid);
+  if(m&&m.cat){const pj=PROJECTS_DB.find(p=>p.name===m.cat); if(pj){const ps=document.getElementById('aProject');if(ps){ps.value=pj.id;fillParentOpts();}}}
+  if(aT)aT.focus();
+  toast('과제 정보를 확인하고 프로젝트·상위업무를 고른 뒤 만들기');
+}
+
+/* ── #3 프레젠테이션 모드 (전체화면 + 싸인펜/형광펜/레이저/지우개) ── */
+let _presMid=null,_presTool='move',_presColor='#ff3b30',_presDrawing=false,_presLast=null;
+let _laserPts=[],_laserRAF=0;
+function startPresentation(id){
+  const m=M.find(x=>x.id===id); if(!m)return;
+  _presMid=id;
+  const dateHtml=esc(m.date||'');
+  const body=(m.sm||[]).length?mdRender((m.sm||[]).join('\n')):'<div style="color:#8ba0b3">내용 없음</div>';
+  document.getElementById('presContent').innerHTML=
+    `<div class="pres-date">${dateHtml}${m.cat?' · '+esc(m.cat):''}</div>`+
+    `<div class="pres-title">${esc(m.tp||'회의')}</div>`+
+    `<div class="descbox">${body}</div>`;
+  const ov=document.getElementById('presOverlay'); ov.classList.add('show');
+  presTool('move'); presColor(_presColor);
+  requestAnimationFrame(()=>{ _presSizeCanvas(); });
+  document.addEventListener('keydown',_presKey);
+  window.addEventListener('resize',_presSizeCanvas);
+  _laserLoop();
+}
+function exitPresentation(){
+  document.getElementById('presOverlay').classList.remove('show');
+  document.removeEventListener('keydown',_presKey);
+  window.removeEventListener('resize',_presSizeCanvas);
+  cancelAnimationFrame(_laserRAF);_laserRAF=0;_laserPts=[];
+  _presMid=null;
+}
+function _presKey(e){if(e.key==='Escape')exitPresentation();}
+function _presSizeCanvas(){
+  ['presCanvas','presLaser'].forEach(cid=>{
+    const c=document.getElementById(cid);if(!c)return;
+    const r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+    // 기존 그림 보존
+    let prev=null;
+    if(cid==='presCanvas'&&c.width){prev=document.createElement('canvas');prev.width=c.width;prev.height=c.height;prev.getContext('2d').drawImage(c,0,0);}
+    c.width=Math.round(r.width*dpr);c.height=Math.round(r.height*dpr);
+    const ctx=c.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);
+    if(prev)ctx.drawImage(prev,0,0,r.width,r.height);
+  });
+}
+function presTool(t){
+  _presTool=t;
+  ['ptMove:move','ptPen:pen','ptHl:hl','ptLaser:laser','ptEraser:eraser'].forEach(p=>{
+    const[id,v]=p.split(':');const el=document.getElementById(id);if(el)el.classList.toggle('on',v===t);
+  });
+  const pc=document.getElementById('presCanvas'),lc=document.getElementById('presLaser'),content=document.getElementById('presContent');
+  if(t==='move'){pc.style.pointerEvents='none';lc.style.pointerEvents='none';content.style.pointerEvents='auto';content.style.cursor='auto';}
+  else if(t==='laser'){pc.style.pointerEvents='none';lc.style.pointerEvents='auto';content.style.pointerEvents='none';lc.style.cursor='crosshair';}
+  else {pc.style.pointerEvents='auto';lc.style.pointerEvents='none';content.style.pointerEvents='none';pc.style.cursor=t==='eraser'?'cell':'crosshair';}
+}
+function presColor(c){_presColor=c;
+  document.querySelectorAll('.pres-bar .pcol').forEach(b=>b.classList.toggle('on',b.dataset.c===c));
+}
+function presClear(){const c=document.getElementById('presCanvas');const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);}
+function _evtXY(e,c){const r=c.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
+// 싸인펜/형광펜/지우개 (presCanvas)
+(function(){
+  const pc=()=>document.getElementById('presCanvas');
+  function down(e){if(_presTool==='move'||_presTool==='laser')return;e.preventDefault();_presDrawing=true;_presLast=_evtXY(e,pc());pc().setPointerCapture&&pc().setPointerCapture(e.pointerId);drawSeg(_presLast,_presLast);}
+  function move(e){if(!_presDrawing||_presTool==='move'||_presTool==='laser')return;const p=_evtXY(e,pc());drawSeg(_presLast,p);_presLast=p;}
+  function up(){_presDrawing=false;_presLast=null;}
+  function drawSeg(a,b){
+    const c=pc(),ctx=c.getContext('2d');ctx.lineJoin=ctx.lineCap='round';
+    if(_presTool==='eraser'){ctx.globalCompositeOperation='destination-out';ctx.globalAlpha=1;ctx.lineWidth=34;}
+    else if(_presTool==='hl'){ctx.globalCompositeOperation='source-over';ctx.globalAlpha=.32;ctx.strokeStyle=_presColor;ctx.lineWidth=22;}
+    else {ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.strokeStyle=_presColor;ctx.lineWidth=3.2;}
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+    ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
+  }
+  document.addEventListener('pointerdown',e=>{if(e.target&&e.target.id==='presCanvas')down(e);});
+  document.addEventListener('pointermove',move);
+  document.addEventListener('pointerup',up);
+})();
+// 레이저 (presLaser, 잔상 페이드)
+document.addEventListener('pointerdown',e=>{if(e.target&&e.target.id==='presLaser'){_presDrawing=true;_addLaser(e);}});
+document.addEventListener('pointermove',e=>{if(_presDrawing&&_presTool==='laser')_addLaser(e);});
+function _addLaser(e){const lc=document.getElementById('presLaser');_laserPts.push({...(_evtXY(e,lc)),t:performance.now()});}
+function _laserLoop(){
+  const lc=document.getElementById('presLaser');if(!lc){return;}
+  const ctx=lc.getContext('2d'),r=lc.getBoundingClientRect();
+  ctx.clearRect(0,0,r.width,r.height);
+  const now=performance.now();
+  _laserPts=_laserPts.filter(p=>now-p.t<650);
+  for(const p of _laserPts){
+    const age=(now-p.t)/650,a=1-age;
+    ctx.beginPath();ctx.arc(p.x,p.y,10*(1-age*.5),0,7);
+    ctx.fillStyle='rgba(255,40,40,'+(a*.55)+')';ctx.fill();
+  }
+  const cur=_laserPts[_laserPts.length-1];
+  if(cur&&now-cur.t<80){ctx.beginPath();ctx.arc(cur.x,cur.y,7,0,7);ctx.fillStyle='#ff2b2b';ctx.shadowColor='#ff2b2b';ctx.shadowBlur=18;ctx.fill();ctx.shadowBlur=0;}
+  _laserRAF=requestAnimationFrame(_laserLoop);
+}
 
 /* ── #17 텔레그램 로그인 게이트 ── */
 function showLogin(){
