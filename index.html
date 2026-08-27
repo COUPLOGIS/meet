@@ -479,7 +479,7 @@ a{color:var(--accent2)}
 <body>
 <div class="shell" id="shell">
   <nav class="side" id="sidebar">
-    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.08.27 10:45</span></div>
+    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.08.27 10:50</span></div>
     <button class="newbtn" onclick="mShow('addModal')">＋ 새 업무</button>
     <div class="navsec">
       <div class="navlabel">모아보기</div>
@@ -613,6 +613,17 @@ a{color:var(--accent2)}
     <span class="sep"></span>
     <button onclick="presClear()" title="필기 전체 지우기">🗑 전체지우기</button>
     <button class="pexit" onclick="exitPresentation()" title="닫기 (Esc)">✕ 닫기</button>
+  </div>
+</div>
+<!-- 회의록 메일 전송 모달 -->
+<div class="mo" id="emailModal" onclick="if(event.target===this)mClose('emailModal')">
+  <div class="mbox" style="width:min(560px,94vw)">
+    <h3>회의록 메일 전송</h3>
+    <label>받는 사람 (쉼표로 여러 명 · 비우면 기본 수신자에게 발송)</label>
+    <input id="emTo" placeholder="name@example.com, name2@example.com">
+    <label>제목</label><input id="emSubject">
+    <div style="font-size:12.5px;color:var(--ink3);margin:8px 0 2px">회의록 내용(제목·날짜·참여자·본문)이 그대로 메일 본문에 담겨 발송됩니다.</div>
+    <div class="mbtns"><button class="bsm" onclick="mClose('emailModal')">취소</button><button class="bsm pri" id="emSendBtn" onclick="sendMeetingEmail()">보내기</button></div>
   </div>
 </div>
 <div id="toast"></div>
@@ -2185,6 +2196,7 @@ function _mcard(m){
     h+='<div class="mdetail">';
     h+=`<div style="text-align:right;margin-bottom:8px">
       <span class="lnk" style="color:var(--accent)" onclick="event.stopPropagation();startPresentation('${m.id}')">🖥 프레젠테이션 보기</span>
+      <span class="lnk" style="margin-left:12px" onclick="event.stopPropagation();openMeetingEmail('${m.id}')">📧 메일 전송</span>
       <span class="lnk" style="margin-left:12px" onclick="event.stopPropagation();editMeeting('${m.id}')">✎ 수정</span>
       <span class="lnk" style="color:var(--today);margin-left:12px" onclick="event.stopPropagation();delMeeting('${m.id}')">🗑 삭제</span></div>`;
     if((m.sm||[]).length)h+='<div class="sect">회의 내용</div><div class="descbox" style="cursor:default">'+mdRender((m.sm||[]).join('\n'))+'</div>';
@@ -2338,6 +2350,33 @@ async function addMeeting(){  // 저장(신규/수정 공용)
 }
 
 function selMeet(id){SEL=SEL===id?null:id;render()}
+
+/* ── 회의록 메일 전송 ── */
+let _emailMid=null;
+function openMeetingEmail(id){
+  const m=M.find(x=>x.id===id); if(!m)return;
+  _emailMid=id;
+  document.getElementById('emSubject').value=`[회의록] ${m.date||''} ${m.tp||''}`.trim();
+  let saved='';try{saved=localStorage.getItem('tlv2_mailto')||''}catch(e){}
+  document.getElementById('emTo').value=saved;
+  mShow('emailModal');
+}
+async function sendMeetingEmail(){
+  const m=M.find(x=>x.id===_emailMid); if(!m)return;
+  const subject=document.getElementById('emSubject').value.trim()||'회의록';
+  const to=document.getElementById('emTo').value.trim();
+  try{if(to)localStorage.setItem('tlv2_mailto',to)}catch(e){}
+  const body=`<h2 style="margin:0 0 4px;font-size:20px">${esc(m.tp||'회의')}</h2>`+
+    `<div style="color:#8CA0AF;font-size:13px;margin-bottom:2px">${esc(m.date||'')}${m.cat?' · '+esc(m.cat):''}</div>`+
+    `<div style="color:#5A6B80;font-size:13px;margin-bottom:16px">참여: ${esc(m.p||'—')}</div>`+
+    `<div>${mdRender((m.sm||[]).join('\n'))}</div>`;
+  const btn=document.getElementById('emSendBtn');
+  if(btn){btn.disabled=true;btn.textContent='보내는 중…';}
+  let r=null;try{r=await apiPost('/api/meeting/email',{id:_emailMid,subject,to,html:body});}catch(e){}
+  if(btn){btn.disabled=false;btn.textContent='보내기';}
+  if(r&&r.ok){mClose('emailModal');toast(`메일 발송 완료 → ${r.count}명`);}
+  else toast('발송 실패 — '+((r&&r.error)||'서버 확인 필요'));
+}
 
 /* ── #2 회의록 텍스트 → 우클릭 → 과제 등록 ── */
 let _taskFromMeeting='';   // 과제 생성 시 연결할 회의록 id
