@@ -485,7 +485,7 @@ a{color:var(--accent2)}
 <body>
 <div class="shell" id="shell">
   <nav class="side" id="sidebar">
-    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.08.27 12:28</span></div>
+    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.08.27 12:31</span></div>
     <button class="newbtn" onclick="mShow('addModal')">＋ 새 업무</button>
     <div class="navsec">
       <div class="navlabel">모아보기</div>
@@ -638,8 +638,7 @@ a{color:var(--accent2)}
 let API_BASE = (() => {
   const h = location.hostname;
   if (h === 'localhost' || h === '127.0.0.1' || h.includes('k12')) return 'http://localhost:8646';
-  // zrok 예약이름 장애(2026-08-27) 임시 우회: cloudflared 터널. zrok 복구 시 원복.
-  return 'https://conclusion-via-resorts-tale.trycloudflare.com';
+  return 'https://teamlog.shares.zrok.io';
 })();
 
 let USER_ID = new URLSearchParams(location.search).get('user') || '';
