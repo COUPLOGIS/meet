@@ -474,12 +474,18 @@ a{color:var(--accent2)}
 .pres-bar .pcol{width:26px;height:26px;border-radius:50%;border:2px solid #333f4d;cursor:pointer;padding:0}
 .pres-bar .pcol.on{border-color:#fff;box-shadow:0 0 0 2px var(--accent)}
 .pres-bar .pexit{background:#3a2530;color:#ff9db0;border-color:#5a2a3a}
+
+/* 회의록 메일 발송 이력 */
+.maillog{display:flex;flex-direction:column;gap:4px}
+.mailrow{display:flex;gap:10px;align-items:baseline;font-size:12.5px;padding:4px 8px;background:var(--surface2,#f4f7fa);border-radius:7px}
+.mailrow .mlt{color:var(--ink2);font-weight:700;white-space:nowrap}
+.mailrow .mlr{color:var(--ink3);word-break:break-all}
 </style>
 </head>
 <body>
 <div class="shell" id="shell">
   <nav class="side" id="sidebar">
-    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.08.27 10:50</span></div>
+    <div class="logo-wrap"><img src="logo_new.png" alt="TeamLog"><span class="ver" title="배포 버전(업데이트 반영 확인용)">v26.08.27 12:28</span></div>
     <button class="newbtn" onclick="mShow('addModal')">＋ 새 업무</button>
     <div class="navsec">
       <div class="navlabel">모아보기</div>
@@ -632,7 +638,8 @@ a{color:var(--accent2)}
 let API_BASE = (() => {
   const h = location.hostname;
   if (h === 'localhost' || h === '127.0.0.1' || h.includes('k12')) return 'http://localhost:8646';
-  return 'https://teamlog.shares.zrok.io';
+  // zrok 예약이름 장애(2026-08-27) 임시 우회: cloudflared 터널. zrok 복구 시 원복.
+  return 'https://conclusion-via-resorts-tale.trycloudflare.com';
 })();
 
 let USER_ID = new URLSearchParams(location.search).get('user') || '';
@@ -933,7 +940,7 @@ async function boot(){
         T=(data.tasks||[]).map(t=>({...t,_h:t._h||[{t:t.meeting_date||t.meeting_id||'?',a:'Created',n:''}]}));
         USERS=data.users||{};
         EV=data.events||{};
-        COMMENTS=data.comments||[];PROJECTS_DB=data.projects||[];FEED=data.feed||[];
+        COMMENTS=data.comments||[];PROJECTS_DB=data.projects||[];FEED=data.feed||[];EMAIL_LOG=data.email_log||[];
         // Build meetings from task meeting_ids
         const mids=new Set();
         T.forEach(t=>{if(t.meeting_id)mids.add(t.meeting_id);if(t.meeting_date)mids.add(t.meeting_date)});
@@ -1017,7 +1024,7 @@ function startPolling(){
         T=(data.tasks||[]).map(t=>({...t,_h:t._h||[{t:t.meeting_date||t.meeting_id||'?',a:'Created',n:''}]}));
         USERS=data.users||{};
         EV=data.events||{};
-        COMMENTS=data.comments||[];PROJECTS_DB=data.projects||[];FEED=data.feed||[];
+        COMMENTS=data.comments||[];PROJECTS_DB=data.projects||[];FEED=data.feed||[];EMAIL_LOG=data.email_log||[];
         // Update meetings if changed
         if(data.meetings&&data.meetings.length){
           const apiMeetings=data.meetings.map(m=>({id:m.id||m.date,date:m.date||m.id,p:m.p||m.participants||'',tp:m.tp||m.topic||'',sm:m.sm||m.summary||[],ts:m.ts||m.task_ids||[],cat:m.cat||m.category||"",dc:m.dc||m.date_color||"",ds:m.ds||m.date_size||""}));
@@ -1040,7 +1047,7 @@ function startPolling(){
    v2 리디자인 — 3층 레이아웃 렌더 레이어
    (데이터 레이어·미러·폴링은 위의 기존 검증 코드 그대로)
    ════════════════════════════════════════════════════════ */
-let VIEW='tasks', PROJECTS_DB=[], FEED=[], PIN=false, QA=null;
+let VIEW='tasks', PROJECTS_DB=[], FEED=[], PIN=false, QA=null, EMAIL_LOG=[];
 let SQA=null, PSQA=null, RNP=null, ADDP=false, PJMORE=false, DRAG=null, _tEdit=false, _aEdit=false, _qaBusy=false;
 /* 신규입력칸: 다른 곳 클릭(blur) 시 자동 닫힘 — Enter 처리 중에는 유지 */
 function qaBlur(){setTimeout(()=>{if(!_qaBusy&&QA&&document.activeElement?.id!=='qaIn'){QA=null;render()}},150)}
@@ -2203,6 +2210,11 @@ function _mcard(m){
     const linked=baseTasks().filter(t=>t.meeting_id===m.id);
     if(linked.length)h+='<div class="sect">연결된 과제</div><div class="subs">'+linked.map(t=>`<div class="subitem" onclick="event.stopPropagation();selTask('${t.id}')">${stPill(t)}<span class="t">${esc(t.title)}</span>${avh(t.assignee,1)}</div>`).join('')+'</div>';
     if(!(m.sm||[]).length&&!linked.length)h+='<div style="color:var(--ink3)">상세 내용 없음 — ✎ 수정으로 작성하세요</div>';
+    const sent=(EMAIL_LOG||[]).filter(x=>x.meeting_id===m.id);
+    if(sent.length){
+      h+=`<div class="sect">📧 메일 발송 이력 <span style="color:var(--ink3);font-weight:400">${sent.length}건</span></div>`;
+      h+='<div class="maillog">'+sent.map(x=>`<div class="mailrow"><span class="mlt">${esc(fmtSentAt(x.sent_at))}</span><span class="mlr">→ ${esc(x.recipients||'')}</span></div>`).join('')+'</div>';
+    }
     h+='</div>';
   }
   return h;
@@ -2374,8 +2386,17 @@ async function sendMeetingEmail(){
   if(btn){btn.disabled=true;btn.textContent='보내는 중…';}
   let r=null;try{r=await apiPost('/api/meeting/email',{id:_emailMid,subject,to,html:body});}catch(e){}
   if(btn){btn.disabled=false;btn.textContent='보내기';}
-  if(r&&r.ok){mClose('emailModal');toast(`메일 발송 완료 → ${r.count}명`);}
+  if(r&&r.ok){
+    mClose('emailModal');toast(`메일 발송 완료 → ${r.count}명`);
+    try{const d=await apiGet('/api/state');if(d&&d.ok){EMAIL_LOG=d.email_log||EMAIL_LOG;render();}}catch(e){}
+  }
   else toast('발송 실패 — '+((r&&r.error)||'서버 확인 필요'));
+}
+function fmtSentAt(iso){
+  if(!iso)return'';
+  const d=new Date(iso);if(isNaN(d))return iso;
+  const p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()%100}.${p(d.getMonth()+1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 /* ── #2 회의록 텍스트 → 우클릭 → 과제 등록 ── */
